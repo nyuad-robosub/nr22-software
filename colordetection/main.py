@@ -13,7 +13,7 @@ def print_hi(name):
 
 
 # Press the green button in the gutter to run the script.
-sum=np.array([0,0]);
+sum=np.array([0,0,0]);
 if __name__ == '__main__':
     cap = cv.VideoCapture(0)
     if not cap.isOpened():
@@ -42,18 +42,22 @@ if __name__ == '__main__':
                 if(color[i][j]>=250):
                     sum[0]+=i
                     sum[1]+=j
-        rows=np.shape(frame)[0]
-        cols = np.shape(frame)[1]
-        print(np.shape(frame))
-        print(sum[0]/len(color))
-        print(sum[1]/len(color[0]))
-        AVI=math.floor(sum[0]/rows)
-        AVJ = math.floor(sum[1]/cols)
-        print("END \n")
+                    sum[2]+=1
+        #print(np.shape(frame))
+        #print(np.shape(color))
+        #print(sum[0]/sum[2])
+        #print(sum[1]/sum[2])
+        AVI=math.floor(sum[0]/sum[2])
+        AVJ = math.floor(sum[1]/sum[2])
+        #print("END \n")
 
         # Display the resulting frame
         #color = cv.cvtColor(frame, cv.COLOR_HSV2BGR)
-        color[AVI][AVJ]=0
+        #color[AVI][AVJ]=0
+        for i in range(len(color)):
+            for j in range(len(color[i])):
+                if(i==AVI):
+                    color[i][j]=150
         cv.imshow('frame', color)
         if cv.waitKey(1) == ord('q'):
             break

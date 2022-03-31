@@ -1,0 +1,9 @@
+[submodule "simulations/src/bluerov2"]
+	path = simulations/src/bluerov2
+	url = https://github.com/nyuad-robosub/bluerov2
+[submodule "simulations/src/realsense-ros"]
+	path = simulations/src/realsense-ros
+	url = https://github.com/nyuad-robosub/realsense-ros
+[submodule "simulations/src/realsense_gazebo_plugin"]
+	path = simulations/src/realsense_gazebo_plugin
+	url = https://github.com/nyuad-robosub/realsense_gazebo_plugin

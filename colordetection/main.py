@@ -58,6 +58,10 @@ if __name__ == '__main__':
             for j in range(len(color[i])):
                 if(i==AVI):
                     color[i][j]=150
+                if(j==AVJ):
+                    color[i][j] = 150
+
+
         cv.imshow('frame', color)
         if cv.waitKey(1) == ord('q'):
             break

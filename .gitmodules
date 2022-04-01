@@ -5,6 +5,8 @@
 [submodule "simulations/src/realsense-ros"]
 	path = simulations/src/realsense-ros
 	url = https://github.com/nyuad-robosub/realsense-ros
+	branch = development-gazebo
 [submodule "simulations/src/realsense_gazebo_plugin"]
 	path = simulations/src/realsense_gazebo_plugin
 	url = https://github.com/nyuad-robosub/realsense_gazebo_plugin
+	branch = melodic-devel

@@ -1,6 +1,7 @@
 import math
 import numpy as np
 import scipy.sparse as sp
+import time
 
 # Using SortedKeyList with key-get lambda
 # https://stackoverflow.com/questions/27672494/how-to-use-bisect-insort-left-with-a-key
@@ -13,8 +14,8 @@ from sortedcontainers.sortedlist import SortedKeyList
 
 # Define some constants
 # Size of occupancy grid (let ROV start at center)
-OCC_SIZE_X = OCC_SIZE_Y = 18
-OCC_SIZE_Z = 18
+OCC_SIZE_X = OCC_SIZE_Y = 100
+OCC_SIZE_Z = 50
 OCC_SIZE_ZIP = [round(OCC_SIZE_X / 2), round(OCC_SIZE_Y / 2), round(OCC_SIZE_Z / 2)]
 # Unit dimensions of occupancy grid (meters)
 OCC_UNIT_X = OCC_UNIT_Y = OCC_UNIT_Z = OCC_UNIT = 0.1
@@ -24,10 +25,52 @@ OBSTACLE_THRESHOLD = 255
 MAX_HEIGHT = 50
 MAX_DEPTH = -50
 # Define boundaries for obstacles (truncated box)
-AVOIDANCE_RADIUS = 0.3  # meters
+AVOIDANCE_RADIUS = 0.2 # meters
 BOUND_X = BOUND_Y = BOUND_Z = BOUND = round(AVOIDANCE_RADIUS / OCC_UNIT)
 # Get costs of neighbors
 NGBR_COST = (1, 1.41421, 1.73205)
+
+# For analytics
+USE_PTG_TYPE = 0
+start_time = 0
+times = [0, 0, 0, 0]
+
+# Different schemes to find Pythagoras distance
+# Integer parameters
+def GetPTGDistance(xyz_start, xyz_end):
+    if USE_PTG_TYPE == 0:
+        start_time = time.time_ns()
+        val = math.sqrt((xyz_start[0] - xyz_end[0]) ** 2 +
+                         (xyz_start[1] - xyz_end[1]) ** 2 +
+                         (xyz_start[2] - xyz_end[2]) ** 2)
+        LazyTheta.times[2] += time.time_ns() - start_time
+        return val
+    elif USE_PTG_TYPE == 1:
+        return np.linalg.norm(np.array(xyz_start) - np.array(xyz_end))
+    elif USE_PTG_TYPE == 2:
+        xyz = tuple(np.sort(np.array(xyz_start) - np.array(xyz_end)))
+        try:
+            return GetPTGDistance.XYZ[xyz]
+        except AttributeError:
+            GetPTGDistance.XYZ = {}
+        except KeyError:
+            pass
+        val = math.sqrt((xyz_start[0] - xyz_end[0]) ** 2 +
+                         (xyz_start[1] - xyz_end[1]) ** 2 +
+                         (xyz_start[2] - xyz_end[2]) ** 2)
+        GetPTGDistance.XYZ[xyz] = val
+        return val
+    else:
+        xyz = tuple(np.sort(np.array(xyz_start) - np.array(xyz_end)))
+        try:
+            return GetPTGDistance.XYZ[xyz]
+        except AttributeError:
+            GetPTGDistance.XYZ = {}
+        except KeyError:
+            pass
+        val = np.linalg.norm(np.array(xyz_start) - np.array(xyz_end))
+        GetPTGDistance.XYZ[xyz] = val
+        return val
 
 
 # Node/vertex class
@@ -50,14 +93,13 @@ class Node:
 
     # Take advantage of integers for faster calculations
     def UpdateHScore(self, goal):
-        self.hScore = math.sqrt((goal.xyz[0] - self.xyz[0]) ** 2 +
-                                (goal.xyz[1] - self.xyz[1]) ** 2 +
-                                (goal.xyz[2] - self.xyz[2]) ** 2)
+        self.hScore = GetPTGDistance(self.xyz, goal.xyz)
 
 
 # LazyTheta class
 # For newing instances
 class LazyTheta:
+    times = [0, 0, 0, 0, 0]
     # ---
     # Initialization & updates area
     # ---
@@ -86,11 +128,14 @@ class LazyTheta:
         self.zMin = zMin
 
         # Placeholder start node
-        self.s_start = Node(xyzStart)
+        self.s_start = None
         self.s_end = None
+
+        LazyTheta.times = [0, 0, 0, 0, 0]
 
     # Update occupancy grid, with updateStart and updateBox tuples of 3D ints
     def UpdateOccupancyGrid(self, grid=None, updateStart=None, updateBox=None):
+        start_time = time.time_ns()
         # Update occupancy grid, with updateStart and updateBox tuples of 3D ints
         if grid is None:
             return False
@@ -103,7 +148,7 @@ class LazyTheta:
                 # X: row, Y: column
                 X, Y, V = sp.find(grid[z])
                 for i in range(len(V)):
-                    if V[i] == OBSTACLE_THRESHOLD:
+                    if V[i] >= OBSTACLE_THRESHOLD:
                         # Add obstacle if not already added
                         if (X[i], Y[i], z) not in self.obstaclesXYZ:
                             self.obstaclesXYZ.add((X[i], Y[i], z))
@@ -122,13 +167,13 @@ class LazyTheta:
                 for i in range(len(V)):
                     if (X[i], Y[i], z) not in self.obstaclesXYZ:
                         if xmin < X[i] < xmax and ymin < Y[i] < ymax:
-                            if V[i] == OBSTACLE_THRESHOLD:
+                            if V[i] >= OBSTACLE_THRESHOLD:
                                 # Add obstacle if not already added
-                                if (X[i], Y[i], z) not in self.obstaclesXYZ:
-                                    self.obstaclesXYZ.add((X[i], Y[i], z))
-                                    self.blockedXYZ |= self.AddObstacle((X[i], Y[i], z))
+                                self.obstaclesXYZ.add((X[i], Y[i], z))
+                                self.blockedXYZ |= self.AddObstacle((X[i], Y[i], z))
 
         # Return confirmation
+        LazyTheta.times[3] += time.time_ns() - start_time
         return True
 
     # Create truncated boundary cuboids
@@ -136,25 +181,25 @@ class LazyTheta:
         x, y, z = xyz
         obstacleSet = (
             # Set truncated outer box
-                set([(x0, y0, z0) for x0 in range(x - BOUND_X + 1, x + BOUND_X) for y0 in
-                     range(y - BOUND_Y + 1, y + BOUND_Y) for z0 in [z - BOUND_Z, z + BOUND_Z]]) |
-                set([(x0, y0, z0) for x0 in range(x - BOUND_X + 1, x + BOUND_X) for y0 in [y - BOUND_Y, y + BOUND_Y] for
-                     z0
-                     in range(z - BOUND_Z + 1, z + BOUND_Z)]) |
-                set([(x0, y0, z0) for x0 in [x - BOUND_X, x + BOUND_X] for y0 in range(y - BOUND_Y + 1, y + BOUND_Y) for
-                     z0
-                     in range(z - BOUND_Z + 1, z + BOUND_Z)]) |
+            set([(x0, y0, z0) for x0 in range(x - BOUND_X + 1, x + BOUND_X) for y0 in
+                 range(y - BOUND_Y + 1, y + BOUND_Y) for z0 in [z - BOUND_Z, z + BOUND_Z]]) |
+            set([(x0, y0, z0) for x0 in range(x - BOUND_X + 1, x + BOUND_X) for y0 in [y - BOUND_Y, y + BOUND_Y] for
+                 z0
+                 in range(z - BOUND_Z + 1, z + BOUND_Z)]) |
+            set([(x0, y0, z0) for x0 in [x - BOUND_X, x + BOUND_X] for y0 in range(y - BOUND_Y + 1, y + BOUND_Y) for
+                 z0
+                 in range(z - BOUND_Z + 1, z + BOUND_Z)]) |
 
-                # Set inner edge frame (to avoid LOS errors)
-                set([(x0, y0, z0) for x0 in range(x - BOUND_X + 1, x + BOUND_X) for y0 in
-                     [y - BOUND_Y + 1, y + BOUND_Y - 1]
-                     for z0 in [z - BOUND_Z + 1, z + BOUND_Z - 1]]) |
-                set([(x0, y0, z0) for x0 in [x - BOUND_X + 1, x + BOUND_X - 1] for y0 in
-                     range(y - BOUND_Y + 2, y + BOUND_Y - 1) for z0 in [z - BOUND_Z + 1, z + BOUND_Z - 1]]) |
-                set([(x0, y0, z0) for x0 in [x - BOUND_X + 1, x + BOUND_X - 1] for y0 in
-                     [y - BOUND_Y + 1, y + BOUND_Y - 1]
-                     for z0 in range(z - BOUND_Z + 2, z + BOUND_Z - 1)]) |
-                {xyz})  # Set center too
+            # Set inner edge frame (to avoid LOS errors)
+            set([(x0, y0, z0) for x0 in range(x - BOUND_X + 1, x + BOUND_X) for y0 in
+                 [y - BOUND_Y + 1, y + BOUND_Y - 1]
+                 for z0 in [z - BOUND_Z + 1, z + BOUND_Z - 1]]) |
+            set([(x0, y0, z0) for x0 in [x - BOUND_X + 1, x + BOUND_X - 1] for y0 in
+                 range(y - BOUND_Y + 2, y + BOUND_Y - 1) for z0 in [z - BOUND_Z + 1, z + BOUND_Z - 1]]) |
+            set([(x0, y0, z0) for x0 in [x - BOUND_X + 1, x + BOUND_X - 1] for y0 in
+                 [y - BOUND_Y + 1, y + BOUND_Y - 1]
+                 for z0 in range(z - BOUND_Z + 2, z + BOUND_Z - 1)]) |
+            {xyz})  # Set center too
         return obstacleSet
 
     # ---
@@ -173,9 +218,8 @@ class LazyTheta:
         # Explored xyz as unordered set (for quick neighbor lookup)
         self.closedXYZ = set()
         # Start & end nodes
-        self.s_end = Node(xyzEnd, 0)
+        self.s_end = Node(xyzEnd)
         self.s_start = Node(xyzStart, 0, goal=self.s_end)
-        self.s_start.UpdateHScore(self.s_end)
         self.s_start.parent = self.s_start
 
         self.open.add(self.s_start)
@@ -202,10 +246,12 @@ class LazyTheta:
                         # Unexplored
                         s_apos = Node(xyz, goal=self.s_end)
                     else:
+                        start_time = time.time_ns()
                         # Get the node currently in list
                         for index, node in enumerate(self.open):
                             if node.xyz == xyz:
                                 break
+                        LazyTheta.times[4] += time.time_ns() - start_time
                         s_apos = self.open[index]
 
                     self.UpdateVertex(s, s_apos)
@@ -215,6 +261,7 @@ class LazyTheta:
 
     # Quickly check neighbors without too many lookups
     def GetVisNeighborsXYZ(self, s):
+        start_time = time.time_ns()
         # Get neighboring obstacles
         obs = [((x0, y0, z0) in self.blockedXYZ)
                for x0 in [s.xyz[0] + OCC_SIZE_ZIP[0] - 1, s.xyz[0] + OCC_SIZE_ZIP[0]]
@@ -272,6 +319,8 @@ class LazyTheta:
                              s.xyz[1] + 2 * ((i // 2) % 2) - 1,
                              s.xyz[2] + 2 * ((i // 4) % 2) - 1), NGBR_COST[2]))
             i += 1
+
+        LazyTheta.times[0] += time.time_ns() - start_time
         return nbs
 
     # Implementing fast ray traversal algorithm
@@ -288,7 +337,6 @@ class LazyTheta:
         # Check if ray lies on x/y/z plane, in which case different checks should be enabled
         aligned = [(i == 0) for i in v]
         step = np.array([round(np.sign(i)) for i in v])
-        # print(start.xyz, end.xyz, v, step)
         norm = np.linalg.norm(v)
         if norm < 0.001:
             return True
@@ -434,16 +482,20 @@ class LazyTheta:
         return True
 
     def SetVertex(self, s):
+        start_time = time.time_ns()
         if not self.LineOfSight(s.parent, s):
+            LazyTheta.times[1] += time.time_ns() - start_time
             nbs = self.GetVisNeighborsXYZ(s)
             i = 0
             currentGCMin = math.inf
             currentIndex = -1
             for i in range(len(nbs)):
                 if nbs[i][0] in self.closedXYZ:
+                    start_time = time.time_ns()
                     for index, node in enumerate(self.closed):
                         if node.xyz == nbs[i][0]:
                             break
+                    LazyTheta.times[4] += time.time_ns() - start_time
                     if self.closed[index].gScore + nbs[i][1] < currentGCMin:
                         currentGCMin = self.closed[index].gScore + nbs[i][1]
                         currentIndex = index
@@ -452,15 +504,13 @@ class LazyTheta:
                 s.parent = self.closed[index]
                 s.UpdateGScore(currentGCMin)
                 return True
+        else:
+            LazyTheta.times[1] += time.time_ns() - start_time
         return True
 
-    xyz_track = []
-    occurence = []
     def ComputeCost(self, s, s_apos):
         # Path 2
-        cScore = math.sqrt((s_apos.xyz[0] - s.parent.xyz[0]) ** 2 +
-                           (s_apos.xyz[1] - s.parent.xyz[1]) ** 2 +
-                           (s_apos.xyz[2] - s.parent.xyz[2]) ** 2)
+        cScore = GetPTGDistance(s_apos.xyz, s.parent.xyz)
         if s.parent.gScore + cScore < s_apos.gScore:
             s_apos.parent = s.parent
             s_apos.UpdateGScore(s.parent.gScore + cScore)
@@ -494,10 +544,11 @@ class LazyTheta:
         if s_apos.gScore < g_old:
             if s_apos.xyz in self.openXYZ:
                 self.openXYZ.remove(s_apos.xyz)
+                start_time = time.time_ns()
                 for index, node in enumerate(self.open):
                     if node.xyz == s_apos.xyz:
                         break
-
+                LazyTheta.times[4] += time.time_ns() - start_time
                 s_apos.parent = self.open.pop(index).parent
 
             self.openXYZ.add(s_apos.xyz)

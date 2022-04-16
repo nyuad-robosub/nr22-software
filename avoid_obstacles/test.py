@@ -62,6 +62,17 @@ scttr_cl_val = []
 if lt.LineOfSight(Node((0, 0, 0)), Node((4, 4, 3))):
     print("LOS")
 
+times = [0, 0, 0, 0]
+import time
+for i in range(100):
+    print(i)
+    t = time.time_ns() / 100000
+    lt.UpdateOccupancyGrid(grid=grid)
+    # USE_PTG_TYPE = i % 4
+    lt.ComputePath((0, 0, 0), (8, 8, 8))
+    times[0] += time.time_ns() / 100000 - t
+print(times[0])
+
 if (lt.ComputePath((0, 0, 0), (8, 7, 8))):
     s = lt.s_end
     xyzs.append([s.xyz[i] + OCC_SIZE_ZIP[i] for i in range(3)])
@@ -85,7 +96,7 @@ colors[obst & (~voxelarray)] = '#FF993355'
 
 # and plot everything
 ax = plt.figure().add_subplot(projection='3d')
-ax.voxels(obst & (~voxelarray), facecolors=colors, edgecolor='k')
+# ax.voxels(obst & (~voxelarray), facecolors=colors, edgecolor='k')
 ax.voxels(voxelarray, facecolors=colors, edgecolor='k')
 ax.plot(*zip(*xyzs), linewidth=2, zorder=1000)
 # ax.scatter(*zip(*scttr_op), np.array(scttr_op_val))

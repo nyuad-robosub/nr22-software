@@ -152,7 +152,7 @@ class LazyTheta:
                         # Add obstacle if not already added
                         if (X[i], Y[i], z) not in self.obstaclesXYZ:
                             self.obstaclesXYZ.add((X[i], Y[i], z))
-                            self.blockedXYZ |= self.AddObstacle((X[i], Y[i], z))
+                            self.AddObstacle((X[i], Y[i], z))
 
         else:
             # Only update in the specified region
@@ -170,7 +170,7 @@ class LazyTheta:
                             if V[i] >= OBSTACLE_THRESHOLD:
                                 # Add obstacle if not already added
                                 self.obstaclesXYZ.add((X[i], Y[i], z))
-                                self.blockedXYZ |= self.AddObstacle((X[i], Y[i], z))
+                                self.AddObstacle((X[i], Y[i], z))
 
         # Return confirmation
         LazyTheta.times[3] += time.time_ns() - start_time
@@ -179,28 +179,31 @@ class LazyTheta:
     # Create truncated boundary cuboids
     def AddObstacle(self, xyz=(0, 0, 0)):
         x, y, z = xyz
-        obstacleSet = (
-            # Set truncated outer box
-            set([(x0, y0, z0) for x0 in range(x - BOUND_X + 1, x + BOUND_X) for y0 in
-                 range(y - BOUND_Y + 1, y + BOUND_Y) for z0 in [z - BOUND_Z, z + BOUND_Z]]) |
-            set([(x0, y0, z0) for x0 in range(x - BOUND_X + 1, x + BOUND_X) for y0 in [y - BOUND_Y, y + BOUND_Y] for
-                 z0
-                 in range(z - BOUND_Z + 1, z + BOUND_Z)]) |
-            set([(x0, y0, z0) for x0 in [x - BOUND_X, x + BOUND_X] for y0 in range(y - BOUND_Y + 1, y + BOUND_Y) for
-                 z0
-                 in range(z - BOUND_Z + 1, z + BOUND_Z)]) |
+        self.blockedXYZ |= set([(x0, y0, z0)
+                                for x0 in range(x - BOUND_X + 1, x + BOUND_X)
+                                for y0 in range(y - BOUND_Y + 1, y + BOUND_Y)
+                                for z0 in range(y - BOUND_Z + 1, y + BOUND_Z)])
 
-            # Set inner edge frame (to avoid LOS errors)
-            set([(x0, y0, z0) for x0 in range(x - BOUND_X + 1, x + BOUND_X) for y0 in
-                 [y - BOUND_Y + 1, y + BOUND_Y - 1]
-                 for z0 in [z - BOUND_Z + 1, z + BOUND_Z - 1]]) |
-            set([(x0, y0, z0) for x0 in [x - BOUND_X + 1, x + BOUND_X - 1] for y0 in
-                 range(y - BOUND_Y + 2, y + BOUND_Y - 1) for z0 in [z - BOUND_Z + 1, z + BOUND_Z - 1]]) |
-            set([(x0, y0, z0) for x0 in [x - BOUND_X + 1, x + BOUND_X - 1] for y0 in
-                 [y - BOUND_Y + 1, y + BOUND_Y - 1]
-                 for z0 in range(z - BOUND_Z + 2, z + BOUND_Z - 1)]) |
-            {xyz})  # Set center too
-        return obstacleSet
+        # # Set truncated outer box
+        # set([(x0, y0, z0) for x0 in range(x - BOUND_X + 1, x + BOUND_X) for y0 in
+        #      range(y - BOUND_Y + 1, y + BOUND_Y) for z0 in [z - BOUND_Z, z + BOUND_Z]]) |
+        # set([(x0, y0, z0) for x0 in range(x - BOUND_X + 1, x + BOUND_X) for y0 in [y - BOUND_Y, y + BOUND_Y] for
+        #      z0
+        #      in range(z - BOUND_Z + 1, z + BOUND_Z)]) |
+        # set([(x0, y0, z0) for x0 in [x - BOUND_X, x + BOUND_X] for y0 in range(y - BOUND_Y + 1, y + BOUND_Y) for
+        #      z0
+        #      in range(z - BOUND_Z + 1, z + BOUND_Z)]) |
+        #
+        # # Set inner edge frame (to avoid LOS errors)
+        # set([(x0, y0, z0) for x0 in range(x - BOUND_X + 1, x + BOUND_X) for y0 in
+        #      [y - BOUND_Y + 1, y + BOUND_Y - 1]
+        #      for z0 in [z - BOUND_Z + 1, z + BOUND_Z - 1]]) |
+        # set([(x0, y0, z0) for x0 in [x - BOUND_X + 1, x + BOUND_X - 1] for y0 in
+        #      range(y - BOUND_Y + 2, y + BOUND_Y - 1) for z0 in [z - BOUND_Z + 1, z + BOUND_Z - 1]]) |
+        # set([(x0, y0, z0) for x0 in [x - BOUND_X + 1, x + BOUND_X - 1] for y0 in
+        #      [y - BOUND_Y + 1, y + BOUND_Y - 1]
+        #      for z0 in range(z - BOUND_Z + 2, z + BOUND_Z - 1)]) |
+        # {xyz})  # Set center too
 
     # ---
     # Calculate area
@@ -209,18 +212,23 @@ class LazyTheta:
     # http://idm-lab.org/bib/abstracts/papers/aaai10b.pdf
     # Params: start and end nodes
     def ComputePath(self, xyzStart, xyzEnd):
+        # Start & end nodes
+        self.s_end = Node(xyzEnd)
+        self.s_start = Node(xyzStart, 0, goal=self.s_end)
+        self.s_start.parent = self.s_start
+        # If direct line of sight between start and end: return
+        if self.LineOfSight(self.s_start, self.s_end):
+            self.s_end.parent = self.s_start
+            return True
+
         # To-explore stack
         self.open = SortedKeyList(key=lambda r: r.fScore)
         # To-explore xyz as unordered set (for quick neighbor lookup)
         self.openXYZ = set()
         # Explored stack
-        self.closed = SortedKeyList(key=lambda r: r.xyz)
+        self.closed = SortedKeyList(key=lambda r: r.fScore)
         # Explored xyz as unordered set (for quick neighbor lookup)
         self.closedXYZ = set()
-        # Start & end nodes
-        self.s_end = Node(xyzEnd)
-        self.s_start = Node(xyzStart, 0, goal=self.s_end)
-        self.s_start.parent = self.s_start
 
         self.open.add(self.s_start)
         self.openXYZ.add(self.s_start.xyz)

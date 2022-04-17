@@ -12,15 +12,15 @@ size = 6
 start = tuple(- np.array(OCC_SIZE_ZIP))
 end = tuple(np.array(OCC_SIZE_ZIP))
 filename = "log_{}.txt".format(random.randint(0, 1000))
-with open(filename, "w") as f:
-    f.write("Runtimes:\n")
+# with open(filename, "w") as f:
+#     f.write("Runtimes:\n")
 
 while True:
     # Generate some obstacles
     voxelarray = np.full((OCC_SIZE_X, OCC_SIZE_Y, OCC_SIZE_Z), False)
     obst = [(random.randint(0, OCC_SIZE_X - 1),
              random.randint(0, OCC_SIZE_Y - 1),
-             random.randint(0, OCC_SIZE_Z - 1)) for _ in range(20)]
+             random.randint(0, OCC_SIZE_Z - 1)) for _ in range(30)]
     for xyz in obst:
         if np.linalg.norm(np.array(xyz) - np.array(start)) > size + BOUND and \
                 np.linalg.norm(np.array(xyz) - np.array(end)) > size + BOUND:
@@ -50,6 +50,7 @@ while True:
                     col[z].append(y)
                     data[z].append(OBSTACLE_THRESHOLD)
 
+    _start_time = time.time_ns()
     print("Pre")
     for z in range(OCC_SIZE_Z):
         grid.append(sp.coo_array((data[z], (row[z], col[z])), shape=(OCC_SIZE_X, OCC_SIZE_Y), dtype=np.uint8))
@@ -57,6 +58,7 @@ while True:
     lt = LazyTheta()
     tmp = set()
     if lt.UpdateOccupancyGrid(grid=grid):
+        print(LazyTheta.times[3] / 1000000)
         tmp = lt.blockedXYZ
 
     # set the expanded obstacles
@@ -68,7 +70,6 @@ while True:
                     # X: row, Y: column
                     obst[x][y][z] = True
     print("Post")
-    _start_time = time.time_ns()
     # Preview obstacles
     # colors = np.empty(voxelarray.shape, dtype=object)
     # colors[voxelarray] = 'green'
@@ -92,14 +93,14 @@ while True:
         t = time.time_ns() / 100000
         lt.UpdateOccupancyGrid(grid=grid)
         # USE_PTG_TYPE = i % 4
-        lt.ComputePath((0, 0, 0), (8, 8, 8))
+        # lt.ComputePath((0, 0, 0), (8, 8, 8))
         _times[0] += time.time_ns() / 100000 - t
     # print(times[0])
 
     if (lt.ComputePath(start, end)):
         duration = time.time_ns() - _start_time
-        with open(filename, "a") as f:
-            f.write("{}\n".format(duration))
+        # with open(filename, "a") as f:
+        #     f.write("{}\n".format(duration))
         print("Runtime:", duration / 1000000, "ms")
         print(" - GetVis:", LazyTheta.times[0] / 1000000, "ms", LazyTheta.times[0] / duration * 100, "%")
         print(" - LineOSight:", LazyTheta.times[1] / 1000000, "ms", LazyTheta.times[1] / duration * 100, "%")
@@ -119,21 +120,22 @@ while True:
         scttr_cl = [np.array(s.xyz) + np.array(OCC_SIZE_ZIP) for s in lt.closed]
         scttr_cl_val = [s.fScore for s in lt.closed]
 
-        # set the colors of each object
-        colors = np.empty(voxelarray.shape, dtype=object)
-        colors[voxelarray] = 'green'
-        colors[obst & (~voxelarray)] = '#FF993355'
+        if duration / 1000000000 > 5:
+            # set the colors of each object
+            colors = np.empty(voxelarray.shape, dtype=object)
+            colors[voxelarray] = 'green'
+            colors[obst & (~voxelarray)] = '#FF993355'
 
-        # and plot everything
-        # ax = plt.figure().add_subplot(projection='3d')
-        # ax.voxels(obst & (~voxelarray), facecolors=colors, edgecolor='k')
-        # ax.voxels(voxelarray, facecolors=colors, edgecolor='k')
-        # ax.plot(*zip(*xyzs), linewidth=2, zorder=1000)
-        # ax.scatter(*zip(*scttr_op), np.array(scttr_op_val))
-        # ax.scatter(*zip(*scttr_cl), np.array(scttr_cl_val))
-        # ax.scatter(*zip(*xyzs))
-        # for i in range(len(xyzs) - 1):
-        #     ax.plot([xyzs[i][0], xyzs[i + 1][0]],
-        #             [xyzs[i][1], xyzs[i + 1][1]],
-        #             [xyzs[i][2], xyzs[i + 1][2]], linewidth=2)
-        # plt.show()
+            # and plot everything
+            ax = plt.figure().add_subplot(projection='3d')
+            # ax.voxels(obst & (~voxelarray), facecolors=colors, edgecolor='k')
+            ax.voxels(voxelarray, facecolors=colors, edgecolor='k')
+            # ax.plot(*zip(*xyzs), linewidth=2, zorder=1000)
+            # ax.scatter(*zip(*scttr_op), np.array(scttr_op_val))
+            # ax.scatter(*zip(*scttr_cl), np.array(scttr_cl_val))
+            ax.scatter(*zip(*xyzs))
+            # for i in range(len(xyzs) - 1):
+            #     ax.plot([xyzs[i][0], xyzs[i + 1][0]],
+            #             [xyzs[i][1], xyzs[i + 1][1]],
+            #             [xyzs[i][2], xyzs[i + 1][2]], linewidth=2)
+            plt.show()

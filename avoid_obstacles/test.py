@@ -82,8 +82,8 @@ if (lt.ComputePath((0, 0, 0), (8, 7, 8))):
         xyzs.append([s.xyz[i] + OCC_SIZE_ZIP[i] for i in range(3)])
         print(s.xyz)
 
-    scttr_op = [np.array(s.xyz) + np.array(OCC_SIZE_ZIP) for s in lt.open]
-    scttr_op_val = [s.fScore for s in lt.open]
+    scttr_op = [np.array(s.xyz) + np.array(OCC_SIZE_ZIP) for s in lt.openList]
+    scttr_op_val = [s.fScore for s in lt.openList]
     scttr_cl = [np.array(s.xyz) + np.array(OCC_SIZE_ZIP) for s in lt.closed]
     scttr_cl_val = [s.fScore for s in lt.closed]
 

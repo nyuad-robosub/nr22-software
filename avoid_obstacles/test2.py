@@ -11,9 +11,11 @@ zlim = round(OCC_SIZE_Z / 2)
 size = 8
 start = tuple(- np.array(OCC_SIZE_ZIP))
 end = tuple(np.array(OCC_SIZE_ZIP))
-filename = "log_{}.txt".format(random.randint(0, 1000))
+# filename = "log_{}.txt".format(random.randint(0, 1000))
 # with open(filename, "w") as f:
 #     f.write("Runtimes:\n")
+
+random.seed(2930)
 
 while True:
     # Generate some obstacles

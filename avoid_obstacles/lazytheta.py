@@ -14,9 +14,9 @@ from sortedcontainers.sortedlist import SortedKeyList
 
 # Define some constants
 # Size of occupancy grid (let ROV start at center)
-OCC_SIZE_X = 250
-OCC_SIZE_Y = 250
-OCC_SIZE_Z = 100
+OCC_SIZE_X = 24
+OCC_SIZE_Y = 24
+OCC_SIZE_Z = 10
 OCC_SIZE_ZIP = [round(OCC_SIZE_X / 2), round(OCC_SIZE_Y / 2), round(OCC_SIZE_Z / 2)]
 # Unit dimensions of occupancy grid (meters)
 OCC_UNIT_X = OCC_UNIT_Y = OCC_UNIT_Z = OCC_UNIT = 0.1
@@ -368,6 +368,7 @@ class LazyTheta:
             # Define start & end
             startVoxel = np.array([round(end.xyz[i] + OCC_SIZE_ZIP[i] + (step[i] - 1) / 2) for i in range(3)])
             endVoxel = [round(start.xyz[i] + OCC_SIZE_ZIP[i] + (- step[i] - 1) / 2) for i in range(3)]
+            endVoxelTuple = tuple(endVoxel)
             tDelta = 1 / abs(v)
             tMax = np.array(tDelta)  # starting from vertex, not crossing any boundaries
             # Check for corner moves
@@ -401,10 +402,15 @@ class LazyTheta:
                 LazyTheta.times[1] += time.time_ns() - start_time
                 return False
 
-            while tuple(XYZ) != tuple(endVoxel):
-                if tripleMove:
+            if tripleMove:
+                while tuple(XYZ) != endVoxelTuple:
                     XYZ += step
-                elif doubleMove:
+                    if tuple(XYZ) in self.blockedXYZ:
+                        LazyTheta.times[1] += time.time_ns() - start_time
+                        return False
+
+            elif doubleMove:
+                while tuple(XYZ) != endVoxelTuple:
                     tmp, = np.where(tMax == tMax.min())
                     # If the two doubleMove axes are min -> prioritize
                     if len(tmp) == 2 or (len(tmp) == 3 and prioritizeDoubleMove):
@@ -415,26 +421,95 @@ class LazyTheta:
                     else:
                         XYZ[dMAx] += step[dMAx]
                         tMax[dMAx] += tDelta[dMAx]
-                else:
-                    # Need some optimization
-                    tmp, = np.where(tMax == tMax.min())
-                    # If all 3 tMax are equal -> prioritize smallest tDelta
-                    if len(tmp) == 3:
-                        index = tDeltaMin
-                    # If 2 are equal minimum -> prioritize smallest tDelta between the two
-                    elif len(tmp) == 2:
-                        index = tmp[0] if tDelta[tmp[0]] < tDelta[tmp[1]] else tmp[1]
-                    # Else this is normal
-                    else:
-                        index = np.argmin(tMax)
-                    XYZ[index] += step[index]
-                    tMax[index] += tDelta[index]
 
-                if tuple(XYZ) in self.blockedXYZ:
-                    if not (doubleMove or tripleMove):
+                    if tuple(XYZ) in self.blockedXYZ:
+                        LazyTheta.times[1] += time.time_ns() - start_time
+                        return False
+
+            else:
+                tMax100 = [10e6 if tMax[i] > 100000 else round(tMax[i] * 100) for i in range(3)]
+                tDelta100 = [round(tDelta[i] * 100) for i in range(3)]
+                tDeltaMinDual = [i if tDelta100[i] < tDelta100[(i + 1) % 3] else (i + 1) % 3 for i in range(3)]
+                while tuple(XYZ) != endVoxelTuple:
+                    # Need some optimization
+                    # If all 3 tMax are equal -> prioritize smallest tDelta
+                    if tMax100[0] == tMax100[1] == tMax100[2]:
+                        XYZ[tDeltaMin] += step[tDeltaMin]
+                        tMax100[tDeltaMin] += tDelta100[tDeltaMin]
+                    else:
+                        if tMax100[0] < tMax100[1]:
+                            # Normal
+                            if tMax100[0] < tMax100[2]:
+                                XYZ[0] += step[0]
+                                tMax100[0] += tDelta100[0]
+                            elif tMax100[2] < tMax100[0]:
+                                XYZ[2] += step[2]
+                                tMax100[2] += tDelta100[2]
+                            # If 2 are equal minimum -> prioritize smallest tDelta between the two
+                            else:
+                                XYZ[tDeltaMinDual[2]] += step[tDeltaMinDual[2]]
+                                tMax100[tDeltaMinDual[2]] += tDelta100[tDeltaMinDual[2]]
+                        elif tMax100[1] < tMax100[0]:
+                            # Normal
+                            if tMax100[1] < tMax100[2]:
+                                XYZ[1] += step[1]
+                                tMax100[1] += tDelta100[1]
+                            elif tMax100[2] < tMax100[1]:
+                                XYZ[2] += step[2]
+                                tMax100[2] += tDelta100[2]
+                            # If 2 are equal minimum -> prioritize smallest tDelta between the two
+                            else:
+                                XYZ[tDeltaMinDual[1]] += step[tDeltaMinDual[1]]
+                                tMax100[tDeltaMinDual[1]] += tDelta100[tDeltaMinDual[1]]
+                        # Normal
+                        elif tMax100[2] < tMax100[0]:
+                            XYZ[2] += step[2]
+                            tMax100[2] += tDelta100[2]
+                        # If 2 are equal minimum -> prioritize smallest tDelta between the two
+                        else:
+                            XYZ[tDeltaMinDual[0]] += step[tDeltaMinDual[0]]
+                            tMax100[tDeltaMinDual[0]] += tDelta100[tDeltaMinDual[0]]
+
+                    if tuple(XYZ) in self.blockedXYZ:
                         LazyTheta.times[5] += time.time_ns() - start_time
-                    LazyTheta.times[1] += time.time_ns() - start_time
-                    return False
+                        LazyTheta.times[1] += time.time_ns() - start_time
+                        return False
+
+            # Need some optimization
+            # while tuple(XYZ) != tuple(endVoxel):
+            #     if tripleMove:
+            #         XYZ += step
+            #     elif doubleMove:
+            #         tmp, = np.where(tMax == tMax.min())
+            #         # If the two doubleMove axes are min -> prioritize
+            #         if len(tmp) == 2 or (len(tmp) == 3 and prioritizeDoubleMove):
+            #             for i in dMAxes:
+            #                 XYZ[i] += step[i]
+            #                 tMax[i] += tDelta[i]
+            #         # Else this is normal
+            #         else:
+            #             XYZ[dMAx] += step[dMAx]
+            #             tMax[dMAx] += tDelta[dMAx]
+            #     else:
+            #         # Need some optimization
+            #         tmp, = np.where(tMax == tMax.min())
+            #         # If all 3 tMax are equal -> prioritize smallest tDelta
+            #         if len(tmp) == 3:
+            #             index = tDeltaMin
+            #         # If 2 are equal minimum -> prioritize smallest tDelta between the two
+            #         elif len(tmp) == 2:
+            #             index = tmp[0] if tDelta[tmp[0]] < tDelta[tmp[1]] else tmp[1]
+            #         # Else this is normal
+            #         else:
+            #             index = np.argmin(tMax)
+            #         XYZ[index] += step[index]
+            #         tMax[index] += tDelta[index]
+            #
+            #     if tuple(XYZ) in self.blockedXYZ:
+            #         if not (doubleMove or tripleMove):
+            #             LazyTheta.times[5] += time.time_ns() - start_time
+            #         LazyTheta.times[1] += time.time_ns() - start_time
+            #         return False
 
         elif np.count_nonzero(aligned) == 1:
             # Traverse between faces

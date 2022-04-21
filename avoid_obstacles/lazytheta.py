@@ -14,8 +14,8 @@ from sortedcontainers.sortedlist import SortedKeyList
 
 # Define some constants
 # Size of occupancy grid (let ROV start at center)
-OCC_SIZE_X = 24
-OCC_SIZE_Y = 24
+OCC_SIZE_X = 20
+OCC_SIZE_Y = 20
 OCC_SIZE_Z = 10
 OCC_SIZE_ZIP = [round(OCC_SIZE_X / 2), round(OCC_SIZE_Y / 2), round(OCC_SIZE_Z / 2)]
 # Unit dimensions of occupancy grid (meters)
@@ -23,10 +23,10 @@ OCC_UNIT_X = OCC_UNIT_Y = OCC_UNIT_Z = OCC_UNIT = 0.1
 # Determining characteristics of obstacle definition
 OBSTACLE_THRESHOLD = 255
 # Define boundaries for pool surfaces
-MAX_HEIGHT = 50
-MAX_DEPTH = -50
+MAX_HEIGHT = 5
+MAX_DEPTH = -5
 # Define boundaries for obstacles (truncated box)
-AVOIDANCE_RADIUS = 0.2 # meters
+AVOIDANCE_RADIUS = 0.5 # meters
 BOUND_X = BOUND_Y = BOUND_Z = BOUND = round(AVOIDANCE_RADIUS / OCC_UNIT)
 # Get costs of neighbors
 NGBR_COST = (1, 1.41421, 1.73205)
@@ -332,9 +332,9 @@ class LazyTheta:
         i = 0
         for n1 in range(8):
             if not obs[n1]:
-                nbs.append(((s.xyz[0] + 2 * (i % 2) - 1,
+                nbs.append(((s.xyz[0] + 2 * ((i // 4) % 2) - 1,
                              s.xyz[1] + 2 * ((i // 2) % 2) - 1,
-                             s.xyz[2] + 2 * ((i // 4) % 2) - 1), NGBR_COST[2]))
+                             s.xyz[2] + 2 * (i % 2) - 1), NGBR_COST[2]))
             i += 1
 
         LazyTheta.times[0] += time.time_ns() - start_time
@@ -427,48 +427,48 @@ class LazyTheta:
                         return False
 
             else:
-                tMax100 = [10e6 if tMax[i] > 100000 else round(tMax[i] * 100) for i in range(3)]
-                tDelta100 = [round(tDelta[i] * 100) for i in range(3)]
-                tDeltaMinDual = [i if tDelta100[i] < tDelta100[(i + 1) % 3] else (i + 1) % 3 for i in range(3)]
+                # tMax = [10e6 if tMax[i] > 100000 else round(tMax[i] * 100) for i in range(3)]
+                # tDelta = [round(tDelta[i] * 100) for i in range(3)]
+                tDeltaMinDual = [i if tDelta[i] < tDelta[(i + 1) % 3] else (i + 1) % 3 for i in range(3)]
                 while tuple(XYZ) != endVoxelTuple:
                     # Need some optimization
                     # If all 3 tMax are equal -> prioritize smallest tDelta
-                    if tMax100[0] == tMax100[1] == tMax100[2]:
+                    if tMax[0] == tMax[1] == tMax[2]:
                         XYZ[tDeltaMin] += step[tDeltaMin]
-                        tMax100[tDeltaMin] += tDelta100[tDeltaMin]
+                        tMax[tDeltaMin] += tDelta[tDeltaMin]
                     else:
-                        if tMax100[0] < tMax100[1]:
+                        if tMax[0] < tMax[1]:
                             # Normal
-                            if tMax100[0] < tMax100[2]:
+                            if tMax[0] < tMax[2]:
                                 XYZ[0] += step[0]
-                                tMax100[0] += tDelta100[0]
-                            elif tMax100[2] < tMax100[0]:
+                                tMax[0] += tDelta[0]
+                            elif tMax[2] < tMax[0]:
                                 XYZ[2] += step[2]
-                                tMax100[2] += tDelta100[2]
+                                tMax[2] += tDelta[2]
                             # If 2 are equal minimum -> prioritize smallest tDelta between the two
                             else:
                                 XYZ[tDeltaMinDual[2]] += step[tDeltaMinDual[2]]
-                                tMax100[tDeltaMinDual[2]] += tDelta100[tDeltaMinDual[2]]
-                        elif tMax100[1] < tMax100[0]:
+                                tMax[tDeltaMinDual[2]] += tDelta[tDeltaMinDual[2]]
+                        elif tMax[1] < tMax[0]:
                             # Normal
-                            if tMax100[1] < tMax100[2]:
+                            if tMax[1] < tMax[2]:
                                 XYZ[1] += step[1]
-                                tMax100[1] += tDelta100[1]
-                            elif tMax100[2] < tMax100[1]:
+                                tMax[1] += tDelta[1]
+                            elif tMax[2] < tMax[1]:
                                 XYZ[2] += step[2]
-                                tMax100[2] += tDelta100[2]
+                                tMax[2] += tDelta[2]
                             # If 2 are equal minimum -> prioritize smallest tDelta between the two
                             else:
                                 XYZ[tDeltaMinDual[1]] += step[tDeltaMinDual[1]]
-                                tMax100[tDeltaMinDual[1]] += tDelta100[tDeltaMinDual[1]]
+                                tMax[tDeltaMinDual[1]] += tDelta[tDeltaMinDual[1]]
                         # Normal
-                        elif tMax100[2] < tMax100[0]:
+                        elif tMax[2] < tMax[0]:
                             XYZ[2] += step[2]
-                            tMax100[2] += tDelta100[2]
+                            tMax[2] += tDelta[2]
                         # If 2 are equal minimum -> prioritize smallest tDelta between the two
                         else:
                             XYZ[tDeltaMinDual[0]] += step[tDeltaMinDual[0]]
-                            tMax100[tDeltaMinDual[0]] += tDelta100[tDeltaMinDual[0]]
+                            tMax[tDeltaMinDual[0]] += tDelta[tDeltaMinDual[0]]
 
                     if tuple(XYZ) in self.blockedXYZ:
                         LazyTheta.times[5] += time.time_ns() - start_time
@@ -629,7 +629,6 @@ class LazyTheta:
             #     s.parent = self.closed[index]
             #     s.UpdateGScore(currentGCMin)
             #     return True
-
         return True
 
     def ComputeCost(self, s, s_apos):

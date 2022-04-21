@@ -14,19 +14,19 @@ from sortedcontainers.sortedlist import SortedKeyList
 
 # Define some constants
 # Size of occupancy grid (let ROV start at center)
-OCC_SIZE_X = 250
-OCC_SIZE_Y = 250
-OCC_SIZE_Z = 100
+OCC_SIZE_X = 150
+OCC_SIZE_Y = 40
+OCC_SIZE_Z = 30
 OCC_SIZE_ZIP = [round(OCC_SIZE_X / 2), round(OCC_SIZE_Y / 2), round(OCC_SIZE_Z / 2)]
 # Unit dimensions of occupancy grid (meters)
 OCC_UNIT_X = OCC_UNIT_Y = OCC_UNIT_Z = OCC_UNIT = 0.1
 # Determining characteristics of obstacle definition
 OBSTACLE_THRESHOLD = 255
 # Define boundaries for pool surfaces
-MAX_HEIGHT = 50
-MAX_DEPTH = -50
+MAX_HEIGHT = OCC_SIZE_Z / 2
+MAX_DEPTH = - OCC_SIZE_Z / 2
 # Define boundaries for obstacles (truncated box)
-AVOIDANCE_RADIUS = 0.2 # meters
+AVOIDANCE_RADIUS = 0.5 # meters
 BOUND_X = BOUND_Y = BOUND_Z = BOUND = round(AVOIDANCE_RADIUS / OCC_UNIT)
 # Get costs of neighbors
 NGBR_COST = (1, 1.41421, 1.73205)
@@ -162,7 +162,7 @@ class LazyTheta:
             xmax += xmin
             ymax += ymin
             zmax += zmin
-            for z in range(zmin, zmax):
+            for z in range(round(zmin + 0.5), round(zmax - 0.5)):
                 # X: row, Y: column
                 X, Y, V = sp.find(grid[z])
                 for i in range(len(V)):
@@ -185,27 +185,6 @@ class LazyTheta:
                                 for y0 in range(y - BOUND_Y + 1, y + BOUND_Y)
                                 for z0 in range(z - BOUND_Z + 1, z + BOUND_Z)])
 
-        # # Set truncated outer box
-        # set([(x0, y0, z0) for x0 in range(x - BOUND_X + 1, x + BOUND_X) for y0 in
-        #      range(y - BOUND_Y + 1, y + BOUND_Y) for z0 in [z - BOUND_Z, z + BOUND_Z]]) |
-        # set([(x0, y0, z0) for x0 in range(x - BOUND_X + 1, x + BOUND_X) for y0 in [y - BOUND_Y, y + BOUND_Y] for
-        #      z0
-        #      in range(z - BOUND_Z + 1, z + BOUND_Z)]) |
-        # set([(x0, y0, z0) for x0 in [x - BOUND_X, x + BOUND_X] for y0 in range(y - BOUND_Y + 1, y + BOUND_Y) for
-        #      z0
-        #      in range(z - BOUND_Z + 1, z + BOUND_Z)]) |
-        #
-        # # Set inner edge frame (to avoid LOS errors)
-        # set([(x0, y0, z0) for x0 in range(x - BOUND_X + 1, x + BOUND_X) for y0 in
-        #      [y - BOUND_Y + 1, y + BOUND_Y - 1]
-        #      for z0 in [z - BOUND_Z + 1, z + BOUND_Z - 1]]) |
-        # set([(x0, y0, z0) for x0 in [x - BOUND_X + 1, x + BOUND_X - 1] for y0 in
-        #      range(y - BOUND_Y + 2, y + BOUND_Y - 1) for z0 in [z - BOUND_Z + 1, z + BOUND_Z - 1]]) |
-        # set([(x0, y0, z0) for x0 in [x - BOUND_X + 1, x + BOUND_X - 1] for y0 in
-        #      [y - BOUND_Y + 1, y + BOUND_Y - 1]
-        #      for z0 in range(z - BOUND_Z + 2, z + BOUND_Z - 1)]) |
-        # {xyz})  # Set center too
-
     # ---
     # Calculate area
     # ---
@@ -213,15 +192,6 @@ class LazyTheta:
     # http://idm-lab.org/bib/abstracts/papers/aaai10b.pdf
     # Params: start and end nodes
     def ComputePath(self, xyzStart, xyzEnd):
-        # Start & end nodes
-        self.s_end = Node(xyzEnd)
-        self.s_start = Node(xyzStart, 0, goal=self.s_end)
-        self.s_start.parent = self.s_start
-        # If direct line of sight between start and end: return
-        if self.LineOfSight(self.s_start, self.s_end):
-            self.s_end.parent = self.s_start
-            return True
-
         # To-explore stack
         self.open = {}
         # To-explore stack as an fScore sorted list
@@ -232,6 +202,15 @@ class LazyTheta:
         self.closed = {}
         # Explored xyz as unordered set (for quick neighbor lookup)
         self.closedXYZ = set()
+
+        # Start & end nodes
+        self.s_end = Node(xyzEnd)
+        self.s_start = Node(xyzStart, 0, goal=self.s_end)
+        self.s_start.parent = self.s_start
+        # If direct line of sight between start and end: return
+        if self.LineOfSight(self.s_start, self.s_end):
+            self.s_end.parent = self.s_start
+            return True
 
         self.open[self.s_start.xyz] = self.s_start
         self.openList.add(self.s_start)
@@ -582,23 +561,6 @@ class LazyTheta:
                 s.parent = self.closed[currentXYZ]
                 s.UpdateGScore(currentGCMin)
                 return True
-
-            # currentIndex = -1
-            # for i in range(len(nbs)):
-            #     if nbs[i][0] in self.closedXYZ:
-            #         start_time = time.time_ns()
-            #         for index, node in enumerate(self.closed):
-            #             if node.xyz == nbs[i][0]:
-            #                 break
-            #         LazyTheta.times[4] += time.time_ns() - start_time
-            #         if self.closed[index].gScore + nbs[i][1] < currentGCMin:
-            #             currentGCMin = self.closed[index].gScore + nbs[i][1]
-            #             currentIndex = index
-            #
-            # if currentIndex >= 0:
-            #     s.parent = self.closed[index]
-            #     s.UpdateGScore(currentGCMin)
-            #     return True
         return True
 
     def ComputeCost(self, s, s_apos):
@@ -652,20 +614,3 @@ class LazyTheta:
             self.openList.add(s_apos)
             return True
         return False
-
-        # g_old = s_apos.gScore
-        # self.ComputeCost(s, s_apos)
-        # if s_apos.gScore < g_old:
-        #     if s_apos.xyz in self.openXYZ:
-        #         self.openXYZ.remove(s_apos.xyz)
-        #         start_time = time.time_ns()
-        #         for index, node in enumerate(self.openList):
-        #             if node.xyz == s_apos.xyz:
-        #                 break
-        #         LazyTheta.times[4] += time.time_ns() - start_time
-        #         s_apos.parent = self.openList.pop(index).parent
-        #
-        #     self.openXYZ.add(s_apos.xyz)
-        #     self.openList.add(s_apos)
-        #     return True
-        # return False

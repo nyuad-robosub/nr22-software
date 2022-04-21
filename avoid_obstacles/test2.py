@@ -16,16 +16,17 @@ end = tuple(np.array(OCC_SIZE_ZIP))
 #     f.write("Runtimes:\n")
 
 random.seed(2930)
-
+count = 0
 while True:
+    count += 1
     # Generate some obstacles
     voxelarray = np.full((OCC_SIZE_X, OCC_SIZE_Y, OCC_SIZE_Z), False)
     obst = [(random.randint(0, OCC_SIZE_X - 1),
              random.randint(0, OCC_SIZE_Y - 1),
-             random.randint(0, OCC_SIZE_Z - 1)) for _ in range(10)]
+             random.randint(0, OCC_SIZE_Z - 1)) for _ in range(30)]
     for xyz in obst:
-        if np.linalg.norm(np.array(xyz) - np.array(start)) > (size + BOUND) * 2 and \
-                np.linalg.norm(np.array(xyz) - np.array(end)) > (size + BOUND) * 2:
+        if np.linalg.norm(np.array(xyz) - np.array(start) - np.array(OCC_SIZE_ZIP)) > (size + BOUND) * 1.75 and \
+                np.linalg.norm(np.array(xyz) - np.array(end) - np.array(OCC_SIZE_ZIP)) > (size + BOUND) * 1.75:
             for x in range(xyz[0] - size, xyz[0] + size + 1):
                 for y in range(xyz[1] - size, xyz[1] + size + 1):
                     for z in range(xyz[2] - size, xyz[2] + size + 1):
@@ -73,13 +74,15 @@ while True:
                     obst[x][y][z] = True
     print("Post")
     # Preview obstacles
-    # colors = np.empty(voxelarray.shape, dtype=object)
-    # colors[voxelarray] = 'green'
-    # colors[obst & (~voxelarray)] = '#993355'
-    # ax = plt.figure().add_subplot(projection='3d')
-    # ax.voxels(obst & (~voxelarray), facecolors=colors, edgecolor='k')
-    # ax.voxels(voxelarray, facecolors=colors, edgecolor='k')
-    # plt.show()
+    if False:
+        colors = np.empty(voxelarray.shape, dtype=object)
+        colors[voxelarray] = 'green'
+        colors[obst & (~voxelarray)] = '#993355'
+        ax = plt.figure().add_subplot(projection='3d')
+        ax.voxels(obst & (~voxelarray), facecolors=colors, edgecolor='k')
+        ax.voxels(voxelarray, facecolors=colors, edgecolor='k')
+        ax.set_box_aspect(OCC_SIZE_ZIP)
+        plt.show()
 
     xyzs = []
     scttr_op = []
@@ -101,22 +104,29 @@ while True:
 
     done = lt.ComputePath(start, end)
     duration = time.time_ns() - _start_time
+    err = False
     if done:
         # with open(filename, "a") as f:
         #     f.write("{}\n".format(duration))
         print("Runtime:", duration / 1000000, "ms")
         print(" - GetVis:", LazyTheta.times[0] / 1000000, "ms", LazyTheta.times[0] / duration * 100, "%")
         print(" - LineOSight:", LazyTheta.times[1] / 1000000, "ms", LazyTheta.times[1] / duration * 100, "%")
-        print("   + Regular 3-axis:", LazyTheta.times[5] / 1000000, "ms", LazyTheta.times[5] / LazyTheta.times[1] * 100, "%")
+        print("   + Regular 3-axis:", LazyTheta.times[5] / 1000000, "ms", LazyTheta.times[5] / LazyTheta.times[1] * 100,
+              "%")
         print(" - PTGDist:", LazyTheta.times[2] / 1000000, "ms", LazyTheta.times[2] / duration * 100, "%")
         print(" - UpdateGrid:", LazyTheta.times[3] / 1000000, "ms", LazyTheta.times[3] / duration * 100, "%")
         print(" - Enumerate:", LazyTheta.times[4] / 1000000, "ms", LazyTheta.times[4] / duration * 100, "%")
         s = lt.s_end
         xyzs.append([s.xyz[i] + OCC_SIZE_ZIP[i] for i in range(3)])
+        old_xyz = s.xyz
         print(s.xyz)
         while s.xyz != start:
             s = s.parent
             xyzs.append([s.xyz[i] + OCC_SIZE_ZIP[i] for i in range(3)])
+            if not lt.LineOfSight(Node(s.xyz), Node(old_xyz)):
+                print("ERR:", s.xyz, old_xyz)
+                err = True
+            old_xyz = s.xyz
             print(s.xyz)
 
     scttr_op = []
@@ -130,7 +140,13 @@ while True:
         scttr_cl.append(np.array(xyz) + np.array(OCC_SIZE_ZIP))
         scttr_cl_val.append(lt.closed[xyz].fScore)
 
-    if duration / 1000000000 > 2 or not done: #
+    # err = False
+    # for i in range(len(xyzs) - 1):
+    #     if not lt.LineOfSight(Node(tuple(np.array(xyzs[i]) - np.array(OCC_SIZE_ZIP))),
+    #                           Node(tuple(np.array(xyzs[i + 1]) - np.array(OCC_SIZE_ZIP)))):
+    #         err = True
+
+    if duration / 1000000000 > 8:  # err anderr or not done
         # set the colors of each object
         colors = np.empty(voxelarray.shape, dtype=object)
         colors[voxelarray] = 'green'
@@ -143,10 +159,26 @@ while True:
         # ax.plot(*zip(*xyzs), linewidth=2, zorder=1000)
         # ax.scatter(*zip(*scttr_op), np.array(scttr_op_val))
         # ax.scatter(*zip(*scttr_cl), np.array(scttr_cl_val))
-        # ax.scatter(*zip(*xyzs))
+        # ax.scatter(*zip(*xyzs), s=10, c='#882222FF')
+        # for i in range(len(xyzs) - 1):
+        #     ax.plot([xyzs[i][0], xyzs[i + 1][0]],
+        #             [xyzs[i][1], xyzs[i + 1][1]],
+        #             [xyzs[i][2], xyzs[i + 1][2]], linewidth=2)
         for i in range(len(xyzs) - 1):
-            ax.plot([xyzs[i][0], xyzs[i + 1][0]],
-                    [xyzs[i][1], xyzs[i + 1][1]],
-                    [xyzs[i][2], xyzs[i + 1][2]], linewidth=2)
+            for t in np.arange(0.0, 1.0, 0.2):
+                ax.scatter(xyzs[i][0] * t + xyzs[i + 1][0] * (1 - t),
+                           xyzs[i][1] * t + xyzs[i + 1][1] * (1 - t),
+                           xyzs[i][2] * t + xyzs[i + 1][2] * (1 - t))
+        # if err:
+        #     for i in range(len(xyzs) - 1):
+        #         for t in np.arange(0.0, 1.0, 0.2):
+        #             ax.scatter(xyzs[i][0] * t + xyzs[i + 1][0] * (1 - t),
+        #                         xyzs[i][1] * t + xyzs[i + 1][1] * (1 - t),
+        #                         xyzs[i][2] * t + xyzs[i + 1][2] * (1 - t))
+        # ax.scatter(*zip(*scttr_op), np.array(scttr_op_val))
+        # ax.scatter(*zip(*scttr_cl), np.array(scttr_cl_val))
+        # ax.plot([xyzs[i][0], xyzs[i + 1][0]],
+        #         [xyzs[i][1], xyzs[i + 1][1]],
+        #         [xyzs[i][2], xyzs[i + 1][2]], linewidth=2)
         ax.set_box_aspect(OCC_SIZE_ZIP)
         plt.show()

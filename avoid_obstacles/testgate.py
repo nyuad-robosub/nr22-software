@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.sparse as sp
 from lazytheta import *
+from numba import cuda, jit
+print(cuda.get_current_device())
 
 xlim = round(OCC_SIZE_X / 2)
 ylim = round(OCC_SIZE_Y / 2)
@@ -32,7 +34,7 @@ while True:
                                          round((X_CENTER + RADIUS) / OCC_UNIT_X + 1))
                 for y0 in range(round((Y_CENTER - RADIUS) / OCC_UNIT_Y),
                                 round((Y_CENTER + RADIUS) / OCC_UNIT_Y + 1))]:
-        print(xy_)
+        # print(xy_)
         if np.linalg.norm(np.array((X_CENTER / OCC_UNIT_X, Y_CENTER / OCC_UNIT_Y))
                           - np.array(xy_)) < RADIUS / OCC_UNIT:
             for z in range(0, OCC_SIZE_Z, 6):

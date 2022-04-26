@@ -127,3 +127,11 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+*.iml
+*.yml
+
+# Catkin stuff
+devel/
+build/
+logs/
+.catkin_tools/

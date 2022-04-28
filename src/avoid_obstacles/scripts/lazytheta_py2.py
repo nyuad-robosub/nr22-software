@@ -177,6 +177,44 @@ class LazyTheta:
         LazyTheta.times[3] += time.time() - start_time
         return True
 
+    # Update occupancy set, with updateStart and updateBox tuples of 3D ints
+    def UpdateOccupancySet(self, occSet=None, updateStart=None, updateBox=None):
+        start_time = time.time()
+        # Update occupancy grid, with updateStart and updateBox tuples of 3D ints
+        if occSet is None:
+            return False
+
+        # If updateStart is None: function called to initialize obstacles
+        if updateStart is None:
+            self.obstaclesXYZ = set()
+            self.blockedXYZ = set()
+            for x in range(OCC_SIZE_X):
+                for y in range(OCC_SIZE_Y):
+                    for z in range(self.zMin, self.zMax):
+                        # Add obstacle if not already added
+                        if (x, y, z) in occSet and (x, y, z) not in self.obstaclesXYZ:
+                            self.obstaclesXYZ.add((x, y, z))
+                            self.AddObstacle((x, y, z))
+
+        else:
+            # Only update in the specified region
+            xmin, ymin, zmin = updateStart
+            xmax, ymax, zmax = updateBox
+            xmax += xmin
+            ymax += ymin
+            zmax += zmin
+            for x in range(int(round(xmin + 0.5)), int(round(xmax - 0.5))):
+                for y in range(int(round(ymin + 0.5)), int(round(ymax - 0.5))):
+                    for z in range(int(round(zmin + 0.5)), int(round(zmax - 0.5))):
+                        # Add obstacle if not already added
+                        if (x, y, z) in occSet and (x, y, z) not in self.obstaclesXYZ:
+                            self.obstaclesXYZ.add((x, y, z))
+                            self.AddObstacle((x, y, z))
+
+        # Return confirmation
+        LazyTheta.times[3] += time.time() - start_time
+        return True
+
     # Create truncated boundary cuboids
     def AddObstacle(self, xyz):
         x, y, z = xyz

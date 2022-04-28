@@ -20,6 +20,7 @@ count = 0
 while True:
     count += 1
     # Generate some obstacles
+    obstSet = set()
     voxelarray = np.full((OCC_SIZE_X, OCC_SIZE_Y, OCC_SIZE_Z), False)
     obst = [(random.randint(0, OCC_SIZE_X - 1),
              random.randint(0, OCC_SIZE_Y - 1),
@@ -32,35 +33,37 @@ while True:
                     for z in range(xyz[2] - size, xyz[2] + size + 1):
                         if 0 <= x < OCC_SIZE_X and 0 <= y < OCC_SIZE_Y and 0 <= z < OCC_SIZE_Z:
                             voxelarray[x, y, z] = True
+                            obstSet.add((x, y, z))
         # voxelarray[xyz[0]][xyz[1]][xyz[2]] = True
 
-    grid = []
-    # X: row, Y: column
-    row = []
-    col = []
-    data = []
-    for z in range(OCC_SIZE_Z):
-        row.append([])
-        col.append([])
-        data.append([])
+    # grid = []
+    # # X: row, Y: column
+    # row = []
+    # col = []
+    # data = []
+    # for z in range(OCC_SIZE_Z):
+    #     row.append([])
+    #     col.append([])
+    #     data.append([])
 
-    for x in range(len(voxelarray)):
-        for y in range(len(voxelarray[x])):
-            for z in range(len(voxelarray[x][y])):
-                # X: row, Y: column
-                if voxelarray[x][y][z]:
-                    row[z].append(x)
-                    col[z].append(y)
-                    data[z].append(OBSTACLE_THRESHOLD)
+    # for x in range(len(voxelarray)):
+    #     for y in range(len(voxelarray[x])):
+    #         for z in range(len(voxelarray[x][y])):
+    #             # X: row, Y: column
+    #             if voxelarray[x][y][z]:
+    #                 row[z].append(x)
+    #                 col[z].append(y)
+    #                 data[z].append(OBSTACLE_THRESHOLD)
 
     _start_time = time.time_ns()
     print("Pre")
-    for z in range(OCC_SIZE_Z):
-        grid.append(sp.coo_array((data[z], (row[z], col[z])), shape=(OCC_SIZE_X, OCC_SIZE_Y), dtype=np.uint8))
+    # for z in range(OCC_SIZE_Z):
+    #    grid.append(sp.coo_array((data[z], (row[z], col[z])), shape=(OCC_SIZE_X, OCC_SIZE_Y), dtype=np.uint8))
 
     lt = LazyTheta()
     tmp = set()
-    if lt.UpdateOccupancyGrid(grid=grid):
+    # if lt.UpdateOccupancyGrid(grid=grid):
+    if lt.UpdateOccupancySet(occSet=obstSet):
         print(LazyTheta.times[3] / 1000000)
         tmp = lt.blockedXYZ
 

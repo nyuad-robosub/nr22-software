@@ -7,7 +7,7 @@ project(avoid_obstacles)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED)
+find_package(catkin REQUIRED COMPONENTS roscpp rospy std_msgs genmsg pcl_ros)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -44,16 +44,18 @@ find_package(catkin REQUIRED)
 
 ## Generate messages in the 'msg' folder
 # add_message_files(
+#   DIRECTORY
+#   msg
 #   FILES
-#   Message1.msg
-#   Message2.msg
+#   Num.msg
 # )
 
 ## Generate services in the 'srv' folder
 # add_service_files(
+#   DIRECTORY
+#   srv
 #   FILES
-#   Service1.srv
-#   Service2.srv
+#   AddTwoInts.srv
 # )
 
 ## Generate actions in the 'action' folder
@@ -112,8 +114,8 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-# include
-# ${catkin_INCLUDE_DIRS}
+  include
+  ${catkin_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -202,3 +204,11 @@ catkin_install_python(PROGRAMS
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+
+add_executable(talker scripts/talker.cpp)
+target_link_libraries(talker ${catkin_LIBRARIES})
+add_dependencies(talker ${catkin_EXPORTED_TARGETS})
+
+add_executable(tf_pointcloud scripts/tf_pointcloud.cpp)
+target_link_libraries(tf_pointcloud ${catkin_LIBRARIES})
+add_dependencies(tf_pointcloud ${catkin_EXPORTED_TARGETS})

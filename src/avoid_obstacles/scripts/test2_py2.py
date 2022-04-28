@@ -1,13 +1,14 @@
 import random
 import time
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import scipy.sparse as sp
-from lazytheta import *
+from lazytheta_py2 import *
 
-xlim = round(OCC_SIZE_X / 2)
-ylim = round(OCC_SIZE_Y / 2)
-zlim = round(OCC_SIZE_Z / 2)
+xlim = OCC_SIZE_X / 2
+ylim = OCC_SIZE_Y / 2
+zlim = OCC_SIZE_Z / 2
 size = 6
 start = tuple(- np.array(OCC_SIZE_ZIP))
 end = tuple(np.array(OCC_SIZE_ZIP))
@@ -53,15 +54,15 @@ while True:
                     col[z].append(y)
                     data[z].append(OBSTACLE_THRESHOLD)
 
-    _start_time = time.time_ns()
+    _start_time = time.time()
     print("Pre")
     for z in range(OCC_SIZE_Z):
-        grid.append(sp.coo_array((data[z], (row[z], col[z])), shape=(OCC_SIZE_X, OCC_SIZE_Y), dtype=np.uint8))
+        grid.append(sp.coo_matrix((data[z], (row[z], col[z])), shape=(OCC_SIZE_X, OCC_SIZE_Y), dtype=np.uint8))
 
     lt = LazyTheta()
     tmp = set()
     if lt.UpdateOccupancyGrid(grid=grid):
-        print(LazyTheta.times[3] / 1000000)
+        print(LazyTheta.times[3] * 1000)
         tmp = lt.blockedXYZ
 
     # set the expanded obstacles
@@ -95,27 +96,27 @@ while True:
     _times = [0, 0, 0, 0]
     for i in range(0):
         print(i)
-        t = time.time_ns() / 100000
+        t = time.time() / 100000
         lt.UpdateOccupancyGrid(grid=grid)
         # USE_PTG_TYPE = i % 4
         # lt.ComputePath((0, 0, 0), (8, 8, 8))
-        _times[0] += time.time_ns() / 100000 - t
+        _times[0] += time.time() / 100000 - t
     # print(times[0])
 
     done = lt.ComputePath(start, end)
-    duration = time.time_ns() - _start_time
+    duration = time.time() - _start_time
     err = False
     if done:
         # with open(filename, "a") as f:
         #     f.write("{}\n".format(duration))
-        print("Runtime:", duration / 1000000, "ms")
-        print(" - GetVis:", LazyTheta.times[0] / 1000000, "ms", LazyTheta.times[0] / duration * 100, "%")
-        print(" - LineOSight:", LazyTheta.times[1] / 1000000, "ms", LazyTheta.times[1] / duration * 100, "%")
-        print("   + Regular 3-axis:", LazyTheta.times[5] / 1000000, "ms", LazyTheta.times[5] / LazyTheta.times[1] * 100,
+        print("Runtime:", duration * 1000, "ms")
+        print(" - GetVis:", LazyTheta.times[0] * 1000, "ms", LazyTheta.times[0] / duration * 100, "%")
+        print(" - LineOSight:", LazyTheta.times[1] * 1000, "ms", LazyTheta.times[1] / duration * 100, "%")
+        print("   + Regular 3-axis:", LazyTheta.times[5] * 1000, "ms", LazyTheta.times[5] / LazyTheta.times[1] * 100,
               "%")
-        print(" - PTGDist:", LazyTheta.times[2] / 1000000, "ms", LazyTheta.times[2] / duration * 100, "%")
-        print(" - UpdateGrid:", LazyTheta.times[3] / 1000000, "ms", LazyTheta.times[3] / duration * 100, "%")
-        print(" - Enumerate:", LazyTheta.times[4] / 1000000, "ms", LazyTheta.times[4] / duration * 100, "%")
+        print(" - PTGDist:", LazyTheta.times[2] * 1000, "ms", LazyTheta.times[2] / duration * 100, "%")
+        print(" - UpdateGrid:", LazyTheta.times[3] * 1000, "ms", LazyTheta.times[3] / duration * 100, "%")
+        print(" - Enumerate:", LazyTheta.times[4] * 1000, "ms", LazyTheta.times[4] / duration * 100, "%")
         s = lt.s_end
         xyzs.append([s.xyz[i] + OCC_SIZE_ZIP[i] for i in range(3)])
         old_xyz = s.xyz
@@ -146,14 +147,15 @@ while True:
     #                           Node(tuple(np.array(xyzs[i + 1]) - np.array(OCC_SIZE_ZIP)))):
     #         err = True
 
-    if duration / 1000000000 > 8:  # err anderr or not done
+    if duration > 8:  # err anderr or not done
         # set the colors of each object
         colors = np.empty(voxelarray.shape, dtype=object)
         colors[voxelarray] = 'green'
         colors[obst & (~voxelarray)] = '#FF993355'
 
         # and plot everything
-        ax = plt.figure().add_subplot(projection='3d')
+        fig = plt.figure()
+        ax = fig.gca(projection='3d')
         # ax.voxels(obst & (~voxelarray), facecolors=colors, edgecolor='k')
         ax.voxels(voxelarray, facecolors=colors, edgecolor='k')
         # ax.plot(*zip(*xyzs), linewidth=2, zorder=1000)
@@ -180,5 +182,9 @@ while True:
         # ax.plot([xyzs[i][0], xyzs[i + 1][0]],
         #         [xyzs[i][1], xyzs[i + 1][1]],
         #         [xyzs[i][2], xyzs[i + 1][2]], linewidth=2)
-        ax.set_box_aspect(OCC_SIZE_ZIP)
+        ax.set_aspect('equal')
+        # https://stackoverflow.com/a/9349255
+        for direction in (-1, 1):
+            for point in np.diag(direction * np.array(OCC_SIZE_ZIP)):
+                ax.plot([point[0] + OCC_SIZE_ZIP[0]], [point[1] + OCC_SIZE_ZIP[1]], [point[2] + OCC_SIZE_ZIP[2]], 'w')
         plt.show()

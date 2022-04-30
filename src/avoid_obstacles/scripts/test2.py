@@ -28,10 +28,12 @@ while True:
     for xyz in obst:
         if np.linalg.norm(np.array(xyz) - np.array(start) - np.array(OCC_SIZE_ZIP)) > (size + BOUND) * 1.75 and \
                 np.linalg.norm(np.array(xyz) - np.array(end) - np.array(OCC_SIZE_ZIP)) > (size + BOUND) * 1.75:
+            print("Vector3i", tuple(np.array(xyz) - np.array(OCC_SIZE_ZIP)), ",", sep='')
             for x in range(xyz[0] - size, xyz[0] + size + 1):
                 for y in range(xyz[1] - size, xyz[1] + size + 1):
                     for z in range(xyz[2] - size, xyz[2] + size + 1):
                         if 0 <= x < OCC_SIZE_X and 0 <= y < OCC_SIZE_Y and 0 <= z < OCC_SIZE_Z:
+                            # print("Vector3i", tuple(np.array([x, y, z]) - np.array(OCC_SIZE_ZIP)), ",")
                             voxelarray[x, y, z] = True
                             obstSet.add((x, y, z))
         # voxelarray[xyz[0]][xyz[1]][xyz[2]] = True

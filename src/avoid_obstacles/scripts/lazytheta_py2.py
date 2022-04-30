@@ -114,10 +114,10 @@ class LazyTheta:
         # Explored xyz as unordered set (for quick neighbor lookup)
         self.closedXYZ = set()
         # Occupancy grid
-        self.grid = []
-        for z in range(OCC_SIZE_Z):
-            # X: row, Y: column
-            self.grid.append(sp.lil_matrix((OCC_SIZE_X, OCC_SIZE_Y), dtype=np.uint8))
+        # self.grid = []
+        # for z in range(OCC_SIZE_Z):
+        #     # X: row, Y: column
+        #     self.grid.append(sp.lil_matrix((OCC_SIZE_X, OCC_SIZE_Y), dtype=np.uint8))
 
         # Blocked grid in form of set of tuples (most efficient)
         self.blockedXYZ = set()
@@ -134,49 +134,6 @@ class LazyTheta:
 
         LazyTheta.times = [0, 0, 0, 0, 0, 0]
 
-    # Update occupancy grid, with updateStart and updateBox tuples of 3D ints
-    def UpdateOccupancyGrid(self, grid=None, updateStart=None, updateBox=None):
-        start_time = time.time()
-        # Update occupancy grid, with updateStart and updateBox tuples of 3D ints
-        if grid is None:
-            return False
-        for z in range(len(grid)):
-            self.grid[z] = sp.lil_matrix(grid[z])
-
-        # If updateStart is None: function called to initialize obstacles
-        if updateStart is None:
-            for z in range(self.zMin, self.zMax):
-                # X: row, Y: column
-                X, Y, V = sp.find(grid[z])
-                for i in range(len(V)):
-                    if V[i] >= OBSTACLE_THRESHOLD:
-                        # Add obstacle if not already added
-                        if (X[i], Y[i], z) not in self.obstaclesXYZ:
-                            self.obstaclesXYZ.add((X[i], Y[i], z))
-                            self.AddObstacle((X[i], Y[i], z))
-
-        else:
-            # Only update in the specified region
-            xmin, ymin, zmin = updateStart
-            xmax, ymax, zmax = updateBox
-            xmax += xmin
-            ymax += ymin
-            zmax += zmin
-            for z in range(int(round(zmin + 0.5)), int(round(zmax - 0.5))):
-                # X: row, Y: column
-                X, Y, V = sp.find(grid[z])
-                for i in range(len(V)):
-                    if (X[i], Y[i], z) not in self.obstaclesXYZ:
-                        if xmin < X[i] < xmax and ymin < Y[i] < ymax:
-                            if V[i] >= OBSTACLE_THRESHOLD:
-                                # Add obstacle if not already added
-                                self.obstaclesXYZ.add((X[i], Y[i], z))
-                                self.AddObstacle((X[i], Y[i], z))
-
-        # Return confirmation
-        LazyTheta.times[3] += time.time() - start_time
-        return True
-
     # Update occupancy set, with updateStart and updateBox tuples of 3D ints
     def UpdateOccupancySet(self, occSet=None, updateStart=None, updateBox=None):
         start_time = time.time()
@@ -192,9 +149,11 @@ class LazyTheta:
                 for y in range(OCC_SIZE_Y):
                     for z in range(self.zMin, self.zMax):
                         # Add obstacle if not already added
-                        if (x, y, z) in occSet and (x, y, z) not in self.obstaclesXYZ:
-                            self.obstaclesXYZ.add((x, y, z))
-                            self.AddObstacle((x, y, z))
+                        if (x, y, z) in occSet:
+                            xyz_ = tuple(np.array([x, y, z]) - np.array(OCC_SIZE_ZIP))
+                            if xyz_ not in self.obstaclesXYZ:
+                                self.obstaclesXYZ.add(xyz_)
+                                self.AddObstacle(xyz_)
 
         else:
             # Only update in the specified region
@@ -207,9 +166,11 @@ class LazyTheta:
                 for y in range(int(round(ymin + 0.5)), int(round(ymax - 0.5))):
                     for z in range(int(round(zmin + 0.5)), int(round(zmax - 0.5))):
                         # Add obstacle if not already added
-                        if (x, y, z) in occSet and (x, y, z) not in self.obstaclesXYZ:
-                            self.obstaclesXYZ.add((x, y, z))
-                            self.AddObstacle((x, y, z))
+                        if (x, y, z) in occSet:
+                            xyz_ = tuple(np.array([x, y, z]) - np.array(OCC_SIZE_ZIP))
+                            if xyz_ not in self.obstaclesXYZ:
+                                self.obstaclesXYZ.add(xyz_)
+                                self.AddObstacle(xyz_)
 
         # Return confirmation
         LazyTheta.times[3] += time.time() - start_time
@@ -298,9 +259,9 @@ class LazyTheta:
         start_time = time.time()
         # Get neighboring obstacles
         obs = [((x0, y0, z0) in self.blockedXYZ)
-               for x0 in [s.xyz[0] + OCC_SIZE_ZIP[0] - 1, s.xyz[0] + OCC_SIZE_ZIP[0]]
-               for y0 in [s.xyz[1] + OCC_SIZE_ZIP[1] - 1, s.xyz[1] + OCC_SIZE_ZIP[1]]
-               for z0 in [s.xyz[2] + OCC_SIZE_ZIP[2] - 1, s.xyz[2] + OCC_SIZE_ZIP[2]]]
+               for x0 in [s.xyz[0] - 1, s.xyz[0]]
+               for y0 in [s.xyz[1] - 1, s.xyz[1]]
+               for z0 in [s.xyz[2] - 1, s.xyz[2]]]
 
         # Get neighboring nodes
         nbs = []
@@ -383,8 +344,8 @@ class LazyTheta:
         if not any(aligned):
             # All is well
             # Define start & end
-            startVoxel = np.array([int(round(end.xyz[i] + OCC_SIZE_ZIP[i] + (step[i] - 1) * 1.0 / 2)) for i in range(3)])
-            endVoxel = [int(round(start.xyz[i] + OCC_SIZE_ZIP[i] + (- step[i] - 1) * 1.0 / 2)) for i in range(3)]
+            startVoxel = np.array([int(round(end.xyz[i] + (step[i] - 1) * 1.0 / 2)) for i in range(3)])
+            endVoxel = [int(round(start.xyz[i] + (- step[i] - 1) * 1.0 / 2)) for i in range(3)]
             endVoxelTuple = tuple(endVoxel)
             tDeltaInt = [int(round(150 / abs(v[i]))) for i in range(3)]
             tMaxInt = [tDeltaInt[i] for i in range(3)] # starting from vertex, not crossing any boundaries
@@ -494,10 +455,10 @@ class LazyTheta:
             ax = axes.pop(aligned.index(True))
             # Define start & end
             # Store face of higher-valued voxel
-            startFace = np.array([int(round(end.xyz[i] + OCC_SIZE_ZIP[i] + (step[i] - 1) * 1.0 / 2)) if i in axes
-                                  else int(round(end.xyz[i] + OCC_SIZE_ZIP[i])) for i in range(3)])
-            endFace = [int(round(start.xyz[i] + OCC_SIZE_ZIP[i] + (- step[i] - 1) * 1.0 / 2)) if i in axes
-                       else int(round(start.xyz[i] + OCC_SIZE_ZIP[i])) for i in range(3)]
+            startFace = np.array([int(round(end.xyz[i] + (step[i] - 1) * 1.0 / 2)) if i in axes
+                                  else int(round(end.xyz[i])) for i in range(3)])
+            endFace = [int(round(start.xyz[i] + (- step[i] - 1) * 1.0 / 2)) if i in axes
+                       else int(round(start.xyz[i])) for i in range(3)]
             endFaceTuple = tuple(endFace)
             tDeltaInt = [int(round(150 / abs(v[i]))) if i in axes else 1e6 for i in range(3)]
             tMaxInt = [tDeltaInt[i] for i in range(3)] # starting from vertex, not crossing any boundaries
@@ -552,10 +513,10 @@ class LazyTheta:
             ax = axes.pop(aligned.index(False))
             # Define start & end
             # Store edge of higher-valued voxel
-            startEdge = np.array([int(round(end.xyz[i] + OCC_SIZE_ZIP[i] + (step[i] - 1) * 1.0 / 2)) if i == ax
-                                  else int(round(end.xyz[i] + OCC_SIZE_ZIP[i])) for i in range(3)])
-            endEdge = [int(round(start.xyz[i] + OCC_SIZE_ZIP[i] + (- step[i] - 1) * 1.0 / 2)) if i == ax
-                       else int(round(start.xyz[i] + OCC_SIZE_ZIP[i])) for i in range(3)]
+            startEdge = np.array([int(round(end.xyz[i] + (step[i] - 1) * 1.0 / 2)) if i == ax
+                                  else int(round(end.xyz[i])) for i in range(3)])
+            endEdge = [int(round(start.xyz[i] + (- step[i] - 1) * 1.0 / 2)) if i == ax
+                       else int(round(start.xyz[i])) for i in range(3)]
             endEdgeTuple = tuple(endEdge)
             extra = [[0, 0, 0],
                      [0 if i != axes[0] else 1 for i in range(3)],
@@ -609,27 +570,6 @@ class LazyTheta:
             s_apos.UpdateGScore(s.parent.gScore + cScore)
             return True
         return False
-        # A* & Theta* algorithm
-        # # Path 2
-        # if self.LineOfSight(s.parent, s_apos):
-        #     cScore = math.sqrt((s_apos.xyz[0] - s.parent.xyz[0]) * (s_apos.xyz[0] - s.parent.xyz[0]) +
-        #                        (s_apos.xyz[1] - s.parent.xyz[1]) * (s_apos.xyz[1] - s.parent.xyz[1]) +
-        #                        (s_apos.xyz[2] - s.parent.xyz[2]) * (s_apos.xyz[2] - s.parent.xyz[2]))
-        #     if s.parent.gScore + cScore < s_apos.gScore:
-        #         s_apos.parent = s.parent
-        #         s_apos.UpdateGScore(s.parent.gScore + cScore)
-        #     return True
-        # # return False
-        #
-        # # Path 1
-        # else:
-        #     cScore = math.sqrt((s_apos.xyz[0] - s.xyz[0]) * (s_apos.xyz[0] - s.xyz[0]) +
-        #                        (s_apos.xyz[1] - s.xyz[1]) * (s_apos.xyz[1] - s.xyz[1]) +
-        #                        (s_apos.xyz[2] - s.xyz[2]) * (s_apos.xyz[2] - s.xyz[2]))
-        #     if s.gScore + cScore < s_apos.gScore:
-        #         s_apos.parent = s
-        #         s_apos.UpdateGScore(s.gScore + cScore)
-        #     return True
 
     def UpdateVertex(self, s, s_apos):
         cScore = GetPTGDistance(s_apos.xyz, s.parent.xyz)

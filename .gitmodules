@@ -10,3 +10,7 @@
 	path = simulations/src/realsense_gazebo_plugin
 	url = https://github.com/nyuad-robosub/realsense_gazebo_plugin
 	branch = melodic-devel
+[submodule "src/deps/perception_pcl"]
+	path = src/deps/perception_pcl
+	url = https://github.com/ros-perception/perception_pcl
+	branch = melodic-devel

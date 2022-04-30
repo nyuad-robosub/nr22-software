@@ -7,7 +7,8 @@ project(avoid_obstacles)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS roscpp rospy std_msgs genmsg pcl_ros)
+find_package(catkin REQUIRED cmake_modules COMPONENTS roscpp rospy std_msgs genmsg pcl_ros tf2 tf2_ros)
+find_package(Eigen REQUIRED)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -104,7 +105,7 @@ catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES avoid_obstacles
 #  CATKIN_DEPENDS other_catkin_pkg
-#  DEPENDS system_lib
+ DEPENDS Eigen
 )
 
 ###########
@@ -116,6 +117,7 @@ catkin_package(
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
+  ${Eigen_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -212,3 +214,7 @@ add_dependencies(talker ${catkin_EXPORTED_TARGETS})
 add_executable(tf_pointcloud scripts/tf_pointcloud.cpp)
 target_link_libraries(tf_pointcloud ${catkin_LIBRARIES})
 add_dependencies(tf_pointcloud ${catkin_EXPORTED_TARGETS})
+
+add_executable(tf2_pointcloud scripts/tf2_pointcloud.cpp)
+target_link_libraries(tf2_pointcloud ${catkin_LIBRARIES})
+add_dependencies(tf2_pointcloud ${catkin_EXPORTED_TARGETS})

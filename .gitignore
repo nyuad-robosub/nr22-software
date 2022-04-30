@@ -138,3 +138,6 @@ logs/
 
 # Pycharm stuff
 .idea/
+
+# VScode stuff
+.vscode/

@@ -1,0 +1,3 @@
+# Add submodule with specific branch & directory
+git submodule add -b <branch> https://github.com/<repo> <path>
+

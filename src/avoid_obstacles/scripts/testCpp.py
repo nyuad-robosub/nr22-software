@@ -8,7 +8,7 @@ from lazytheta import *
 xlim = round(OCC_SIZE_X / 2)
 ylim = round(OCC_SIZE_Y / 2)
 zlim = round(OCC_SIZE_Z / 2)
-size = 6
+size = 3
 start = tuple(- np.array(OCC_SIZE_ZIP))
 end = tuple(np.array(OCC_SIZE_ZIP))
 # filename = "log_{}.txt".format(random.randint(0, 1000))
@@ -21,14 +21,15 @@ while True:
     count += 1
     # Generate some obstacles
     obstSet = set()
+    print('{', sep='', end='')
     voxelarray = np.full((OCC_SIZE_X, OCC_SIZE_Y, OCC_SIZE_Z), False)
     obst = [(random.randint(0, OCC_SIZE_X - 1),
              random.randint(0, OCC_SIZE_Y - 1),
-             random.randint(0, OCC_SIZE_Z - 1)) for _ in range(20)]
+             random.randint(0, OCC_SIZE_Z - 1)) for _ in range(15)]
     for xyz in obst:
         if np.linalg.norm(np.array(xyz) - np.array(start) - np.array(OCC_SIZE_ZIP)) > (size + BOUND) * 1.75 and \
                 np.linalg.norm(np.array(xyz) - np.array(end) - np.array(OCC_SIZE_ZIP)) > (size + BOUND) * 1.75:
-            print("Vector3i", tuple(np.array(xyz) - np.array(OCC_SIZE_ZIP)), ",", sep='')
+            # print("Vector3i", tuple(np.array(xyz) - np.array(OCC_SIZE_ZIP)), ", ", sep='', end='')
             for x in range(xyz[0] - size, xyz[0] + size + 1):
                 for y in range(xyz[1] - size, xyz[1] + size + 1):
                     for z in range(xyz[2] - size, xyz[2] + size + 1):
@@ -37,7 +38,7 @@ while True:
                             voxelarray[x, y, z] = True
                             obstSet.add((x, y, z))
         # voxelarray[xyz[0]][xyz[1]][xyz[2]] = True
-
+    print('}, ', sep='')
     # grid = []
     # # X: row, Y: column
     # row = []
@@ -72,44 +73,86 @@ while True:
     # set the expanded obstacles
     obst = np.full((OCC_SIZE_X, OCC_SIZE_Y, OCC_SIZE_Z), False)
     for (x, y, z) in tmp:
-        if 0 <= x < OCC_SIZE_X:
-            if 0 <= y < OCC_SIZE_Y:
-                if 0 <= z < OCC_SIZE_Z:
+        if 0 <= x + OCC_SIZE_ZIP[0] < OCC_SIZE_X:
+            if 0 <= y + OCC_SIZE_ZIP[1] < OCC_SIZE_Y:
+                if 0 <= z + OCC_SIZE_ZIP[2] < OCC_SIZE_Z:
                     # X: row, Y: column
-                    obst[x][y][z] = True
+                    obst[x + OCC_SIZE_ZIP[0]][y + OCC_SIZE_ZIP[1]][z + OCC_SIZE_ZIP[2]] = True
+                    # obst[x][y][z] = True
     print("Post")
     # C++ generated path
     xyzs_ = [[
-        (75, 20, 15),
-        (22, 11, 15),
-        (-8, 6, 6),
-        (-16, 4, 1),
-        (-75, -20, -15),
+        (15, 10, 10),
+        (11, 1, 2),
+        (10, -4, 2),
+        (9, -6, 0),
+        (5, -9, -3),
+        (-15, -10, -10),
     ], [
-        (75, 20, 15),
-        (39, 9, 17),
-        (27, 5, 15),
-        (11, 1, 8),
-        (-31, -6, -11),
-        (-32, -6, -12),
-        (-40, -7, -15),
-        (-75, -20, -15)
+        (15, 10, 10),
+        (3, 4, 9),
+        (0, -4, 8),
+        (0, -5, 8),
+        (-1, -7, 6),
+        (-1, -7, 5),
+        (-15, -10, -10),
     ], [
-        (75, 20, 15),
-        (72, 21, 14),
-        (48, 22, 9),
-        (-5, 8, -3),
-        (-50, -9, -13),
-        (-75, -20, -15)
+        (15, 10, 10),
+        (-5, 4, 6),
+        (-12, 2, 0),
+        (-15, -10, -10),
+    ], [
+        (15, 10, 10),
+        (6, 0, 9),
+        (-1, -1, 8),
+        (-3, -5, 7),
+        (-4, -6, 6),
+        (-15, -10, -10),
+    ], [
+        (15, 10, 10),
+        (-1, 11, 6),
+        (-9, 10, -2),
+        (-11, 9, -5),
+        (-13, 6, -7),
+        (-15, -10, -10),
+    ], [
+        (15, 10, 10),
+        (7, 0, 8),
+        (6, -2, 8),
+        (6, -3, 8),
+        (6, -11, 3),
+        (4, -13, 1),
+        (-4, -13, -4),
+        #ERR::: (-4, -13, -4), (-15, -10, -10),
+       (-15, -10, -10),
+    ], [
+        (15, 10, 10),
+        (5, 12, 6),
+        (-8, 13, 1),
+        (-11, 7, -5),
+        (-15, -10, -10),
+    ], [
+        (15, 10, 10),
+        (10, -7, 8),
+        (8, -12, 4),
+        (-3, -13, -3),
+        # ERR::: (-3, -13, -3), (-15, -10, -10),
+       (-15, -10, -10),
+    ], [
+        (15, 10, 10),
+        (9, 6, 16),
+        (8, 5, 17),
+        (-3, -3, 17),
+        (-15, -10, -10),
     ]]
 
     # Preview obstacles
-    if count == 2:
+    if True: #count == 2:
         colors = np.empty(voxelarray.shape, dtype=object)
         colors[voxelarray] = 'green'
-        # colors[obst & (~voxelarray)] = '#993355'
+        colors[obst & (~voxelarray)] = '#993355'
         ax = plt.figure().add_subplot(projection='3d')
-        # ax.voxels(obst & (~voxelarray), facecolors=colors, edgecolor='k')
+        ax.voxels(obst & (~voxelarray), facecolors=colors, edgecolor='k')
         ax.voxels(voxelarray, facecolors=colors, edgecolor='k')
         ax.set_box_aspect(OCC_SIZE_ZIP)
 
@@ -122,8 +165,8 @@ while True:
                            OCC_SIZE_ZIP[1] + xyzs_[count - 1][i][1] * t + xyzs_[count - 1][i + 1][1] * (1 - t),
                            OCC_SIZE_ZIP[2] + xyzs_[count - 1][i][2] * t + xyzs_[count - 1][i + 1][2] * (1 - t))
         plt.show()
-    else:
-        continue
+    #else:
+        #continue
 
     xyzs = []
     scttr_op = []

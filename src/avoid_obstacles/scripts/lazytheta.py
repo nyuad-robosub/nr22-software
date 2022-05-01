@@ -14,9 +14,12 @@ from sortedcontainers.sortedlist import SortedKeyList
 
 # Define some constants
 # Size of occupancy grid (let ROV start at center)
-OCC_SIZE_X = 150
-OCC_SIZE_Y = 40
-OCC_SIZE_Z = 30
+# OCC_SIZE_X = 150
+# OCC_SIZE_Y = 40
+# OCC_SIZE_Z = 30
+OCC_SIZE_X = 30
+OCC_SIZE_Y = 20
+OCC_SIZE_Z = 20
 OCC_SIZE_ZIP = [round(OCC_SIZE_X / 2), round(OCC_SIZE_Y / 2), round(OCC_SIZE_Z / 2)]
 # Unit dimensions of occupancy grid (meters)
 OCC_UNIT_X = OCC_UNIT_Y = OCC_UNIT_Z = OCC_UNIT = 0.1

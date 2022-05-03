@@ -51,33 +51,21 @@ while True:
                (-20, -4, -10),  # Before gate
                end]
 
-    grid = []
-    # X: row, Y: column
-    row = []
-    col = []
-    data = []
-    for z in range(OCC_SIZE_Z):
-        row.append([])
-        col.append([])
-        data.append([])
+    occSet = set()
 
     for x in range(len(voxelarray)):
         for y in range(len(voxelarray[x])):
             for z in range(len(voxelarray[x][y])):
                 # X: row, Y: column
                 if voxelarray[x][y][z]:
-                    row[z].append(x)
-                    col[z].append(y)
-                    data[z].append(OBSTACLE_THRESHOLD)
+                    occSet.add((x, y, z))
 
     _start_time = time.time_ns()
     print("Pre")
-    for z in range(OCC_SIZE_Z):
-        grid.append(sp.coo_array((data[z], (row[z], col[z])), shape=(OCC_SIZE_X, OCC_SIZE_Y), dtype=np.uint8))
 
     lt = LazyTheta()
     tmp = set()
-    if lt.UpdateOccupancyGrid(grid=grid):
+    if lt.UpdateOccupancySet(occSet=occSet):
         print(LazyTheta.times[3] / 1000000)
         tmp = lt.blockedXYZ
 
@@ -90,7 +78,40 @@ while True:
                     # X: row, Y: column
                     obst[x][y][z] = True
     print("Post")
+    # C++ generated path
+    xyzs_ = [[(-75, -14, -13), (-20, 4, -10), (-20, 4, -10), (68, 10, -5), (72, 9, -5), (73, 8, -5), (74, 7, -5), (75, 4, -5), (75, 4, -5), (75, -4, -5), (75, -4, -5), (74, -6, -5), (71, -9, -5), (-20, -4, -10), (-20, -4, -10), (-75, 15, -12)
+    ], [(-75, -5, -8), (-20, 4, -10), (-20, 4, -10), (68, 10, -5), (72, 9, -5), (73, 8, -5), (74, 7, -5), (75, 4, -5), (75, 4, -5), (75, -4, -5), (75, -4, -5), (74, -6, -5), (71, -9, -5), (-20, -4, -10), (-20, -4, -10), (-49, -5, -9), (-75, -8, -1)
+    ], [(-75, 1, -9), (-20, 4, -10), (-20, 4, -10), (68, 10, -5), (72, 9, -5), (73, 8, -5), (74, 7, -5), (75, 4, -5), (75, 4, -5), (75, -4, -5), (75, -4, -5), (74, -6, -5), (71, -9, -5), (-20, -4, -10), (-20, -4, -10), (-42, 0, -9), (-43, 0, -8), (-75, 7, -2)
+    ], [(-75, -1, -5), (-30, 3, -10), (-20, 4, -10), (-20, 4, -10), (68, 10, -5), (72, 9, -5), (73, 8, -5), (74, 7, -5), (75, 4, -5), (75, 4, -5), (75, -4, -5), (75, -4, -5), (74, -6, -5), (71, -9, -5), (-20, -4, -10), (-20, -4, -10), (-45, -5, -9), (-75, -14, -8)
+    ], [(-75, 6, 0), (-35, 4, -10), (-20, 4, -10), (-20, 4, -10), (68, 10, -5), (72, 9, -5), (73, 8, -5), (74, 7, -5), (75, 4, -5), (75, 4, -5), (75, -4, -5), (75, -4, -5), (74, -6, -5), (71, -9, -5), (-20, -4, -10), (-20, -4, -10), (-47, -4, -9), (-75, -4, -7)
+    ], [(-75, -12, -11), (-20, 4, -10), (-20, 4, -10), (68, 10, -5), (72, 9, -5), (73, 8, -5), (74, 7, -5), (75, 4, -5), (75, 4, -5), (75, -4, -5), (75, -4, -5), (74, -6, -5), (71, -9, -5), (-20, -4, -10), (-20, -4, -10), (-75, 9, -12)
+    ], [(-75, -10, -2), (-34, 0, -10), (-20, 4, -10), (-20, 4, -10), (68, 10, -5), (72, 9, -5), (73, 8, -5), (74, 7, -5), (75, 4, -5), (75, 4, -5), (75, -4, -5), (75, -4, -5), (74, -6, -5), (71, -9, -5), (-20, -4, -10), (-20, -4, -10), (-40, -5, -9), (-75, -17, -2)
+    ], [(-75, -5, -7), (-21, 4, -10), (-20, 4, -10), (-20, 4, -10), (68, 10, -5), (72, 9, -5), (73, 8, -5), (74, 7, -5), (75, 4, -5), (75, 4, -5), (75, -4, -5), (75, -4, -5), (74, -6, -5), (71, -9, -5), (-20, -4, -10), (-20, -4, -10), (-39, -5, -11), (-75, -18, -14)
+    ]]
 
+    # Preview obstacles
+    if True:
+        colors = np.empty(voxelarray.shape, dtype=object)
+        colors[voxelarray] = 'green'
+        # colors[obst & (~voxelarray)] = '#993355'
+        ax = plt.figure().add_subplot(projection='3d')
+        # ax.voxels(obst & (~voxelarray), facecolors=colors, edgecolor='k')
+        ax.voxels(voxelarray, facecolors=colors, edgecolor='k')
+        ax.set_box_aspect(OCC_SIZE_ZIP)
+
+        for i in range(len(xyzs_[count - 1]) - 1):
+            if not lt.LineOfSight(Node(xyzs_[count - 1][i - 1]), Node(xyzs_[count - 1][i])):
+                print("ERR:", xyzs_[count - 1][i], xyzs_[count - 1][i + 1])
+                err = True
+            for t in np.arange(0.0, 1.0, 0.2):
+                ax.scatter(OCC_SIZE_ZIP[0] + xyzs_[count - 1][i][0] * t + xyzs_[count - 1][i + 1][0] * (1 - t),
+                           OCC_SIZE_ZIP[1] + xyzs_[count - 1][i][1] * t + xyzs_[count - 1][i + 1][1] * (1 - t),
+                           OCC_SIZE_ZIP[2] + xyzs_[count - 1][i][2] * t + xyzs_[count - 1][i + 1][2] * (1 - t))
+        plt.show()
+
+    if count == len(xyzs_):
+        break
+    continue
     xyzs = []
     scttr_op = []
     scttr_op_val = []

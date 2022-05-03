@@ -32,6 +32,7 @@ void cloud_callback (const sensor_msgs::PointCloud2& cloud_in) {
 
     // Publish cloud
     cloud_out.header = cloud_in.header;
+    cloud_out.header.frame_id = "world";
     pub.publish(cloud_out);
 }
 
@@ -56,7 +57,7 @@ int main(int argc, char** argv) {
     ros::Rate rate(30.0);
     while (nh.ok()){
         try{
-            transformStamped = tfBuffer.lookupTransform("world", "camera_depth_frame",
+            transformStamped = tfBuffer.lookupTransform("world", "camera_depth_optical_frame",
                 ros::Time(0));
         }
         catch (tf2::TransformException ex){

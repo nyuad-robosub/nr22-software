@@ -1,3 +1,8 @@
+# PROGRAMS
+# Run command without any output and does not occupy terminal
+<command> &> /dev/null &
+
+# GIT
 # Add submodule with specific branch & directory
 git submodule add -b <branch> https://github.com/<repo> <path>
 

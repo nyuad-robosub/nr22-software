@@ -2,6 +2,7 @@
 """
 Try to send external position to MAVlink
 Relevant links:
+# EKF related
 https://discuss.bluerobotics.com/t/ardusub-research-development-dvl/6990
 https://github.com/Williangalvani/ardupilot/commit/e1d009555e7cadaf69c1d901e5b5ef5fc4b5c3ca#diff-44fb8d1e593cf689717f7e036207a553ff61b27792d44f8fbc5f97b9ccbc8ae2R1
 https://github.com/thien94/vision_to_mavros/blob/master/scripts/t265_to_mavlink.py
@@ -10,12 +11,21 @@ https://discuss.ardupilot.org/t/vision-position-estimate-not-appearing-in-qgroun
 https://mavlink.io/en/messages/ardupilotmega.html#VISION_POSITION_DELTA
 https://www.ardusub.com/developers/dvl-integration.html
 https://ardupilot.org/copter/docs/common-ekf-sources.html
+https://github.com/ArduPilot/ardupilot/tree/master/libraries/AP_VisualOdom
+
+https://discuss.bluerobotics.com/t/x-y-z-axis-reference-bluerov2/11565
+https://ardupilot.org/copter/docs/common-vio-tracking-camera.html#configure-ardupilot
+https://discuss.ardupilot.org/t/integration-of-ardupilot-and-vio-tracking-camera-part-4-non-ros-bridge-to-mavlink-in-python/44001
+
+# Mix with other yaw sources
+https://discuss.ardupilot.org/t/vio-alignment-in-primary-lane/72308/9
+https://discuss.ardupilot.org/t/external-visual-odometry-and-gps-at-the-same-time/52543
+
+# Home related
 https://github.com/ArduPilot/MAVProxy/blob/master/MAVProxy/modules/mavproxy_map/__init__.py
 https://discuss.bluerobotics.com/t/sending-mavproxy-messages-from-a-python-program/1515/2
 https://ardupilot.org/dev/docs/mavlink-get-set-home-and-origin.html
-https://github.com/ArduPilot/ardupilot/tree/master/libraries/AP_VisualOdom
 https://github.com/mavlink/mavros/issues/1641
-https://discuss.bluerobotics.com/t/x-y-z-axis-reference-bluerov2/11565
 """
 
 

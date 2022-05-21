@@ -157,6 +157,7 @@ include_directories(
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
   scripts/test_pymavlink.py
+  scripts/test_control.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

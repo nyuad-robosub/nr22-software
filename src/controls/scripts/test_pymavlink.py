@@ -86,11 +86,11 @@ def cmd_set_home(lat, lon, alt):
 
 # Send vision delta courtesy of:
 # https://github.com/Williangalvani/ardupilot/commit/e1d009555e7cadaf69c1d901e5b5ef5fc4b5c3ca#diff-44fb8d1e593cf689717f7e036207a553ff61b27792d44f8fbc5f97b9ccbc8ae2R1
-def send_vision(delt_time, position=[0.0, 0.0, 0.0], rotation=[0.0, 0.0, 0.0], confidence=100): # , x, y, z
+def send_vision(sys_time, delt_time, position=[0.0, 0.0, 0.0], rotation=[0.0, 0.0, 0.0], confidence=100): # , x, y, z
     "Sends message VISION_POSITION_DELTA to flight controller"
     print("Sending VPD: ", position)
     master.mav.vision_position_delta_send(
-        0, # time
+        sys_time, # 0, # time (us)
         delt_time,  # delta time (us)
         rotation,  # angle delta
         position, # position delta [x, y, z],
@@ -115,12 +115,14 @@ last_pos = [0.0, 0.0, 0.0]
 last_rot = [0.0, 0.0, 0.0]
 # curr_pos = [0.0, 0.0, 0.0]
 # curr_rot = [0.0, 0.0, 0.0]
+boot_time = datetime.now()
 last_time = datetime.now()
 
 def processTransform(p_trans):
     global last_time, last_rot, last_pos
     curr_time = datetime.now()
     delt_time = (curr_time - last_time).total_seconds() * 1e6
+    sys_time = (curr_time - boot_time).total_seconds() * 1e6
     last_time = curr_time
 
     curr_pos = [p_trans.transform.translation.x.real,
@@ -145,7 +147,7 @@ def processTransform(p_trans):
     delt_rot[1] = -delt_rot[1]
     delt_rot[2] = -delt_rot[2]
 
-    send_vision(delt_time, delt_pos, delt_rot, 100)
+    send_vision(sys_time, delt_time, delt_pos, delt_rot, 100)
     last_pos = curr_pos
     last_rot = curr_rot
 
@@ -176,6 +178,11 @@ def receiver():
             processTransform(trans)
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             continue
+        except Exception, e:
+            # Make sure the connection is valid
+            print("EXCEPTION!", e.message) # master.wait_heartbeat()
+        if rospy.is_shutdown():
+            return
         rate.sleep()
 
     # rospy.Subscriber("chatter", String, callback)

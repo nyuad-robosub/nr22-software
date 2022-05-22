@@ -135,3 +135,9 @@ devel/
 build/
 logs/
 .catkin_tools/
+
+# Pycharm stuff
+.idea/
+
+# VScode stuff
+.vscode/

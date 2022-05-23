@@ -1,5 +1,5 @@
-#Git ignore dependencies
-src/deps/
+# Git ignore dependencies
+# src/deps/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

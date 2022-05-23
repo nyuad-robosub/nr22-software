@@ -9,40 +9,43 @@ The repository is structured as a catkin workspace with only the `/src` director
 
 `git clone https://github.com/nyuad-robosub/nr22-software` (add `-b <branch>` if cloning a specific branch, and add `--single-branch` if only want to fetch single branch)
 
+- Change directory to the new repoL
+
 `cd nr22-software`
 
 - For first time cloning, init all the submodules:
 
 `git submodule update --init --recursive`
 
-- To update submodules to latest version:
+- For later, to update submodules to latest version:
 
 `git submodule update --recursive --remote`
 
 - If there are no pre-existing catkin workspaces (only ROS exists on the system): extend `nr22-software` to ROS Melodic install folder
   - `catkin config --init --extend /opt/ros/melodic`
 
-- If there are already a workspace (such as `~/gz_ws`) the extend above need to be extending to that instead:
-  - `catkin config --init --extend <path-to-last-workspace>`
-  - Example: `catkin config --init --extend ~/gz_ws`
+- If there is already a workspace (such as `~/gz_ws`) the extend above needs to be extending to that instead (note the `/devel` at the end). This is to "chain" all the workspaces, so that the build system can read all packages in all workspaces:
+  - `catkin config --init --extend <path-to-last-workspace/devel>`
+  - Example: `catkin config --init --extend ~/gz_ws/devel`
 
 - Build the packages inside (this command can be run anywhere inside the `nr22-software` folder):
 
 `catkin build` (to build specific packages use `catkin build <package-name>`)
 
-- Source the new workspace after building (this needs to be done everytime a new package is built, and everytime a terminal is opened, for ROS to recognize it):
+- Source the new workspace after building (this needs to be done after a new package is built, everytime a terminal is opened, for ROS to recognize it):
 
 `source devel/setup.bash`
 
 - If you don't want to do that everytime, do this:
-
-`echo 'source <path-to-folder-containing-nr22-software>/nr22-software/devel/setup.bash' > ~/.bashrc` (which will write the source command to `~/.bashrc` and each new terminal will run it)
+  - Go to `/home/<user>/`, Ctrl-H to see hidden files and open .bashrc (all opened terminals run this file initially)
+  - Append `source <path-to-nr22-software>/nr22-software/devel/setup.bash` at the end of the file
+  - This will allow each new terminal opened to recognize the new workspace and use the packages
 
 ## Creating new packages
 
 - References: https://catkin-tools.readthedocs.io/en/latest/verbs/catkin_create.html
 
-- Change directory to `/src`:
+- Change directory to `/src` (this is where all the packages are, can also be put in subfolders):
 
 `cd src`
 

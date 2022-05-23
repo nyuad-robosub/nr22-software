@@ -1,4 +1,4 @@
-#Submodules:
+#Git ignore dependencies
 src/deps/
 
 # Byte-compiled / optimized / DLL files

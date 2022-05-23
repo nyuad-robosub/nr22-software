@@ -5,3 +5,9 @@
 [submodule "src/deps/Pangolin"]
 	path = src/deps/Pangolin
 	url = https://github.com/stevenlovegrove/Pangolin.git
+[submodule "src/ORB_SLAM3"]
+	path = src/ORB_SLAM3
+	url = https://github.com/nyuad-robosub/ORB_SLAM3
+[submodule "src/realsense-ros"]
+	path = src/realsense-ros
+	url = https://github.com/nyuad-robosub/realsense-ros

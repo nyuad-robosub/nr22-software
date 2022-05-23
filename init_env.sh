@@ -129,10 +129,13 @@ cd $p/deps
 # Download and unpack sources
 # Create build directory
 mkdir -p build && cd build
+cmake ..
+make
+sudo make install
 # Configure
-cmake  ..#/opencv-4.x
+#cmake  ..#/opencv-4.x
 # Build
-cmake --build .
+#cmake --build .
 
 # wget "http://bitbucket.org/eigen/eigen/get/3.2.8.tar.gz"
 

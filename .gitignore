@@ -1,6 +1,7 @@
 # Git ignore dependencies
 # src/deps/
-
+eigen*/
+Pangolin*/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

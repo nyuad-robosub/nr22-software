@@ -81,92 +81,71 @@ sudo apt-get update
 sudo apt-get install librealsense2-dkms --allow-unauthenticated -y
 sudo apt-get install librealsense2-dev --allow-unauthenticated -y
 
-#install eigen IS THIS NEEDED?
-#sudo apt install libeigen3-dev
-
-
-cd ./src
+cd ./include
 p=$(pwd)
 
-
 # Get Pangolin
-cd $p/deps/Pangolin 
+wget "https://codeload.github.com/stevenlovegrove/Pangolin/zip/refs/tags/v0.5"
+unzip v0.5
+rm v0.5
+cd $p/Pangolin*
 mkdir build
 cd build
 cmake .. 
 sudo make install
 
-#FOR ORBSLAM WE NEED SOPHUS #include <sophus/se3.hpp> DOESNT WORK
-cd $p/deps/Sophus
+#FOR ORBSLAM WE NEED SOPHUS #include <sophus/se3.hpp>
+cd $p/Sophus
+mkdir build
+cd build
+cmake ..
+sudo make install
+
+#FOR ORBSLAM WE NEED FMT #include <sophus/se3.hpp>
+cd $p/fmt
 mkdir build
 cd build
 cmake ..
 sudo make install
 
 #GET EIGEN 3.2.10 VERSION FOR NO CONFLICTS
-# cd $p/deps
 # wget "https://gitlab.com/libeigen/eigen/-/archive/3.2.10/eigen-3.2.10.tar.bz2"
-# tar -xf eigen-3.2.10.tar.bz2
-# cd $p/deps/eigen-3.2.10
-# mkdir build
-# cd build
-# cmake ..
-# make
-# sudo make install
-cd $p/deps
-wget "https://gitlab.com/libeigen/eigen/-/archive/3.3.9/eigen-3.3.9.tar.bz2"
-tar -xf eigen-3.3.9.tar.bz2
-cd $p/deps/eigen-3.2.10
+cd $p
+#wget "https://gitlab.com/libeigen/eigen/-/archive/3.3.9/eigen-3.3.9.tar.bz2"
+#tar -xf eigen-3.3.9.tar.bz2
+#rm eigen-3.3.9.tar.bz2
+
+wget "https://gitlab.com/libeigen/eigen/-/archive/3.3.0/eigen-3.3.0.tar.bz2"
+tar -xf eigen-3.3.0.tar.bz2
+rm eigen-3.3.0.tar.bz2
+cd $p/eigen*
 mkdir build
 cd build
 cmake ..
-make
+#make
 sudo make install
 
 
 #install opencv 4.4 
-cd $p/deps
+cd $p/opencv
 # Download and unpack sources
 # Create build directory
 mkdir -p build && cd build
 cmake ..
 make
 sudo make install
-# Configure
-#cmake  ..#/opencv-4.x
-# Build
-#cmake --build .
-
-# wget "http://bitbucket.org/eigen/eigen/get/3.2.8.tar.gz"
-
-# tar zxvf 3.2.8.tar.gz
-
-# cd eigen*
-
-# /eigen-eigen-07105f7124f9$ mkdir build
-
-# /eigen-eigen-07105f7124f9$ cd build
-
-# /eigen-eigen-07105f7124f9/build$ cmake .. 
-
-# /eigen-eigen-07105f7124f9/build$ make
-
-# /eigen-eigen-07105f7124f9/build$ sudo make install
-
 
 cd $p
-catkin config --extend /opt/ros/melodic
-catkin build || true #will not build realsense2_camera 
-
-cd $p 
 cd ..
-p=${pwd}
+p=$(pwd)
+catkin config --extend /opt/ros/melodic
+catkin build || true 
+
 source $p/devel/setup.sh
 
 #create orbslam3 ros package separately
-
-#cd $p/include/ORB_SLAM3/
-bash $p/include/ORB_SLAM3/build_ros.sh
+#bash $p/include/ORB_SLAM3/build_ros.sh
+bahs $p/include/ORB_SLAM2/build_ros.sh
 #source /opt/ros/melodic/setup.bash
 #export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$WORKDIR/ORB_SLAM3/Examples/ROS/ PUT THIS IN BASH RC OR SOURCE DEVEL?
 

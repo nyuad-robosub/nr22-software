@@ -17,3 +17,6 @@
 [submodule "src/deps/realsense-ros"]
 	path = src/deps/realsense-ros
 	url = https://github.com/nyuad-robosub/realsense-ros
+[submodule "include/fmt"]
+	path = include/fmt
+	url = https://github.com/fmtlib/fmt

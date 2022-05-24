@@ -2,9 +2,6 @@
 	path = src/deps/perception_pcl
 	url = https://github.com/ros-perception/perception_pcl
 	branch = melodic-devel
-[submodule "include/Pangolin"]
-	path = include/Pangolin
-	url = https://github.com/stevenlovegrove/Pangolin.git
 [submodule "include/ORB_SLAM3"]
 	path = include/ORB_SLAM3
 	url = https://github.com/nyuad-robosub/ORB_SLAM3
@@ -20,3 +17,6 @@
 [submodule "include/fmt"]
 	path = include/fmt
 	url = https://github.com/fmtlib/fmt
+[submodule "include/ORB_SLAM2"]
+	path = include/ORB_SLAM2
+	url = https://github.com/nyuad-robosub/ORB_SLAM2

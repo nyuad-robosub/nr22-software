@@ -5,9 +5,6 @@
 [submodule "include/ORB_SLAM3"]
 	path = include/ORB_SLAM3
 	url = https://github.com/nyuad-robosub/ORB_SLAM3
-[submodule "include/opencv"]
-	path = include/opencv
-	url = https://github.com/opencv/opencv.git
 [submodule "include/Sophus"]
 	path = include/Sophus
 	url = https://github.com/strasdat/Sophus
@@ -20,3 +17,9 @@
 [submodule "include/ORB_SLAM2"]
 	path = include/ORB_SLAM2
 	url = https://github.com/nyuad-robosub/ORB_SLAM2
+[submodule "src/orb_slam_2_ros"]
+	path = src/orb_slam_2_ros
+	url = https://github.com/appliedAI-Initiative/orb_slam_2_ros
+[submodule "include/Pangolin"]
+	path = include/Pangolin
+	url = https://github.com/stevenlovegrove/Pangolin.git

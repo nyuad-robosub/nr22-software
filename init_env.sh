@@ -71,8 +71,6 @@ git submodule update --init --recursive
 
 #install orbslam3 dependencies
 sudo apt install libgl1-mesa-dev libglew-dev cmake python3.6 libpython3.6-dev pkg-config libegl1-mesa-dev libwayland-dev libxkbcommon-dev wayland-protocols ffmpeg libavcodec-dev libavutil-dev libavformat-dev libswscale-dev libavdevice-dev libjpeg-dev libtiff5-dev libopenexr-dev python3-pip g++ git gcc
-sudo apt install libssl-dev libopencv-dev libboost-filesystem-dev libboost-serialization-dev
-sudo apt install python3-opencv
 
 # Install realsense2 packages
 sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-key C8B3A55A6F3EFCDE
@@ -80,14 +78,15 @@ sudo add-apt-repository "deb https://librealsense.intel.com/Debian/apt-repo $(ls
 sudo apt-get update
 sudo apt-get install librealsense2-dkms --allow-unauthenticated -y
 sudo apt-get install librealsense2-dev --allow-unauthenticated -y
+sudo apt install ros-melodic-rgbd-launch
 
 cd ./include
 p=$(pwd)
 
-# Get Pangolin
-wget "https://codeload.github.com/stevenlovegrove/Pangolin/zip/refs/tags/v0.5"
-unzip v0.5
-rm v0.5
+# # Get Pangolin
+# wget "https://codeload.github.com/stevenlovegrove/Pangolin/zip/refs/tags/v0.5"
+# unzip v0.5
+# rm v0.5
 cd $p/Pangolin*
 mkdir build
 cd build
@@ -115,9 +114,11 @@ cd $p
 #tar -xf eigen-3.3.9.tar.bz2
 #rm eigen-3.3.9.tar.bz2
 
-wget "https://gitlab.com/libeigen/eigen/-/archive/3.3.0/eigen-3.3.0.tar.bz2"
-tar -xf eigen-3.3.0.tar.bz2
-rm eigen-3.3.0.tar.bz2
+#wget "https://gitlab.com/libeigen/eigen/-/archive/3.3.0/eigen-3.3.0.tar.bz2"
+#tar -xf eigen-3.3.0.tar.bz2
+wget "https://gitlab.com/libeigen/eigen/-/archive/3.2.10/eigen-3.2.10.tar.bz2"
+tar -xf eigen-3.2.10.tar.bz2
+rm eigen-3.2.10.tar.bz2
 cd $p/eigen*
 mkdir build
 cd build
@@ -126,14 +127,14 @@ cmake ..
 sudo make install
 
 
-#install opencv 4.4 
-cd $p/opencv
-# Download and unpack sources
-# Create build directory
-mkdir -p build && cd build
-cmake ..
-make
-sudo make install
+# #install opencv 4.4 DOWNGRADE
+# cd $p/opencv
+# # Download and unpack sources
+# # Create build directory
+# mkdir -p build && cd build
+# cmake ..
+# make
+# sudo make install
 
 cd $p
 cd ..
@@ -146,7 +147,9 @@ source $p/devel/setup.sh
 #create orbslam3 ros package separately
 #bash $p/include/ORB_SLAM3/build_ros.sh
 bahs $p/include/ORB_SLAM2/build_ros.sh
-#source /opt/ros/melodic/setup.bash
-#export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$WORKDIR/ORB_SLAM3/Examples/ROS/ PUT THIS IN BASH RC OR SOURCE DEVEL?
 
+#source /opt/ros/melodic/setup.bash
+#export ROS_PACKAGE_PATH=${ROS_PACKAGE_PATH}:~/nr22-software/include/ORB_SLAM2/Examples/ROS/ORB_SLAM2
+#roslaunch realsense2_camera rs_rgbd.launch initial_reset:=true
+#rosrun ORB_SLAM2 RGBD /home/rami/nr22-software/include/ORB_SLAM2/Vocabulary/ORBvoc.txt /home/rami/nr22-software/include/ORB_SLAM2/Examples/ROS/ORB_SLAM2/Asus.yaml
 

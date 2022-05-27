@@ -33,37 +33,12 @@ https://github.com/mavlink/mavros/issues/1641
 #   Mavlink area
 # ---------------------------------------------
 
-MAV_ADDR = 'udpin:0.0.0.0:14551' # 'udpin:127.0.0.1:14551'
-
 import time
 # Import mavutil
 from pymavlink import mavutil
 
-# Disable "Bare exception" warning
-# pylint: disable=W0702
-
-# Create the connection
-#  If using a companion computer
-#  the default connection is available
-#  at ip 192.168.2.1 and the port 14550
-# Note: The connection is done with 'udpin' and not 'udpout'.
-#  You can check in http:192.168.2.2:2770/mavproxy that the communication made for 14550
-#  uses a 'udpbcast' (client) and not 'udpin' (server).
-#  If you want to use QGroundControl in parallel with your python script,
-#  it's possible to add a new output port in http:192.168.2.2:2770/mavproxy as a new line.
-#  E.g: --out udpbcast:192.168.2.255:yourport
-master = mavutil.mavlink_connection(MAV_ADDR, dialect='ardupilotmega')
-
-# Make sure the connection is valid
-master.wait_heartbeat()
-
-# GPS origin ( This is the faculty pool)
-lat_global = 24.52433290904017
-long_global = 54.43519869059818
-alt_global = 0
-
 # Try to set home
-def cmd_set_home(lat, lon, alt):
+def cmd_set_home(master, lat, lon, alt):
     '''called when user selects "Set Home (with height)" on map'''
     print("Setting home to: ", lat, lon, alt)
     print(master.mav.set_gps_global_origin_send(
@@ -88,7 +63,7 @@ def cmd_set_home(lat, lon, alt):
 
 # Send vision delta courtesy of:
 # https://github.com/Williangalvani/ardupilot/commit/e1d009555e7cadaf69c1d901e5b5ef5fc4b5c3ca#diff-44fb8d1e593cf689717f7e036207a553ff61b27792d44f8fbc5f97b9ccbc8ae2R1
-def send_vision(sys_time, delt_time, position=[0.0, 0.0, 0.0], rotation=[0.0, 0.0, 0.0], confidence=100): # , x, y, z
+def send_vision(master, sys_time, delt_time, position=[0.0, 0.0, 0.0], rotation=[0.0, 0.0, 0.0], confidence=100): # , x, y, z
     "Sends message VISION_POSITION_DELTA to flight controller"
     print("Sending VPD: ", position)
     master.mav.vision_position_delta_send(
@@ -110,17 +85,15 @@ import geometry_msgs.msg
 from transforms3d import euler, quaternions
 from datetime import datetime
 
-WORLD_FRAME = 'world'
-ROV_FRAME = 'bluerov2/base_link'
-
 last_pos = [0.0, 0.0, 0.0]
 last_rot = [0.0, 0.0, 0.0]
-# curr_pos = [0.0, 0.0, 0.0]
-# curr_rot = [0.0, 0.0, 0.0]
 boot_time = datetime.now()
 last_time = datetime.now()
 
-def processTransform(p_trans):
+def processTransform(master, p_trans):
+    """ Receive data and send to MAVLink
+    :param master: FCU to send to
+    """
     global last_time, last_rot, last_pos
     curr_time = datetime.now()
     delt_time = (curr_time - last_time).total_seconds() * 1e6
@@ -150,26 +123,22 @@ def processTransform(p_trans):
     delt_rot[2] = -delt_rot[2]
     delt_rot[2] = delt_rot[2] % (math.pi * 2)
 
-    send_vision(sys_time, delt_time, delt_pos, delt_rot, 100)
+    send_vision(master, sys_time, delt_time, delt_pos, delt_rot, 100)
     last_pos = curr_pos
     last_rot = curr_rot
 
-
-    # print("Got position: ", p_trans.transform.translation,
-    #       ", rotation: ", euler.quat2euler([
-    #             p_trans.transform.rotation.x.real,
-    #             p_trans.transform.rotation.y.real,
-    #             p_trans.transform.rotation.z.real,
-    #             p_trans.transform.rotation.w.real
-    #         ]))
-
 def receiver():
-    # In ROS, nodes are uniquely named. If two nodes with the same
-    # name are launched, the previous one is kicked off. The
-    # anonymous=True flag means that rospy will choose a unique
-    # name for our 'listener' node so that multiple listeners can
-    # run simultaneously.
-    rospy.init_node('test_frame_listener', anonymous=True)
+    # Create the connection
+    master = mavutil.mavlink_connection(rospy.get_param('~mav_addr'), dialect='ardupilotmega')
+    # Make sure the connection is valid
+    master.wait_heartbeat()
+
+    # Check if need to set home
+    if (rospy.get_param('~set_home')):
+        cmd_set_home(master, rospy.get_param('~home_lat') * 1e7, rospy.get_param('~home_long') * 1e7, rospy.get_param('~home_alt'))
+
+    WORLD_FRAME = rospy.get_param("~world_frame")
+    ROV_FRAME = rospy.get_param("~rov_frame")
 
     tfBuffer = tf2_ros.Buffer()
     listener = tf2_ros.TransformListener(tfBuffer)
@@ -180,7 +149,7 @@ def receiver():
     while not rospy.is_shutdown():
         try:
             trans = tfBuffer.lookup_transform(WORLD_FRAME, ROV_FRAME, rospy.Time(), rospy.Duration(4))
-            processTransform(trans)
+            processTransform(master, trans)
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             continue
         except Exception, e:
@@ -189,7 +158,7 @@ def receiver():
             # while timeout_count != 10:
             #     print("In exception block")
             #     # Try to reconnect
-            #     master = mavutil.mavlink_connection(MAV_ADDR, dialect='ardupilotmega')
+            #     master = mavutil.mavlink_connection(rospy.get_param('~mav_addr'), dialect='ardupilotmega')
             #     connection_regained = False
             #     try:
             #         trans = tfBuffer.lookup_transform(WORLD_FRAME, ROV_FRAME, rospy.Time(), rospy.Duration(4))
@@ -217,52 +186,12 @@ def receiver():
     # rospy.spin()
 
 if __name__== '__main__':
-    cmd_set_home(lat_global * 1e7, long_global * 1e7, 1)
+    # In ROS, nodes are uniquely named. If two nodes with the same
+    # name are launched, the previous one is kicked off. The
+    # anonymous=True flag means that rospy will choose a unique
+    # name for our 'listener' node so that multiple listeners can
+    # run simultaneously.
+    rospy.init_node('send_viso_tf2', anonymous=True)
+
+    # Run receiver
     receiver()
-
-# ---------------------------------------------
-#   Code bank area
-# ---------------------------------------------
-
-# Get some information !
-# while True:
-#     # try:
-#     #     print(master.recv_match().to_dict())
-#     # except:
-#     #     pass
-#     # Make sure the connection is valid
-#     master.wait_heartbeat()
-#     send_vision(0.1, 0.1, 0.1)
-#     print("sent")
-#     time.sleep(0.05)
-
-
-    # x = 0
-    # y = 0
-    # z = 0
-    # q = [1, 0, 0, 0]  # w x y z
-    #
-    # approach_x = 0
-    # approach_y = 0
-    # approach_z = 1
-    #
-    # print(master.mav.set_home_position_send(
-    #     1,
-    #     lat,
-    #     lon,
-    #     alt,
-    #     x,
-    #     y,
-    #     z,
-    #     q,
-    #     approach_x,
-    #     approach_y,
-    #     approach_z
-    # ))
-
-# Set GPS origin ( This is the faculty pool)
-# cmd_set_home(lat_global * 1e7, long_global * 1e7,1)
-
-
-
-

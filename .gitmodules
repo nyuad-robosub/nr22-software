@@ -23,3 +23,6 @@
 [submodule "include/Pangolin"]
 	path = include/Pangolin
 	url = https://github.com/stevenlovegrove/Pangolin.git
+[submodule "include/depthai-core"]
+	path = include/depthai-core
+	url = https://github.com/luxonis/depthai-core

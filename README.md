@@ -41,6 +41,27 @@ The repository is structured as a catkin workspace with only the `/src` director
   - Append `source <path-to-nr22-software>/nr22-software/devel/setup.bash` at the end of the file
   - This will allow each new terminal opened to recognize the new workspace and use the packages
 
+## Installing(Alternative)
+
+- Change directory to the new repo:
+
+`cd nr22-software`
+
+- Then run the bash script:
+
+`sudo bash ./init_env.sh`
+
+## Installing ORB_SLAM2 and OAKD ros launch files
+
+- To setup ORB_SLAM2:
+ - Go to `.bashrc` 
+ - Append `export ROS_PACKAGE_PATH=${ROS_PACKAGE_PATH}:~/nr22-software/include/ORB_SLAM2/Examples/ROS/ORB_SLAM2`
+
+## Running ORB-SLAM2 and OAK-D pipeline scripts:
+
+- Type `rosrun ORB_SLAM2 STEREO_OAKD {PATH TO VOCABULARY FILE} {PATH TO CAMERA YAML CONFIGURAITON FILE}`
+  - For example: `rosrun ORB_SLAM2 STEREO_OAKD /home/rami/nr22-software/include/ORB_SLAM2/Vocabulary/ORBvoc.txt /home/rami/nr22-software/include/ORB_SLAM2/Examples/ROS/ORB_SLAM2/OAKD.yaml`
+
 ## Creating new packages
 
 - References: https://catkin-tools.readthedocs.io/en/latest/verbs/catkin_create.html

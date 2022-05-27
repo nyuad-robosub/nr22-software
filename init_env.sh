@@ -70,8 +70,8 @@ echo "Building ROS nodes"
 git submodule update --init --recursive
 
 #install orbslam3 dependencies
-sudo apt install libgl1-mesa-dev libglew-dev cmake python3.6 libpython3.6-dev pkg-config libegl1-mesa-dev libwayland-dev libxkbcommon-dev wayland-protocols ffmpeg libavcodec-dev libavutil-dev libavformat-dev libswscale-dev libavdevice-dev libjpeg-dev libtiff5-dev libopenexr-dev python3-pip g++ git gcc
-
+sudo apt install libgl1-mesa-dev libglew-dev cmake python3.6 libpython3.6-dev pkg-config libegl1-mesa-dev libwayland-dev libxkbcommon-dev wayland-protocols ffmpeg libavcodec-dev libavutil-dev libavformat-dev libswscale-dev libavdevice-dev libjpeg-dev libtiff5-dev libopenexr-dev python3-pip g++ git gcc ros-melodic-tf2-geometry-msgs
+sudo apt install libusb-1.0-0-dev
 # Install realsense2 packages
 sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-key C8B3A55A6F3EFCDE
 sudo add-apt-repository "deb https://librealsense.intel.com/Debian/apt-repo $(lsb_release -cs) main"
@@ -135,6 +135,25 @@ sudo make install
 # cmake ..
 # make
 # sudo make install
+# Download and unpack sources
+# cd $p/opencv
+# wget -O opencv.zip https://github.com/opencv/opencv/archive/4.x.zip
+# unzip opencv.zip
+# rm opencv.zip
+# cd opencv-4.x
+# # Create build directory
+# mkdir -p build && cd build
+# # Configure
+# cmake  ..
+# # Build
+# #cmake --build .
+# sudo make install
+
+#install depthai
+cd $p/depthai-core
+cmake -H. -Bbuild 
+cd $p/depthai-core/build
+sudo make install
 
 cd $p
 cd ..

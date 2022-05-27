@@ -160,6 +160,7 @@ catkin_install_python(PROGRAMS
   scripts/test_control.py
   scripts/send_viso_tf2.py
   scripts/send_viso_pose.py
+  scripts/mavlink_publisher.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

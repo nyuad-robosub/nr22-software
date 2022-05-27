@@ -1,7 +1,7 @@
 <launch>
 	<!-- base params -->
 	<arg name="mav_addr" default="udpin:0.0.0.0:14551" />
-	<arg name="pose_topic" default="ORB_SLAM2POSE" />
+	<arg name="pose_topic" default="ORBSLAM2_POSE" />
 
 	<!-- optional set home -->
 	<arg name="set_home" default="true" />

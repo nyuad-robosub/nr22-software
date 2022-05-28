@@ -1,0 +1,46 @@
+<?xml version="1.0" ?>
+<sdf version="1.5">
+<!-- SDF file for the pool courtesy of:
+https://uuvsimulator.github.io/packages/uuv_simulator/docs/tutorials/seabed_world/
+https://uuvsimulator.github.io/packages/uuv_simulator
+https://classic.gazebosim.org/tutorials?tut=import_mesh
+https://classic.gazebosim.org/tutorials?tut=guided_i2&cat=
+https://answers.gazebosim.org//question/19654/my-model-is-not-showing-in-gazebo/
+-->
+<model name="pool_v2">
+  <static>true</static>
+  <link name="pool_link">
+
+  <!--visual name="surface">
+    <cast_shadows>false</cast_shadows>
+    <pose>0 0 0 0 0 0</pose>
+    <geometry>
+      <box>
+        <size>55 40 .1</size>
+      </box>
+    </geometry>
+    <material>
+      <script>
+        <uri>file://Media/materials/scripts/water.material</uri>
+        <name>UUVSimulator/StaticWater</name>
+      </script>
+    </material>
+  </visual-->
+
+  <visual name="pool_v2">
+    <pose>0 0 -3.9 0 0 0</pose>
+    <geometry>
+      <mesh><uri>model://pool_v2/meshes/pool_v2.obj</uri><scale>1 1 1</scale></mesh>
+    </geometry>
+  </visual>
+
+  <collision name="pool_v2">
+    <pose>0 0 -3.9 0 0 0</pose>
+    <geometry>
+      <mesh><uri>model://pool_v2/meshes/pool_v2.stl</uri><scale>1 1 1</scale></mesh>
+    </geometry>
+  </collision>
+
+  </link>
+</model>
+</sdf>

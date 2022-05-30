@@ -23,3 +23,6 @@
 [submodule "include/depthai-core"]
 	path = include/depthai-core
 	url = https://github.com/luxonis/depthai-core
+[submodule "include/ORB_SLAM2"]
+	path = include/ORB_SLAM2
+	url = https://github.com/Windfisch/ORB_SLAM2

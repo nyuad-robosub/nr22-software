@@ -14,9 +14,6 @@
 [submodule "include/fmt"]
 	path = include/fmt
 	url = https://github.com/fmtlib/fmt
-[submodule "include/ORB_SLAM2"]
-	path = include/ORB_SLAM2
-	url = https://github.com/nyuad-robosub/ORB_SLAM2
 [submodule "src/orb_slam_2_ros"]
 	path = src/orb_slam_2_ros
 	url = https://github.com/appliedAI-Initiative/orb_slam_2_ros

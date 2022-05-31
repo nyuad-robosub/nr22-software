@@ -45,7 +45,7 @@
     </include -->
     <light type="directional" name="sun_diffuse_1">
       <pose>-200 -200 100 0 0 0</pose>
-      <diffuse>0.06 0.06 0.06 1</diffuse>
+      <diffuse>0.12 0.12 0.12 1</diffuse>
       <specular>0 0 0 1</specular>
       <direction>-0.3 -0.3 -1</direction>
       <cast_shadows>true</cast_shadows>
@@ -53,7 +53,7 @@
 
     <light type="directional" name="sun_diffuse_2">
       <pose>-100 50 200 0 0 0</pose>
-      <diffuse>0.06 0.06 0.06 1</diffuse>
+      <diffuse>0.12 0.12 0.12 1</diffuse>
       <specular>0 0 0 1</specular>
       <direction>-0.3 -0.3 -1</direction>
       <cast_shadows>true</cast_shadows>
@@ -61,7 +61,7 @@
 
     <light type="directional" name="sun_diffuse_3">
       <pose>-150 -130 50 0 0 0</pose>
-      <diffuse>0.06 0.06 0.06 1</diffuse>
+      <diffuse>0.12 0.12 0.12 1</diffuse>
       <specular>0.2 0.2 0.2 1</specular>
       <direction>0.5 0.5 -1</direction>
       <cast_shadows>true</cast_shadows>

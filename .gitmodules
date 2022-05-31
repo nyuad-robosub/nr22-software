@@ -23,7 +23,3 @@
 [submodule "include/ORB_SLAM2_OPENCV4"]
 	path = include/ORB_SLAM2_OPENCV4
 	url = https://github.com/dolf321/ORB_SLAM2_OPENCV4
-[submodule "include/ORB_SLAM3"]
-	path = include/ORB_SLAM3
-	url = https://github.com/duncanrhamill/ORB_SLAM3
-	branch = main

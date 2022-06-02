@@ -11,9 +11,6 @@
 [submodule "include/fmt"]
 	path = include/fmt
 	url = https://github.com/fmtlib/fmt
-[submodule "src/orb_slam_2_ros"]
-	path = src/orb_slam_2_ros
-	url = https://github.com/appliedAI-Initiative/orb_slam_2_ros
 [submodule "include/Pangolin"]
 	path = include/Pangolin
 	url = https://github.com/stevenlovegrove/Pangolin.git
@@ -26,3 +23,7 @@
 [submodule "include/ORB_SLAM3_OPENCV4"]
 	path = include/ORB_SLAM3_OPENCV4
 	url = https://github.com/nyuad-robosub/ORB_SLAM3_OPENCV4
+[submodule "src/deps/depthai-ros"]
+	path = src/deps/depthai-ros
+	url = https://github.com/nyuad-robosub/depthai-ros
+	branch = ros-release

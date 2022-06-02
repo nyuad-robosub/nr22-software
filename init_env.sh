@@ -70,6 +70,7 @@ echo "Building ROS nodes"
 git submodule update --init --recursive
 
 #install orbslam3 dependencies
+sudo apt install libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev
 sudo apt install libgl1-mesa-dev libglew-dev cmake python3.6 libpython3.6-dev pkg-config libegl1-mesa-dev libwayland-dev libxkbcommon-dev wayland-protocols ffmpeg libavcodec-dev libavutil-dev libavformat-dev libswscale-dev libavdevice-dev libjpeg-dev libtiff5-dev libopenexr-dev python3-pip g++ git gcc ros-melodic-tf2-geometry-msgs
 sudo apt install libusb-1.0-0-dev
 # Install realsense2 packages
@@ -78,7 +79,9 @@ sudo add-apt-repository "deb https://librealsense.intel.com/Debian/apt-repo $(ls
 sudo apt-get update
 sudo apt-get install librealsense2-dkms --allow-unauthenticated -y
 sudo apt-get install librealsense2-dev --allow-unauthenticated -y
+sudo apt-get install librealsense2-utils --allow-unauthenticated -y
 sudo apt install ros-melodic-rgbd-launch
+sudo apt-get install ros-melodic-vision-msgs
 
 cd ./include
 p=$(pwd)
@@ -87,7 +90,9 @@ p=$(pwd)
 # wget "https://codeload.github.com/stevenlovegrove/Pangolin/zip/refs/tags/v0.5"
 # unzip v0.5
 # rm v0.5
+sudo apt-get install -y libglew-dev libboost-dev libboost-thread-dev libboost-filesystem-dev ffmpeg libavutil-dev libpng-dev
 cd $p/Pangolin*
+./scripts/install_prerequisites.sh --dry-run recommended
 mkdir build
 cd build
 cmake .. 
@@ -137,23 +142,23 @@ sudo make install
 # sudo make install
 # Download and unpack sources
 # cd $p/opencv
-# wget -O opencv.zip https://github.com/opencv/opencv/archive/4.x.zip
+# wget -O opencv.zip https://github.com/opencv/opencv/archive/refs/tags/4.4.0.tar.gz
 # unzip opencv.zip
 # rm opencv.zip
-# cd opencv-4.x
+# cd opencv-4.4.0
 # # Create build directory
 # mkdir -p build && cd build
 # # Configure
 # cmake  ..
 # # Build
 # #cmake --build .
-# sudo make install
 
 #install depthai
 cd $p/depthai-core
 cmake -H. -Bbuild 
-cd $p/depthai-core/build
-sudo make install
+cmake --build build
+#cd $p/depthai-core/build
+#sudo make install
 
 cd $p
 cd ..
@@ -165,8 +170,12 @@ source $p/devel/setup.sh
 
 #create orbslam3 ros package separately
 #bash $p/include/ORB_SLAM3/build_ros.sh
-bahs $p/include/ORB_SLAM2/build_ros.sh
+#bash $p/include/ORB_SLAM2/build_ros.sh
+bash $p/include/ORB_SLAM3_OPENCV4/build.sh
 
+#you need to export in bash
+echo 'export ROS_PACKAGE_PATH=${ROS_PACKAGE_PATH}:~/nr22-software/include/ORB_SLAM3_OPENCV4/Examples/ROS/ORB_SLAM3' >> ~/.bashrc 
+bash $p/include/ORB_SLAM3_OPENCV4/build_ros.sh
 #source /opt/ros/melodic/setup.bash
 #export ROS_PACKAGE_PATH=${ROS_PACKAGE_PATH}:~/nr22-software/include/ORB_SLAM2/Examples/ROS/ORB_SLAM2
 #roslaunch realsense2_camera rs_rgbd.launch initial_reset:=true

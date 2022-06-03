@@ -82,6 +82,7 @@ sudo apt-get install librealsense2-dev --allow-unauthenticated -y
 sudo apt-get install librealsense2-utils --allow-unauthenticated -y
 sudo apt install ros-melodic-rgbd-launch
 sudo apt-get install ros-melodic-vision-msgs
+sudo apt-get install bzip2
 
 cd ./include
 p=$(pwd)

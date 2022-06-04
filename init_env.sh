@@ -80,9 +80,14 @@ sudo apt-get update
 sudo apt-get install librealsense2-dkms --allow-unauthenticated -y
 sudo apt-get install librealsense2-dev --allow-unauthenticated -y
 sudo apt-get install librealsense2-utils --allow-unauthenticated -y
+sudo apt-get install ros-melodic-ddynamic-reconfigure
 sudo apt install ros-melodic-rgbd-launch
 sudo apt-get install ros-melodic-vision-msgs
-sudo apt-get install bzip2
+sudo apt-get install ros-melodic-camera-info-manager
+sudo apt-get install ros-melodic-pcl-ros
+sudo apt-get install ros-melodic-image-transport
+sudo apt-get install ros-melodic-tf2-sensor-msgs
+sudo apt-get install libbz2-dev
 
 cd ./include
 p=$(pwd)

@@ -23,4 +23,9 @@
 		<param name="home_long" value="$(arg home_long)" />
 		<param name="home_alt" value="$(arg home_alt)" />
 	</node>
+
+	<!-- Static broadcasters for IMU <-> camera transforms courtesy of:
+	 	 http://wiki.ros.org/tf2/Tutorials/Writing%20a%20tf2%20static%20broadcaster%20%28C%2B%2B%29
+	 	  https://www.andre-gaschler.com/rotationconverter/ -->
+	<node pkg="tf2_ros" type="static_transform_publisher" name="cam_imu_broadcaster" args="0.2 0 0 0.5 0.5 0.5 0.5 base_link pcl_link" />
 </launch>

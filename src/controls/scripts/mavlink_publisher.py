@@ -58,7 +58,7 @@ if __name__== '__main__':
     # Make sure the connection is valid
     master.wait_heartbeat()
 
-    # Set message interval (listening to LOCAL_POSITION_NED (#32) and ATTITUDE (#30))
+    # Set message interval (listening to LOCAL_POSITION_NED (#32) and ATTITUDE_QUATERNION (#31))
     set_msg_interval(master, 10000, 32)
     set_msg_interval(master, 10000, 31)
 
@@ -81,6 +81,13 @@ if __name__== '__main__':
     dataCount = [0, 0]
     while not rospy.is_shutdown():
         fcu_msg = master.recv_match(blocking=True)
+        # Check if has not received data in a while
+        if master.time_since('ATTITUDE_QUATERNION') >= 1:
+            publishable[0] = False
+            print("WARN: Not received ATTITUDE_QUATERNION for a while")
+        if master.time_since('LOCAL_POSITION_NED') >= 1:
+            publishable[1] = False
+            print("WARN: Not received LOCAL_POSITION_NED for a while")
         if fcu_msg is None:
             pass
         elif fcu_msg.get_type() != 'BAD_DATA':
@@ -90,14 +97,16 @@ if __name__== '__main__':
                     last_rot = [msg_dict['q1'], msg_dict['q2'], msg_dict['q3'], msg_dict['q4']]
                     if not publishable[0]:
                         dataCount[0] += 1
-                        if dataCount[0] == 10:
+                        if dataCount[0] == 2:
+                            dataCount[0] = 0
                             publishable[0] = True
 
                 if fcu_msg.get_type() == 'LOCAL_POSITION_NED':
                     last_pos = [msg_dict['x'], msg_dict['y'], msg_dict['z']]
                     if not publishable[1]:
                         dataCount[1] += 1
-                        if dataCount[1] == 10:
+                        if dataCount[1] == 2:
+                            dataCount[1] = 0
                             publishable[1] = True
 
                 if publishable[0] and publishable[1]:

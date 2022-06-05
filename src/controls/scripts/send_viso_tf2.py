@@ -35,6 +35,7 @@ https://github.com/mavlink/mavros/issues/1641
 
 import time
 # Import mavutil
+import pymavlink.quaternion
 from pymavlink import mavutil
 
 # Try to set home
@@ -65,7 +66,7 @@ def cmd_set_home(master, lat, lon, alt):
 # https://github.com/Williangalvani/ardupilot/commit/e1d009555e7cadaf69c1d901e5b5ef5fc4b5c3ca#diff-44fb8d1e593cf689717f7e036207a553ff61b27792d44f8fbc5f97b9ccbc8ae2R1
 def send_vision(master, sys_time, delt_time, position=[0.0, 0.0, 0.0], rotation=[0.0, 0.0, 0.0], confidence=100): # , x, y, z
     "Sends message VISION_POSITION_DELTA to flight controller"
-    print("Sending VPD: ", position)
+    print("Sending VPD: ", position, rotation)
     master.mav.vision_position_delta_send(
         sys_time, # 0, # time (us)
         delt_time,  # delta time (us)
@@ -87,6 +88,7 @@ from datetime import datetime
 
 last_pos = [0.0, 0.0, 0.0]
 last_rot = [0.0, 0.0, 0.0]
+# last_rot = pymavlink.quaternion.QuaternionBase()
 boot_time = datetime.now()
 last_time = datetime.now()
 
@@ -105,23 +107,34 @@ def processTransform(master, p_trans):
                 p_trans.transform.translation.z.real]
 
     ai, aj, ak = euler.quat2euler([
+                p_trans.transform.rotation.w.real,
                 p_trans.transform.rotation.x.real,
                 p_trans.transform.rotation.y.real,
-                p_trans.transform.rotation.z.real,
-                p_trans.transform.rotation.w.real
+                p_trans.transform.rotation.z.real
                ])
 
     curr_rot = [ai, aj, ak]
+    # curr_rot = p_trans.transform.rotation
 
     delt_pos = list(map(float.__sub__, curr_pos, last_pos))
     delt_rot = list(map(float.__sub__, curr_rot, last_rot))
+    # delt_rot = [0.0, 0.0, 0.0]
+    # delt_rot[0], delt_rot[1], delt_rot[2] = euler.quat2euler(
+    #     [curr_rot.x.real - last_rot.x.real,
+    #      curr_rot.y.real - last_rot.y.real,
+    #      curr_rot.z.real - last_rot.z.real,
+    #      curr_rot.w.real - last_rot.w.real])
 
     # Change to NED framey
     delt_pos[1] = -delt_pos[1]
     delt_pos[2] = -delt_pos[2]
     delt_rot[1] = -delt_rot[1]
     delt_rot[2] = -delt_rot[2]
-    delt_rot[2] = delt_rot[2] % (math.pi * 2)
+    if delt_rot[2] > math.pi:
+        delt_rot[2] -= 2 * math.pi
+    elif delt_rot[2] < -math.pi:
+        delt_rot[2] += 2 * math.pi
+    # delt_rot[2] = delt_rot[2] % (math.pi * 2)
 
     send_vision(master, sys_time, delt_time, delt_pos, delt_rot, 100)
     last_pos = curr_pos
@@ -152,9 +165,14 @@ def receiver():
             processTransform(master, trans)
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             continue
-        except Exception, e:
+        except AttributeError:
             # Make sure the connection is valid
-            print("EXCEPTION!", e.message) # master.wait_heartbeat()
+            print("Fail to connect to MAVLink") # master.wait_heartbeat()
+            print("Retrying...")
+            # Create the connection
+            master = mavutil.mavlink_connection(rospy.get_param('~mav_addr'), dialect='ardupilotmega')
+            # Make sure the connection is valid
+            master.wait_heartbeat()
             # while timeout_count != 10:
             #     print("In exception block")
             #     # Try to reconnect

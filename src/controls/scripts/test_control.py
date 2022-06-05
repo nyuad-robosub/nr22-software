@@ -58,7 +58,7 @@ def set_target_local_position(sys_time, x, y, z, yaw, vx=0, vy=0, vz=0):
             mavutil.mavlink.POSITION_TARGET_TYPEMASK_AY_IGNORE |
             mavutil.mavlink.POSITION_TARGET_TYPEMASK_AZ_IGNORE |
             # DON'T mavutil.mavlink.POSITION_TARGET_TYPEMASK_FORCE_SET |
-            # DON'T mavutil.mavlink.POSITION_TARGET_TYPEMASK_YAW_IGNORE |
+            mavutil.mavlink.POSITION_TARGET_TYPEMASK_YAW_IGNORE |
             mavutil.mavlink.POSITION_TARGET_TYPEMASK_YAW_RATE_IGNORE
         ), x=x, y=y, z=z, # (x, y WGS84 frame pos - not used), z [m]
         vx=vx, vy=vy, vz=vz, # velocities in NED frame [m/s] (not used)
@@ -148,27 +148,39 @@ def controller():
     master.arducopter_arm()
     master.motors_armed_wait()
 
-    # set the desired operating mode
-    guided = 'GUIDED'
-    guided_mode = master.mode_mapping()[guided]
-    while not master.wait_heartbeat().custom_mode == guided_mode:
-        master.set_mode(guided_mode)
+    for i in range(4):
+        # set the desired operating mode
+        # guided = 'GUIDED'
+        # guided_mode = master.mode_mapping()[guided]
+        # while not master.wait_heartbeat().custom_mode == guided_mode:
+        #     master.set_mode(guided_mode)
+        #
+        # # set a position target
+        # print("setting position")
+        # curr_time = datetime.now()
+        # sys_time = (curr_time - boot_time).total_seconds() * 1e3
+        # # set_target_local_position(sys_time, 2 * (i % 2) - 1, 2 * (i / 2) - 1, 1.5, 0)
+        # set_target_local_position(sys_time, i * 0.4, i * 0.2, 1.5, 90)
+        # # print("begin sleep")
+        # time.sleep(6)
 
-    # set a position target
-    curr_time = datetime.now()
-    sys_time = (curr_time - boot_time).total_seconds() * 1e3
-    for i in range(20):
-        print("setting position")
-        set_target_local_position(sys_time, 0, 5, 50, 1.5)
-        # print("begin sleep")
-        time.sleep(5)
-    time.sleep(5)
+        # set the desired operating mode
+        depth_hold = 'ALT_HOLD'
+        depth_hold_mode = master.mode_mapping()[depth_hold]
+        while not master.wait_heartbeat().custom_mode == depth_hold_mode:
+            master.set_mode(depth_hold)
+
+        print("setting rotation")
+        curr_time = datetime.now()
+        sys_time = (curr_time - boot_time).total_seconds() * 1e3
+        set_target_attitude(sys_time, 0, 0, 90 * i + 90)
+        time.sleep(4)
 
     # set the desired operating mode
-    depth_hold = 'ALT_HOLD'
-    depth_hold_mode = master.mode_mapping()[depth_hold]
-    while not master.wait_heartbeat().custom_mode == depth_hold_mode:
-        master.set_mode(depth_hold)
+    pos_hold = 'POSHOLD'
+    pos_hold_mode = master.mode_mapping()[pos_hold]
+    while not master.wait_heartbeat().custom_mode == pos_hold_mode:
+        master.set_mode(pos_hold)
 
     # set a depth target
     # set_target_depth(sys_time, -50)

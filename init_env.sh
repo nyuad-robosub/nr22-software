@@ -88,6 +88,7 @@ sudo apt-get install ros-melodic-pcl-ros
 sudo apt-get install ros-melodic-image-transport
 sudo apt-get install ros-melodic-tf2-sensor-msgs
 sudo apt-get install libbz2-dev
+sudo apt install nlohmann-json-dev
 
 cd ./include
 p=$(pwd)
@@ -113,6 +114,13 @@ sudo make install
 
 #FOR ORBSLAM WE NEED FMT #include <sophus/se3.hpp>
 cd $p/fmt
+mkdir build
+cd build
+cmake ..
+sudo make install
+
+#JSON for depthai-ros
+cd $p/json
 mkdir build
 cd build
 cmake ..
@@ -161,7 +169,7 @@ sudo make install
 
 #install depthai
 cd $p/depthai-core
-cmake -H. -Bbuild 
+cmake -H. -Bbuild -D'BUILD_SHARED_LIBS=ON'
 cmake --build build
 #cd $p/depthai-core/build
 #sudo make install

@@ -23,3 +23,9 @@
 	path = src/deps/depthai-ros
 	url = https://github.com/nyuad-robosub/depthai-ros
 	branch = ros-release
+[submodule "include/json"]
+	path = include/json
+	url = https://github.com/nlohmann/json
+[submodule "include/libnop"]
+	path = include/libnop
+	url = https://github.com/google/libnop

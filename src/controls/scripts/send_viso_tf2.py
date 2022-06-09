@@ -32,10 +32,11 @@ https://github.com/mavlink/mavros/issues/1641
 # ---------------------------------------------
 #   Mavlink area
 # ---------------------------------------------
-
+import tf2_py
 import time
 # Import mavutil
 import pymavlink.quaternion
+import transforms3d.quaternions
 from pymavlink import mavutil
 
 # Try to set home
@@ -84,16 +85,14 @@ import numpy as np
 import math
 import tf2_ros
 import geometry_msgs.msg
-from transforms3d import euler, quaternions
+from transforms3d import euler, quaternions, affines
 from datetime import datetime
 
-last_pos = [0.0, 0.0, 0.0]
-# last_rot = [0.0, 0.0, 0.0]
-last_rot = euler.euler2mat(0, 0, 0)
-# last_rot = pymavlink.quaternion.QuaternionBase()
 boot_time = datetime.now()
 last_time = datetime.now()
 
+# last_pos = [0.0, 0.0, 0.0]
+# last_rot = [0.0, 0.0, 0.0]
 # def processTransform(master, p_trans):
 #     """ Receive data and send to MAVLink
 #     :param master: FCU to send to
@@ -142,30 +141,129 @@ last_time = datetime.now()
 #     last_pos = curr_pos
 #     last_rot = curr_rot
 
+# last_pos = [0.0, 0.0, 0.0]
+# last_rot = euler.euler2mat(0, 0, 0)
+# def processTransform(master, p_trans):
+#     """ Receive data and send to MAVLink
+#     :param master: FCU to send to
+#     """
+#     global last_time, last_rot, last_pos
+#     curr_time = datetime.now()
+#     delt_time = (curr_time - last_time).total_seconds() * 1e6
+#     sys_time = (curr_time - boot_time).total_seconds() * 1e6
+#     last_time = curr_time
+#
+#     curr_pos = [p_trans.transform.translation.x.real,
+#                 p_trans.transform.translation.y.real,
+#                 p_trans.transform.translation.z.real]
+#
+#     curr_rot = quaternions.quat2mat(np.array([
+#         p_trans.transform.rotation.w.real,
+#         p_trans.transform.rotation.x.real,
+#         p_trans.transform.rotation.y.real,
+#         p_trans.transform.rotation.z.real]))
+#
+#     delt_pos = list(map(float.__sub__, curr_pos, last_pos))
+#     # Rotate to the ROV frame
+#     delt_pos = list(last_rot.dot(np.array(delt_pos)))
+#     delt_rot_mat = curr_rot.dot(np.linalg.inv(last_rot))
+#     ai, aj, ak = euler.mat2euler(delt_rot_mat)
+#     delt_rot = [ai, aj, ak]
+#     # print(delt_rot)
+#
+#     # Change to NED framey
+#     delt_pos[1] = -delt_pos[1]
+#     delt_pos[2] = -delt_pos[2]
+#     delt_rot[1] = -delt_rot[1]
+#     delt_rot[2] = -delt_rot[2]
+#     if delt_rot[2] > math.pi:
+#         delt_rot[2] -= 2 * math.pi
+#     elif delt_rot[2] < -math.pi:
+#         delt_rot[2] += 2 * math.pi
+#
+#     send_vision(master, sys_time, delt_time, delt_pos, delt_rot, 70)
+#     last_pos = curr_pos
+#     last_rot = curr_rot
+
+# Message conversion courtesy of:
+# https://answers.ros.org/question/332407/transformstamped-to-transformation-matrix-python/
+# import tf.transformations as tr
+def transform_to_pq(msg):
+    """Convert a C{geometry_msgs/Transform} into position/quaternion np arrays
+
+    @param msg: ROS message to be converted
+    @return:
+      - p: position as a np.array
+      - q: quaternion as a numpy array (order = [x,y,z,w])
+    """
+    p = np.array([msg.translation.x.real, msg.translation.y.real, msg.translation.z.real])
+    q = np.array([msg.rotation.w.real, msg.rotation.x.real,
+                  msg.rotation.y.real, msg.rotation.z.real])
+    return p, q
+def transform_stamped_to_pq(msg):
+    """Convert a C{geometry_msgs/TransformStamped} into position/quaternion np arrays
+
+    @param msg: ROS message to be converted
+    @return:
+      - p: position as a np.array
+      - q: quaternion as a numpy array (order = [x,y,z,w])
+    """
+    return transform_to_pq(msg.transform)
+def msg_to_se3(msg):
+    """Conversion from geometric ROS messages into SE(3)
+
+    @param msg: Message to transform. Acceptable types - C{geometry_msgs/Pose}, C{geometry_msgs/PoseStamped},
+    C{geometry_msgs/Transform}, or C{geometry_msgs/TransformStamped}
+    @return: a 4x4 SE(3) matrix as a numpy array
+    @note: Throws TypeError if we receive an incorrect type.
+    """
+    if isinstance(msg, geometry_msgs.msg.TransformStamped):
+        p, q = transform_stamped_to_pq(msg)
+    else:
+        raise TypeError("Invalid type for conversion to SE(3)")
+    norm = np.linalg.norm(q)
+    if np.abs(norm - 1.0) > 1e-3:
+        raise ValueError(
+            "Received un-normalized quaternion (q = {0:s} ||q|| = {1:3.6f})".format(
+                str(q), np.linalg.norm(q)))
+    elif np.abs(norm - 1.0) > 1e-6:
+        q = q / norm
+    # g = tr.quaternion_matrix(q)
+    g = quaternions.quat2mat(q)
+    tmp = np.eye(4)
+    tmp[:3, :3] = g
+    tmp[:-1, -1] = p
+    # g[0:3, -1] = p
+    # print(tmp)
+    # print("yes")
+    return tmp
+
+initCount = 3
+last_pos = [0.0, 0.0, 0.0]
+last_rot = euler.euler2mat(0, 0, 0)
+last_trans = np.eye(4)
 def processTransform(master, p_trans):
     """ Receive data and send to MAVLink
     :param master: FCU to send to
     """
-    global last_time, last_rot, last_pos
+    global last_time, last_rot, last_pos, last_trans, initCount
+
+    if initCount > 0:
+        last_trans = msg_to_se3(p_trans)
+        initCount -= 1
+        return
+
     curr_time = datetime.now()
     delt_time = (curr_time - last_time).total_seconds() * 1e6
     sys_time = (curr_time - boot_time).total_seconds() * 1e6
     last_time = curr_time
 
-    curr_pos = [p_trans.transform.translation.x.real,
-                p_trans.transform.translation.y.real,
-                p_trans.transform.translation.z.real]
+    curr_trans = msg_to_se3(p_trans)
+    delt_trans = np.linalg.inv(last_trans).dot(curr_trans)
+    last_trans = curr_trans
 
-    curr_rot = quaternions.quat2mat(np.array([
-        p_trans.transform.rotation.w.real,
-        p_trans.transform.rotation.x.real,
-        p_trans.transform.rotation.y.real,
-        p_trans.transform.rotation.z.real]))
-
-    delt_pos = list(map(float.__sub__, curr_pos, last_pos))
-    # Rotate to the ROV frame
-    delt_pos = list(last_rot.dot(np.array(delt_pos)))
-    delt_rot_mat = curr_rot.dot(np.linalg.inv(last_rot))
+    delt_pos_vec, delt_rot_mat, z_vec, s_vec = affines.decompose44(delt_trans)
+    delt_pos = list(delt_pos_vec)
     ai, aj, ak = euler.mat2euler(delt_rot_mat)
     delt_rot = [ai, aj, ak]
     # print(delt_rot)
@@ -180,9 +278,7 @@ def processTransform(master, p_trans):
     elif delt_rot[2] < -math.pi:
         delt_rot[2] += 2 * math.pi
 
-    send_vision(master, sys_time, delt_time, delt_pos, delt_rot, 70)
-    last_pos = curr_pos
-    last_rot = curr_rot
+    send_vision(master, sys_time, delt_time, delt_pos, delt_rot, 90)
 
 def receiver():
     # Create the connection
@@ -200,7 +296,7 @@ def receiver():
     tfBuffer = tf2_ros.Buffer()
     listener = tf2_ros.TransformListener(tfBuffer)
 
-    rate = rospy.Rate(10.0)
+    rate = rospy.Rate(15.0)
     max_timeout = 10
     timeout_count = 0
     while not rospy.is_shutdown():

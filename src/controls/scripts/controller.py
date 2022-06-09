@@ -7,7 +7,9 @@ https://mavlink.io/en/messages/common.html#POSITION_TARGET_LOCAL_NED
 """
 
 # Segment size
-SEGMENT_SIZE = 3
+SEGMENT_SIZE = 10
+# Goal threshold
+GOAL_THRESHOLD = 0.1
 
 # ---------------------------------------------
 #   Mavlink area
@@ -180,7 +182,7 @@ def path_callback(path):
         delt = p_arr - trans_arr
         mag = np.linalg.norm(delt)
 
-        while mag > 0.1:
+        while mag > GOAL_THRESHOLD:
             if not isArmed:
                 break
             if mag < SEGMENT_SIZE:
@@ -242,10 +244,10 @@ def path_callback(path):
             #
             # set a rotation target
             print("setting rotation")
-            # set_target_yaw(master, yaw)
-            sys_time = (datetime.now() - boot_time).total_seconds() * 1e3
-            set_target_attitude(master, sys_time, 0, 0, yaw)
-            rospy.sleep(4)
+            set_target_yaw(master, yaw)
+            # sys_time = (datetime.now() - boot_time).total_seconds() * 1e3
+            # set_target_attitude(master, sys_time, 0, 0, yaw)
+            # rospy.sleep(3.5)
             if not isArmed:
                 break
 

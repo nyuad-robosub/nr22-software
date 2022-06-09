@@ -18,7 +18,7 @@ import tf2_ros
 import geometry_msgs.msg
 import visualization_msgs.msg
 
-focusPoint = geometry_msgs.msg.Point(0, 1000, 0)
+focusPoint = geometry_msgs.msg.Point(1000, 0, 0)
 goalPoint = geometry_msgs.msg.Point(4.2, -2.5, 1)
 goalPoints = [geometry_msgs.msg.Point(20.2, -2.5, 3),
               geometry_msgs.msg.Point(20.2, -10.5, 3),

@@ -32,7 +32,7 @@ tf::StampedTransform st_transform;
 
 // Add frame names
 static std::string REF_FRAME = "world"; // "world";
-static std::string CHILD_FRAME = "camera_depth_optical_frame";
+static std::string CHILD_FRAME = "pcl_link"; // "camera_depth_optical_frame";
 
 // Callback for cloud listener
 void cloud_callback (const sensor_msgs::PointCloud2ConstPtr& input)

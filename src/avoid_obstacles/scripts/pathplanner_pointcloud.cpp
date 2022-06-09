@@ -35,7 +35,7 @@ LazyTheta lt;
 
 // Add frame names
 static std::string REF_FRAME = "world"; // "world";
-static std::string CHILD_FRAME = "camera_depth_optical_frame";
+static std::string CHILD_FRAME = "pcl_link"; // "camera_depth_optical_frame";
 
 // Callback for cloud listener
 void cloud_callback (const sensor_msgs::PointCloud2ConstPtr& input)
@@ -100,29 +100,13 @@ void cloud_callback (const sensor_msgs::PointCloud2ConstPtr& input)
 }
 
 // Callback for start-end points listener
-void se_callback (const visualization_msgs::Marker::ConstPtr se_ptr) {
+void se_callback (const visualization_msgs::Marker::ConstPtr& se_ptr) {
     geometry_msgs::Point p_start = *(se_ptr->points.begin());
     geometry_msgs::Point p_end = *(se_ptr->points.end() - 1);
 
     // TRAJECTORY CALCULATION
     // Compute path & populate the trajectory
     visualization_msgs::Marker path_strip;
-    path_strip.header.frame_id = REF_FRAME;
-    path_strip.header.stamp = ros::Time::now();
-    path_strip.ns = "path_strip";
-    path_strip.action = visualization_msgs::Marker::ADD;
-    path_strip.pose.orientation.w = 1.0;
-    path_strip.id = 0;
-    path_strip.type = visualization_msgs::Marker::LINE_STRIP;
-
-    // Point markers use x and y scale for width/height respectively
-    path_strip.scale.x = 0.1;
-    path_strip.scale.y = 0.1;
-    path_strip.scale.z = 0.1;
-
-    // Path is red
-    path_strip.color.r = 1.0f;
-    path_strip.color.a = 0.5;
     
     Eigen::Vector3i old_xyz, start((int)round(p_start.x * 10), (int)round(p_start.y * 10), (int)round(p_start.z * 10)),
                              end((int)round(p_end.x * 10), (int)round(p_end.y * 10), (int)round(p_end.z * 10));
@@ -143,6 +127,25 @@ void se_callback (const visualization_msgs::Marker::ConstPtr se_ptr) {
             s = *s.parent;
         }
     }
+
+    // Add some details to message
+    path_strip.header.frame_id = REF_FRAME;
+    path_strip.header.stamp = ros::Time::now();
+    path_strip.ns = "path_strip";
+    path_strip.action = visualization_msgs::Marker::ADD;
+    path_strip.pose.orientation.w = 1.0;
+    path_strip.id = 0;
+    path_strip.type = visualization_msgs::Marker::LINE_STRIP;
+
+    // Point markers use x and y scale for width/height respectively
+    path_strip.scale.x = 0.1;
+    path_strip.scale.y = 0.1;
+    path_strip.scale.z = 0.1;
+
+    // Path is red
+    path_strip.color.r = 1.0f;
+    path_strip.color.a = 0.5;
+
     pub2.publish(path_strip);
     // std::cout << "\n\n\n\n\n\n\n";
 }

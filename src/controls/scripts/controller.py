@@ -7,7 +7,7 @@ https://mavlink.io/en/messages/common.html#POSITION_TARGET_LOCAL_NED
 """
 
 # Segment size
-SEGMENT_SIZE = 1
+SEGMENT_SIZE = 3
 
 # ---------------------------------------------
 #   Mavlink area
@@ -63,6 +63,15 @@ def set_target_attitude(master, sys_time, roll, pitch, yaw):
         QuaternionBase([math.radians(angle) for angle in (roll, pitch, yaw)]),
         0, 0, 0, 0 # roll rate, pitch rate, yaw rate, thrust
     )
+def set_target_yaw(master, yaw):
+    """ Sets the target yaw as angle in degrees.
+    """
+    master.mav.command_long_send(
+        master.target_system,
+        master.target_component,
+        mavutil.mavlink.MAV_CMD_CONDITION_YAW,
+        0,
+        yaw, 5, 1, 0, 0, 0, 0)
 
 # ---------------------------------------------
 #   ROS area
@@ -223,16 +232,17 @@ def path_callback(path):
             # rospy.sleep(5)
 
             # ROTATION
-            # set the desired operating mode
-            depth_hold = 'ALT_HOLD'
-            depth_hold_mode = master.mode_mapping()[depth_hold]
-            while not master.wait_heartbeat().custom_mode == depth_hold_mode:
-                master.set_mode(depth_hold)
-            if not isArmed:
-                break
-
+            # # set the desired operating mode
+            # depth_hold = 'ALT_HOLD'
+            # depth_hold_mode = master.mode_mapping()[depth_hold]
+            # while not master.wait_heartbeat().custom_mode == depth_hold_mode:
+            #     master.set_mode(depth_hold)
+            # if not isArmed:
+            #     break
+            #
             # set a rotation target
             print("setting rotation")
+            # set_target_yaw(master, yaw)
             sys_time = (datetime.now() - boot_time).total_seconds() * 1e3
             set_target_attitude(master, sys_time, 0, 0, yaw)
             rospy.sleep(4)

@@ -18,12 +18,16 @@ import tf2_ros
 import geometry_msgs.msg
 import visualization_msgs.msg
 
-focusPoint = geometry_msgs.msg.Point(-1.1, 0.5, 0)
+focusPoint = geometry_msgs.msg.Point(0, 1000, 0)
 goalPoint = geometry_msgs.msg.Point(4.2, -2.5, 1)
-goalPoints = [geometry_msgs.msg.Point(4.2, -2.5, 1),
-              geometry_msgs.msg.Point(-4.2, -2.5, 2),
-              geometry_msgs.msg.Point(-4.2, 2.5, 1),
-              geometry_msgs.msg.Point(4.2, 2.5, 2)]
+goalPoints = [geometry_msgs.msg.Point(20.2, -2.5, 3),
+              geometry_msgs.msg.Point(20.2, -10.5, 3),
+              # geometry_msgs.msg.Point(0, 0, 2.75),
+              # geometry_msgs.msg.Point(20.2, 2.5, 3),
+              geometry_msgs.msg.Point(20.2, 8.5, 3),
+              geometry_msgs.msg.Point(20.2, 8.5, 1),
+              geometry_msgs.msg.Point(20.2, -10.5, 1)]
+              # geometry_msgs.msg.Point(0, 9, 2.75)]
 
 if __name__== '__main__':
     # In ROS, nodes are uniquely named. If two nodes with the same

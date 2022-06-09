@@ -11,7 +11,7 @@ https://mavlink.io/en/messages/common.html#POSITION_TARGET_LOCAL_NED
 #   Mavlink area
 # ---------------------------------------------
 
-MAV_ADDR = 'udpin:0.0.0.0:14552' # 'udpin:127.0.0.1:14551'
+MAV_ADDR = 'udpin:0.0.0.0:14554' # 'udpin:127.0.0.1:14551'
 
 import time
 # Import mavutil
@@ -39,7 +39,7 @@ master.wait_heartbeat()
 # https://www.ardusub.com/developers/pymavlink.html
 # Imports for attitude
 from pymavlink.quaternion import QuaternionBase
-def set_target_local_position(sys_time, x, y, z, yaw, vx=0, vy=0, vz=0):
+def set_target_local_position(sys_time, x, y, z, yaw=0, vx=0, vy=0, vz=0):
     """ Sets local position courtesy of:
     https://mavlink.io/en/messages/common.html#SET_POSITION_TARGET_LOCAL_NED
     """
@@ -150,19 +150,19 @@ def controller():
 
     for i in range(4):
         # set the desired operating mode
-        # guided = 'GUIDED'
-        # guided_mode = master.mode_mapping()[guided]
-        # while not master.wait_heartbeat().custom_mode == guided_mode:
-        #     master.set_mode(guided_mode)
-        #
-        # # set a position target
-        # print("setting position")
-        # curr_time = datetime.now()
-        # sys_time = (curr_time - boot_time).total_seconds() * 1e3
-        # # set_target_local_position(sys_time, 2 * (i % 2) - 1, 2 * (i / 2) - 1, 1.5, 0)
-        # set_target_local_position(sys_time, i * 0.4, i * 0.2, 1.5, 90)
-        # # print("begin sleep")
-        # time.sleep(6)
+        guided = 'GUIDED'
+        guided_mode = master.mode_mapping()[guided]
+        while not master.wait_heartbeat().custom_mode == guided_mode:
+            master.set_mode(guided_mode)
+
+        # set a position target
+        print("setting position")
+        curr_time = datetime.now()
+        sys_time = (curr_time - boot_time).total_seconds() * 1e3
+        # set_target_local_position(sys_time, 2 * (i % 2) - 1, 2 * (i / 2) - 1, 1.5, 0)
+        set_target_local_position(sys_time, i * 0.4, i * 0.2, 1.5)
+        # print("begin sleep")
+        time.sleep(6)
 
         # set the desired operating mode
         depth_hold = 'ALT_HOLD'
@@ -173,7 +173,7 @@ def controller():
         print("setting rotation")
         curr_time = datetime.now()
         sys_time = (curr_time - boot_time).total_seconds() * 1e3
-        set_target_attitude(sys_time, 0, 0, 90 * i + 90)
+        set_target_attitude(sys_time, 0, 0, 180 * i + 180)
         time.sleep(4)
 
     # set the desired operating mode

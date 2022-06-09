@@ -80,6 +80,7 @@ def send_vision(master, sys_time, delt_time, position=[0.0, 0.0, 0.0], rotation=
 
 import rospy
 from std_msgs.msg import String
+import numpy as np
 import math
 import tf2_ros
 import geometry_msgs.msg
@@ -87,10 +88,59 @@ from transforms3d import euler, quaternions
 from datetime import datetime
 
 last_pos = [0.0, 0.0, 0.0]
-last_rot = [0.0, 0.0, 0.0]
+# last_rot = [0.0, 0.0, 0.0]
+last_rot = euler.euler2mat(0, 0, 0)
 # last_rot = pymavlink.quaternion.QuaternionBase()
 boot_time = datetime.now()
 last_time = datetime.now()
+
+# def processTransform(master, p_trans):
+#     """ Receive data and send to MAVLink
+#     :param master: FCU to send to
+#     """
+#     global last_time, last_rot, last_pos
+#     curr_time = datetime.now()
+#     delt_time = (curr_time - last_time).total_seconds() * 1e6
+#     sys_time = (curr_time - boot_time).total_seconds() * 1e6
+#     last_time = curr_time
+#
+#     curr_pos = [p_trans.transform.translation.x.real,
+#                 p_trans.transform.translation.y.real,
+#                 p_trans.transform.translation.z.real]
+#
+#     ai, aj, ak = euler.quat2euler([
+#                 p_trans.transform.rotation.w.real,
+#                 p_trans.transform.rotation.x.real,
+#                 p_trans.transform.rotation.y.real,
+#                 p_trans.transform.rotation.z.real
+#                ])
+#
+#     curr_rot = [ai, aj, ak]
+#     # curr_rot = p_trans.transform.rotation
+#
+#     delt_pos = list(map(float.__sub__, curr_pos, last_pos))
+#     delt_rot = list(map(float.__sub__, curr_rot, last_rot))
+#     # delt_rot = [0.0, 0.0, 0.0]
+#     # delt_rot[0], delt_rot[1], delt_rot[2] = euler.quat2euler(
+#     #     [curr_rot.x.real - last_rot.x.real,
+#     #      curr_rot.y.real - last_rot.y.real,
+#     #      curr_rot.z.real - last_rot.z.real,
+#     #      curr_rot.w.real - last_rot.w.real])
+#
+#     # Change to NED framey
+#     delt_pos[1] = -delt_pos[1]
+#     delt_pos[2] = -delt_pos[2]
+#     delt_rot[1] = -delt_rot[1]
+#     delt_rot[2] = -delt_rot[2]
+#     if delt_rot[2] > math.pi:
+#         delt_rot[2] -= 2 * math.pi
+#     elif delt_rot[2] < -math.pi:
+#         delt_rot[2] += 2 * math.pi
+#     # delt_rot[2] = delt_rot[2] % (math.pi * 2)
+#
+#     send_vision(master, sys_time, delt_time, delt_pos, delt_rot, 100)
+#     last_pos = curr_pos
+#     last_rot = curr_rot
 
 def processTransform(master, p_trans):
     """ Receive data and send to MAVLink
@@ -106,24 +156,19 @@ def processTransform(master, p_trans):
                 p_trans.transform.translation.y.real,
                 p_trans.transform.translation.z.real]
 
-    ai, aj, ak = euler.quat2euler([
-                p_trans.transform.rotation.w.real,
-                p_trans.transform.rotation.x.real,
-                p_trans.transform.rotation.y.real,
-                p_trans.transform.rotation.z.real
-               ])
-
-    curr_rot = [ai, aj, ak]
-    # curr_rot = p_trans.transform.rotation
+    curr_rot = quaternions.quat2mat(np.array([
+        p_trans.transform.rotation.w.real,
+        p_trans.transform.rotation.x.real,
+        p_trans.transform.rotation.y.real,
+        p_trans.transform.rotation.z.real]))
 
     delt_pos = list(map(float.__sub__, curr_pos, last_pos))
-    delt_rot = list(map(float.__sub__, curr_rot, last_rot))
-    # delt_rot = [0.0, 0.0, 0.0]
-    # delt_rot[0], delt_rot[1], delt_rot[2] = euler.quat2euler(
-    #     [curr_rot.x.real - last_rot.x.real,
-    #      curr_rot.y.real - last_rot.y.real,
-    #      curr_rot.z.real - last_rot.z.real,
-    #      curr_rot.w.real - last_rot.w.real])
+    # Rotate to the ROV frame
+    delt_pos = list(last_rot.dot(np.array(delt_pos)))
+    delt_rot_mat = curr_rot.dot(np.linalg.inv(last_rot))
+    ai, aj, ak = euler.mat2euler(delt_rot_mat)
+    delt_rot = [ai, aj, ak]
+    # print(delt_rot)
 
     # Change to NED framey
     delt_pos[1] = -delt_pos[1]
@@ -134,9 +179,8 @@ def processTransform(master, p_trans):
         delt_rot[2] -= 2 * math.pi
     elif delt_rot[2] < -math.pi:
         delt_rot[2] += 2 * math.pi
-    # delt_rot[2] = delt_rot[2] % (math.pi * 2)
 
-    send_vision(master, sys_time, delt_time, delt_pos, delt_rot, 100)
+    send_vision(master, sys_time, delt_time, delt_pos, delt_rot, 70)
     last_pos = curr_pos
     last_rot = curr_rot
 

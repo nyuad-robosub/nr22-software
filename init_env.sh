@@ -99,7 +99,7 @@ p=$(pwd)
 # rm v0.5
 sudo apt-get install -y libglew-dev libboost-dev libboost-thread-dev libboost-filesystem-dev ffmpeg libavutil-dev libpng-dev
 cd $p/Pangolin*
-./scripts/install_prerequisites.sh --dry-run recommended
+#./scripts/install_prerequisites.sh --dry-run recommended
 mkdir build
 cd build
 cmake .. 

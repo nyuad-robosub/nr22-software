@@ -80,6 +80,7 @@ sudo apt-get update
 sudo apt-get install librealsense2-dkms --allow-unauthenticated -y
 sudo apt-get install librealsense2-dev --allow-unauthenticated -y
 sudo apt-get install librealsense2-utils --allow-unauthenticated -y
+sudo apt-get install ros-melodic-desktop-full
 sudo apt-get install ros-melodic-ddynamic-reconfigure
 sudo apt install ros-melodic-rgbd-launch
 sudo apt-get install ros-melodic-vision-msgs

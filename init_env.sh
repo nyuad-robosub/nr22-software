@@ -151,29 +151,20 @@ cmake ..
 #make
 sudo make install
 
-
-# #install opencv 4.4 DOWNGRADE
-# cd $p/opencv
-# # Download and unpack sources
-# # Create build directory
-# mkdir -p build && cd build
-# cmake ..
-# make
-# sudo make install
-# Download and unpack sources
-# cd $p/opencv
-# wget -O opencv.zip https://github.com/opencv/opencv/archive/refs/tags/4.4.0.tar.gz
-# unzip opencv.zip
-# rm opencv.zip
-# cd opencv-4.4.0
-# # Create build directory
-# mkdir -p build && cd build
-# # Configure
-# cmake  ..
-# # Build
-# #cmake --build .
+#install opencv 4
+echo "Configuring and building Thirdpart/opencv"
+cd $p/include
+wget -O opencv.zip https://github.com/opencv/opencv/archive/refs/tags/4.4.0.zip
+unzip opencv
+rm opencv.zip
+cd $p/opencv-4.4.0
+mkdir build
+cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+make
 
 #install depthai
+echo "Configuring/building depthai-core"
 cd $p/depthai-core
 cmake -H. -Bbuild -D'BUILD_SHARED_LIBS=ON'
 cmake --build build

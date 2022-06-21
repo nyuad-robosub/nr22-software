@@ -86,6 +86,7 @@ sudo apt-get install -y curl # if you haven't already installed curl
 curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add -
 
 sudo apt-get install ros-melodic-desktop-full
+echo "source /opt/ros/melodic/setup.bash" >> ~/.bashrc
 sudo apt-get install ros-melodic-ddynamic-reconfigure
 sudo apt install ros-melodic-rgbd-launch
 sudo apt-get install ros-melodic-vision-msgs

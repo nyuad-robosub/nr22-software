@@ -12,7 +12,7 @@
     <arg name="verbose" value="true" />
   </include>
 
-  <include file="$(find bluerov2_description)/launch/upload.launch">
+  <include file="$(find bluerov2_heavy_description)/launch/upload.launch">
     <arg name="use_geodetic" value="false"/>
     <arg name="x" value="0"/>
     <arg name="y" value="0"/>

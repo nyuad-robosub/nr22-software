@@ -79,3 +79,9 @@ The repository is structured as a catkin workspace with only the `/src` director
 - Rule of thumb: add files to their respective folders, such as `/scripts` for C++ and Python node files, `/launch` for launch files, etc.
 
 - Refer to [this (C++)](http://wiki.ros.org/ROS/Tutorials/WritingPublisherSubscriber%28c%2B%2B%29) and [this (Python)](http://wiki.ros.org/ROS/Tutorials/WritingPublisherSubscriber%28python%29) to write your first nodes.
+
+## Launching ORB_SLAM3 with the OAK-D
+
+- Simply start the launch file 
+
+`roslaunch ORB_SLAM3 oakd_node.launch`

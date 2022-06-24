@@ -80,6 +80,7 @@ sudo apt-get update
 sudo apt-get install librealsense2-dkms --allow-unauthenticated -y
 sudo apt-get install librealsense2-dev --allow-unauthenticated -y
 sudo apt-get install librealsense2-utils --allow-unauthenticated -y
+
 sudo apt-get install ros-melodic-ddynamic-reconfigure
 sudo apt install ros-melodic-rgbd-launch
 sudo apt-get install ros-melodic-vision-msgs
@@ -178,7 +179,8 @@ cd $p
 cd ..
 p=$(pwd)
 catkin config --extend /opt/ros/melodic
-catkin build || true 
+#catkin build || true 
+catkin_make -j2
 
 source $p/devel/setup.sh
 
@@ -189,6 +191,8 @@ bash $p/include/ORB_SLAM3_OPENCV4/build.sh
 
 #you need to export in bash
 echo 'export ROS_PACKAGE_PATH=${ROS_PACKAGE_PATH}:~/nr22-software/include/ORB_SLAM3_OPENCV4/Examples/ROS/ORB_SLAM3' >> ~/.bashrc 
+echo 'source ~/nr22-software/devel/setup.bash' >> ~/.bashrc
+
 bash $p/include/ORB_SLAM3_OPENCV4/build_ros.sh
 #source /opt/ros/melodic/setup.bash
 #export ROS_PACKAGE_PATH=${ROS_PACKAGE_PATH}:~/nr22-software/include/ORB_SLAM2/Examples/ROS/ORB_SLAM2

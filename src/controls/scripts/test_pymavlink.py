@@ -33,6 +33,8 @@ https://github.com/mavlink/mavros/issues/1641
 #   Mavlink area
 # ---------------------------------------------
 
+MAV_ADDR = 'udpin:0.0.0.0:14551' # 'udpin:127.0.0.1:14551'
+
 import time
 # Import mavutil
 from pymavlink import mavutil
@@ -50,7 +52,7 @@ from pymavlink import mavutil
 #  If you want to use QGroundControl in parallel with your python script,
 #  it's possible to add a new output port in http:192.168.2.2:2770/mavproxy as a new line.
 #  E.g: --out udpbcast:192.168.2.255:yourport
-master = mavutil.mavlink_connection('udpin:127.0.0.1:14551', dialect='ardupilotmega')
+master = mavutil.mavlink_connection(MAV_ADDR, dialect='ardupilotmega')
 
 # Make sure the connection is valid
 master.wait_heartbeat()
@@ -146,6 +148,7 @@ def processTransform(p_trans):
     delt_pos[2] = -delt_pos[2]
     delt_rot[1] = -delt_rot[1]
     delt_rot[2] = -delt_rot[2]
+    delt_rot[2] = delt_rot[2] % (math.pi * 2)
 
     send_vision(sys_time, delt_time, delt_pos, delt_rot, 100)
     last_pos = curr_pos
@@ -172,6 +175,8 @@ def receiver():
     listener = tf2_ros.TransformListener(tfBuffer)
 
     rate = rospy.Rate(10.0)
+    max_timeout = 10
+    timeout_count = 0
     while not rospy.is_shutdown():
         try:
             trans = tfBuffer.lookup_transform(WORLD_FRAME, ROV_FRAME, rospy.Time(), rospy.Duration(4))
@@ -181,6 +186,28 @@ def receiver():
         except Exception, e:
             # Make sure the connection is valid
             print("EXCEPTION!", e.message) # master.wait_heartbeat()
+            # while timeout_count != 10:
+            #     print("In exception block")
+            #     # Try to reconnect
+            #     master = mavutil.mavlink_connection(MAV_ADDR, dialect='ardupilotmega')
+            #     connection_regained = False
+            #     try:
+            #         trans = tfBuffer.lookup_transform(WORLD_FRAME, ROV_FRAME, rospy.Time(), rospy.Duration(4))
+            #         processTransform(trans)
+            #         connection_regained = True
+            #     except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            #         continue
+            #     except Exception, e:
+            #         continue
+            #     finally:
+            #         if connection_regained:
+            #             break
+            #     timeout_count += 1
+            #     print("Timeout count", timeout_count, "out of 10")
+            #     rospy.sleep(2)
+            # if timeout_count == 10:
+            #     return
+            # timeout_count = 0
         if rospy.is_shutdown():
             return
         rate.sleep()

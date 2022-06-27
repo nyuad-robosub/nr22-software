@@ -1,0 +1,28 @@
+<launch>
+  <arg name="paused" default="false"/>
+  <arg name="gui" default="true"/>
+
+  <include file="$(find pools)/launch/pool_v2_heavy.launch">
+    <arg name="paused" value="false"/>
+    <arg name="gui" value="$(arg gui)"/>
+  </include>
+
+  <include file="$(find controls)/launch/send_viso_tf2.launch" />
+  <include file="$(find controls)/launch/mavlink_publisher.launch" />
+  <include file="$(find controls)/launch/controller.launch" />
+  <!-- include file="$(find )/launch/.launch" />
+
+  <node name="publish_world_models"
+        pkg="uuv_assistants"
+        type="publish_world_models.py"
+        output="screen">
+        <rosparam subst_value="true">
+            meshes:
+                pool_v2:
+                    mesh: package://pools/meshes/pool_v2.dae
+                    pose:
+                      position: [0, 0, 0]
+                    scale: [1, 1, 1]
+        </rosparam>
+  </node -->
+</launch>

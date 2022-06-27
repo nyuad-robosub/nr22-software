@@ -1,0 +1,16 @@
+<launch>
+	<!-- base params -->
+	<arg name="mav_addr" default="udpin:0.0.0.0:14553" />
+	<arg name="base_frame" default="world" />
+	<arg name="publish_frame" default="base_link" />
+
+	<arg name="log_output" default="screen" />
+	<arg name="respawn_mavpub" default="false" />
+
+	<node pkg="controls" type="mavlink_publisher.py" name="mavlink_publisher" required="$(eval not respawn_mavpub)"
+	    clear_params="true" output="$(arg log_output)" respawn="$(arg respawn_mavpub)">
+		<param name="mav_addr" value="$(arg mav_addr)" />
+		<param name="base_frame" value="$(arg base_frame)" />
+		<param name="publish_frame" value="$(arg publish_frame)" />
+	</node>
+</launch>

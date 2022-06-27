@@ -1,0 +1,24 @@
+<launch>
+	<!-- base params -->
+	<arg name="mav_addr" default="udpin:0.0.0.0:14551" />
+	<arg name="pose_topic" default="ORBSLAM2_POSE" />
+
+	<!-- optional set home -->
+	<arg name="set_home" default="true" />
+	<arg name="home_lat" default="24.52433290904017" />
+	<arg name="home_long" default="54.43519869059818" />
+	<arg name="home_alt" default="0" />
+
+	<arg name="log_output" default="screen" />
+	<arg name="respawn_viso" default="false" />
+
+	<node pkg="controls" type="send_viso_pose.py" name="send_viso_pose" required="$(eval not respawn_viso)"
+	    clear_params="true" output="$(arg log_output)" respawn="$(arg respawn_viso)">
+		<param name="mav_addr" value="$(arg mav_addr)" />
+		<param name="pose_topic" value="$(arg pose_topic)" />
+		<param name="set_home" value="$(arg set_home)" />
+		<param name="home_lat" value="$(arg home_lat)" />
+		<param name="home_long" value="$(arg home_long)" />
+		<param name="home_alt" value="$(arg home_alt)" />
+	</node>
+</launch>

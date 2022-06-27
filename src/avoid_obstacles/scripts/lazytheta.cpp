@@ -197,7 +197,8 @@ struct LazyTheta {
 	}
 
 	// Update occupancy set, with updateStart and updateBox vectors
-	void UpdateOccupancySet(const vector<Vector3i>& occSet, bool update = false,
+	void UpdateOccupancySet(const vector<Vector3i>& occSet,
+							bool update = false, bool bounds = false,
 							Vector3i updateStart = Vector3i(0, 0, 0),
 							Vector3i updateBox = Vector3i(0, 0, 0)) {
 		if (!update) {
@@ -206,41 +207,52 @@ struct LazyTheta {
 			for (Vector3i i: occSet)
 				UpdateOccupancy(i);
 		} else {
-			Vector3i updateEnd = updateStart + updateBox;
-			bool inRange = true;
-			for (Vector3i i: occSet) {
-				inRange = true;
-				for (int j = 0; j < 3; j++)
-					if (updateStart(j) > i(j) || i(j) >= updateEnd(j))
-						inRange = false;
-				if (inRange)
-					UpdateOccupancy(i);
+			if (!bounds)
+				for (Vector3i i: occSet)
+				UpdateOccupancy(i);
+			else {
+				Vector3i updateEnd = updateStart + updateBox;
+				bool inRange = true;
+				for (Vector3i i: occSet) {
+					inRange = true;
+					for (int j = 0; j < 3; j++)
+						if (updateStart(j) > i(j) || i(j) >= updateEnd(j))
+							inRange = false;
+					if (inRange)
+						UpdateOccupancy(i);
+				}
 			}
 		}
 	}
 
 #ifdef USE_PCL
 	// Update occupancy set using PCL, with updateStart and updateBox vectors
-	void UpdateOccupancyPCL(const pcl::PointCloud<pcl::PointXYZ>& occPC, bool update = false,
+	void UpdateOccupancyPCL(const pcl::PointCloud<pcl::PointXYZ>& occPC,
+							bool update = false, bool bounds = false,
 							Vector3i updateStart = Vector3i(0, 0, 0),
 							Vector3i updateBox = Vector3i(0, 0, 0)) {
 		if (!update) {
 			obstaclesXYZ = Vec3iu_set{};
 			blockedXYZ = Vec3iu_set{};
-			for (pcl::PointCloud<pcl::PointXYZ>::iterator it = temp2_cloud->begin(); it != temp2_cloud->end(); it++)
-				UpdateOccupancy(Vector3i(round(it->x * 10) / 10, round(it->y * 10) / 10, round(it->z * 10) / 10));
+			for (pcl::PointCloud<pcl::PointXYZ>::const_iterator it = occPC.begin(); it != occPC.end(); it++)
+				UpdateOccupancy(Vector3i(round(it->x * 10), round(it->y * 10), round(it->z * 10)));
 		} else {
-			Vector3i updateEnd = updateStart + updateBox;
-			bool inRange = true;
-			Vector3i tmp;
-			for (pcl::PointCloud<pcl::PointXYZ>::iterator it = temp2_cloud->begin(); it != temp2_cloud->end(); it++) {
-				tmp = Vector3i(round(it->x * 10) / 10, round(it->y * 10) / 10, round(it->z * 10) / 10);
-				inRange = true;
-				for (int j = 0; j < 3; j++)
-					if (updateStart(j) > tmp(j) || tmp(j) >= updateEnd(j))
-						inRange = false;
-				if (inRange)
-					UpdateOccupancy(tmp);
+			if (!bounds)
+				for (pcl::PointCloud<pcl::PointXYZ>::const_iterator it = occPC.begin(); it != occPC.end(); it++)
+					UpdateOccupancy(Vector3i(round(it->x * 10), round(it->y * 10), round(it->z * 10)));
+			else {
+				Vector3i updateEnd = updateStart + updateBox;
+				bool inRange = true;
+				Vector3i tmp;
+				for (pcl::PointCloud<pcl::PointXYZ>::const_iterator it = occPC.begin(); it != occPC.end(); it++) {
+					tmp = Vector3i(round(it->x * 10), round(it->y * 10), round(it->z * 10));
+					inRange = true;
+					for (int j = 0; j < 3; j++)
+						if (updateStart(j) > tmp(j) || tmp(j) >= updateEnd(j))
+							inRange = false;
+					if (inRange)
+						UpdateOccupancy(tmp);
+				}
 			}
 		}
 	}

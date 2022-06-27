@@ -21,7 +21,7 @@ ros::Publisher pub;
 tf::StampedTransform transform;
 
 // Add frame names
-static std::string REF_FRAME = "world";
+static std::string REF_FRAME = "camera_link"; // "world";
 static std::string CHILD_FRAME = "camera_depth_optical_frame";
 
 // Callback for cloud listener
@@ -34,42 +34,44 @@ void cloud_callback (const sensor_msgs::PointCloud2ConstPtr& input)
 
     pcl::fromROSMsg (*input, *temp1_cloud);
 
+    // Downsample filter for voxels: 2cm voxels
+    pcl::VoxelGrid<pcl::PointXYZ> vg1;
+    vg1.setInputCloud (temp1_cloud);
+    vg1.setLeafSize (0.05f, 0.05f, 0.05f);
+    vg1.filter (*temp2_cloud);
+    // ROS_INFO("okay 1");
+
     // Filter for stray points
     pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
-    sor.setInputCloud (temp1_cloud);
+    sor.setInputCloud (temp2_cloud);
     sor.setMeanK (25);
-    sor.setStddevMulThresh (1.0);
-    sor.filter (*temp2_cloud);
-
-    // Downsample filter for voxels: 2cm voxels
-    // pcl::VoxelGrid<pcl::PointXYZ> vg1;
-    // vg1.setInputCloud (temp2_cloud);
-    // vg1.setLeafSize (0.02f, 0.02f, 0.02f);
-    // vg1.filter (*temp1_cloud);
+    sor.setStddevMulThresh (0.1);
+    sor.filter (*temp1_cloud);
 
     // Transform the pointcloud
-    pcl_ros::transformPointCloud(*temp2_cloud, *temp1_cloud, transform);
+    pcl_ros::transformPointCloud(*temp1_cloud, *temp2_cloud, transform);
 
     // Downsample filter for voxels: 10cm voxels
     pcl::VoxelGrid<pcl::PointXYZ> vg2;
-    vg2.setInputCloud (temp1_cloud);
+    vg2.setInputCloud (temp2_cloud);
     vg2.setLeafSize (0.1f, 0.1f, 0.1f);
-    vg2.filter (*temp2_cloud);
+    vg2.filter (*temp1_cloud);
+    // ROS_INFO("okay 2");
 
     // Iterate through the pointcloud courtesy of:
     // https://www.cnblogs.com/linweilin/p/11330677.html
-    temp1_cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>{}); // Can be created through new but unnecessary
-    for (pcl::PointCloud<pcl::PointXYZ>::iterator it = temp2_cloud->begin(); it != temp2_cloud->end(); it++)
+    temp2_cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>{}); // Can be created through new but unnecessary
+    for (pcl::PointCloud<pcl::PointXYZ>::iterator it = temp1_cloud->begin(); it != temp1_cloud->end(); it++)
     {
         // Return an Eigen::Vector3f of points coordinate.
         // Eigen::Vector3f tmp = it->getVector3fMap(); // if double wanted, just say it->getVector3fMap().cast<double>
         // std::cout << "(" << tmp(0) << ", " << tmp(1) << ", " << tmp(2) << "), ";
-        temp1_cloud->push_back(pcl::PointXYZ(round(it->x * 10) / 10, round(it->y * 10) / 10, round(it->z * 10) / 10));
+        temp2_cloud->push_back(pcl::PointXYZ(round(it->x * 10) / 10, round(it->y * 10) / 10, round(it->z * 10) / 10));
     }
     // std::cout << "\n\n\n\n\n\n\n";
 
     sensor_msgs::PointCloud2 cloud_publish;
-    pcl::toROSMsg (*temp1_cloud, cloud_publish);
+    pcl::toROSMsg (*temp2_cloud, cloud_publish);
     cloud_publish.header = input->header;
     cloud_publish.header.frame_id = REF_FRAME;
 

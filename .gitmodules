@@ -1,4 +1,31 @@
-[submodule "src/deps/perception_pcl"]
-	path = src/deps/perception_pcl
-	url = https://github.com/ros-perception/perception_pcl
-	branch = melodic-devel
+[submodule "include/Sophus"]
+	path = include/Sophus
+	url = https://github.com/strasdat/Sophus
+[submodule "src/deps/realsense-ros"]
+	path = src/deps/realsense-ros
+	url = https://github.com/nyuad-robosub/realsense-ros
+[submodule "include/fmt"]
+	path = include/fmt
+	url = https://github.com/fmtlib/fmt
+[submodule "include/Pangolin"]
+	path = include/Pangolin
+	url = https://github.com/stevenlovegrove/Pangolin.git
+[submodule "include/depthai-core"]
+	path = include/depthai-core
+	url = https://github.com/luxonis/depthai-core
+[submodule "include/ORB_SLAM2_OPENCV4"]
+	path = include/ORB_SLAM2_OPENCV4
+	url = https://github.com/dolf321/ORB_SLAM2_OPENCV4
+[submodule "include/ORB_SLAM3_OPENCV4"]
+	path = include/ORB_SLAM3_OPENCV4
+	url = https://github.com/nyuad-robosub/ORB_SLAM3_OPENCV4
+[submodule "src/deps/depthai-ros"]
+	path = src/deps/depthai-ros
+	url = https://github.com/nyuad-robosub/depthai-ros
+	branch = ros-release
+[submodule "include/json"]
+	path = include/json
+	url = https://github.com/nlohmann/json
+[submodule "include/libnop"]
+	path = include/libnop
+	url = https://github.com/google/libnop

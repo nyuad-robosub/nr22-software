@@ -7,9 +7,9 @@ https://mavlink.io/en/messages/common.html#POSITION_TARGET_LOCAL_NED
 """
 
 # Segment size
-SEGMENT_SIZE = 10
+# SEGMENT_SIZE = 2
 # Goal threshold
-GOAL_THRESHOLD = 0.1
+# GOAL_THRESHOLD = 0.1
 
 # ---------------------------------------------
 #   Mavlink area
@@ -80,7 +80,7 @@ def set_target_yaw(master, yaw):
 # ---------------------------------------------
 
 import rospy
-from std_msgs.msg import String, Bool
+from std_msgs.msg import String, Bool, Float64
 import math
 import numpy as np
 import tf2_ros
@@ -104,6 +104,8 @@ last_time = datetime.now()
 usePCL = False
 isArmed = False
 focusPoint = geometry_msgs.msg.Point(0, 0, 0)
+segmentSize = 3
+goalThreshold = 0.2
 
 # Undeclared master
 master = None
@@ -164,6 +166,13 @@ def path_callback(path):
 
     tfBuffer = tf2_ros.Buffer()
     listener = tf2_ros.TransformListener(tfBuffer)
+
+    # set the desired operating mode
+    guided = 'GUIDED'
+    guided_mode = master.mode_mapping()[guided]
+    while not master.wait_heartbeat().custom_mode == guided_mode:
+        master.set_mode(guided_mode)
+
     for p in path.points:
         # Find current location
         while True:
@@ -182,24 +191,24 @@ def path_callback(path):
         delt = p_arr - trans_arr
         mag = np.linalg.norm(delt)
 
-        while mag > GOAL_THRESHOLD:
+        while mag > goalThreshold:
             if not isArmed:
                 break
-            if mag < SEGMENT_SIZE:
+            if mag < segmentSize:
                 nextPoint = p
             else:
                 # Move one meter at a time
-                tmp_arr = trans_arr + (delt / mag) * SEGMENT_SIZE
+                tmp_arr = trans_arr + (delt / mag) * segmentSize
                 nextPoint = geometry_msgs.msg.Point(tmp_arr[0], tmp_arr[1], tmp_arr[2])
 
             # TRANSLATION
-            # set the desired operating mode
-            guided = 'GUIDED'
-            guided_mode = master.mode_mapping()[guided]
-            while not master.wait_heartbeat().custom_mode == guided_mode:
-                master.set_mode(guided_mode)
-            if not isArmed:
-                break
+            # # set the desired operating mode
+            # guided = 'GUIDED'
+            # guided_mode = master.mode_mapping()[guided]
+            # while not master.wait_heartbeat().custom_mode == guided_mode:
+            #     master.set_mode(guided_mode)
+            # if not isArmed:
+            #     break
 
             # set a position target
             if focusPoint.x == nextPoint.x and focusPoint.y == nextPoint.y:
@@ -241,13 +250,13 @@ def path_callback(path):
             #     master.set_mode(depth_hold)
             # if not isArmed:
             #     break
-            #
+            
             # set a rotation target
             print("setting rotation")
             set_target_yaw(master, yaw)
             # sys_time = (datetime.now() - boot_time).total_seconds() * 1e3
-            # set_target_attitude(master, sys_time, 0, 0, yaw)
-            # rospy.sleep(3.5)
+            # set_target_attitude(master, sys_time, 0, 90, yaw)
+            rospy.sleep(2.5)
             if not isArmed:
                 break
 
@@ -303,6 +312,20 @@ def goal_callback(goal):
     else:
         pass
 
+def segment_size_callback(segment_size):
+    """ Get point for the controller to orient the rov towards
+    :param focus: geometry_msgs.msg.PointStamped, point to orient towards (only using xy as of now)"""
+    global segmentSize
+    segmentSize = segment_size.data
+    print("INFO: Segment size set!")
+
+def goal_threshold_callback(goal_threshold):
+    """ Get point for the controller to orient the rov towards
+    :param focus: geometry_msgs.msg.PointStamped, point to orient towards (only using xy as of now)"""
+    global goalThreshold
+    goalThreshold = goal_threshold.data
+    print("INFO: Goal threshold set!")
+
 def controller():
     global master
     # Create the connection
@@ -315,6 +338,8 @@ def controller():
     rospy.Subscriber(rospy.get_param('~focus_topic'), geometry_msgs.msg.PointStamped, focus_callback)
     rospy.Subscriber(rospy.get_param('~goal_topic'), geometry_msgs.msg.PointStamped, goal_callback)
     rospy.Subscriber(rospy.get_param('~goal_path_topic'), visualization_msgs.msg.Marker, path_callback)
+    rospy.Subscriber(rospy.get_param('~segment_size_topic'), Float64, segment_size_callback)
+    rospy.Subscriber(rospy.get_param('~goal_threshold_topic'), Float64, goal_threshold_callback)
 
     # spin() simply keeps python from exiting until this node is stopped
     rospy.spin()

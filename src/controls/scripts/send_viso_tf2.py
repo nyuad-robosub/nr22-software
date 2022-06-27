@@ -67,7 +67,8 @@ def cmd_set_home(master, lat, lon, alt):
 # https://github.com/Williangalvani/ardupilot/commit/e1d009555e7cadaf69c1d901e5b5ef5fc4b5c3ca#diff-44fb8d1e593cf689717f7e036207a553ff61b27792d44f8fbc5f97b9ccbc8ae2R1
 def send_vision(master, sys_time, delt_time, position=[0.0, 0.0, 0.0], rotation=[0.0, 0.0, 0.0], confidence=100): # , x, y, z
     "Sends message VISION_POSITION_DELTA to flight controller"
-    print("Sending VPD: ", position, rotation)
+    # print("Sending VPD: ", position, rotation)
+    # print(rotation[2])
     master.mav.vision_position_delta_send(
         sys_time, # 0, # time (us)
         delt_time,  # delta time (us)

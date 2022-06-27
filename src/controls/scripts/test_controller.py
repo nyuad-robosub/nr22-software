@@ -11,22 +11,27 @@ Relevant links:
 import time
 
 import rospy
-from std_msgs.msg import String, Bool
+from std_msgs.msg import String, Bool, Float64
 import math
 import numpy as np
 import tf2_ros
 import geometry_msgs.msg
 import visualization_msgs.msg
 
-focusPoint = geometry_msgs.msg.Point(1000, 0, 0)
-goalPoint = geometry_msgs.msg.Point(4.2, -2.5, 1)
-goalPoints = [geometry_msgs.msg.Point(20.2, -2.5, 3),
-              geometry_msgs.msg.Point(20.2, -10.5, 3),
+focusPoint = geometry_msgs.msg.Point(30, 0, 0)
+# goalPoint = geometry_msgs.msg.Point(4.2, -2.5, 1)
+# goalPoints = [geometry_msgs.msg.Point(8.2, -2.5, 3),
+#               geometry_msgs.msg.Point(2.5, 8.2, 2),
+#               geometry_msgs.msg.Point(-8.2, 2.5, 3),
+#               geometry_msgs.msg.Point(-2.5, -8.2, 2),
+#               geometry_msgs.msg.Point(8.2, -2.5, 3)]
+goalPoints = [geometry_msgs.msg.Point(20.2, 2.5, 3),
+              geometry_msgs.msg.Point(20.2, 10.5, 3),
               # geometry_msgs.msg.Point(0, 0, 2.75),
               # geometry_msgs.msg.Point(20.2, 2.5, 3),
-              geometry_msgs.msg.Point(20.2, 8.5, 3),
-              geometry_msgs.msg.Point(20.2, 8.5, 1),
-              geometry_msgs.msg.Point(20.2, -10.5, 1)]
+              geometry_msgs.msg.Point(20.2, -10.5, 3)]
+            #   geometry_msgs.msg.Point(20.2, 8.5, 1),
+            #   geometry_msgs.msg.Point(20.2, -10.5, 1)]
               # geometry_msgs.msg.Point(0, 9, 2.75)]
 
 if __name__== '__main__':
@@ -37,13 +42,15 @@ if __name__== '__main__':
     # run simultaneously.
     rospy.init_node('test_controller', anonymous=True)
 
-    rospy.sleep(3)
+    rospy.sleep(1)
 
     pub1 = rospy.Publisher('controller/isArmed', Bool, queue_size=1, latch=True)
     pub2 = rospy.Publisher('controller/usePCL', Bool, queue_size=1, latch=True)
     pub3 = rospy.Publisher('controller/focusPoint', geometry_msgs.msg.PointStamped, queue_size=1, latch=True)
     pub4 = rospy.Publisher('controller/goalPoint', geometry_msgs.msg.PointStamped, queue_size=1, latch=True)
     pub5 = rospy.Publisher('controller/goalPath', visualization_msgs.msg.Marker, queue_size=1, latch=True)
+    pub6 = rospy.Publisher('controller/segmentSize', Float64, queue_size=1, latch=True)
+    pub7 = rospy.Publisher('controller/goalThreshold', Float64, queue_size=1, latch=True)
 
     rate = rospy.Rate(10)  # 10hz
     count = 1
@@ -64,8 +71,7 @@ if __name__== '__main__':
         rate.sleep()
         count -= 1
 
-
-    time.sleep(3)
+    rospy.sleep(2)
     # msg4 = geometry_msgs.msg.PointStamped()
     # msg4.header.stamp = rospy.Time.now()
     # msg4.header.frame_id = 'world'
@@ -79,4 +85,14 @@ if __name__== '__main__':
         msg5.points.append(p)
     pub5.publish(msg5)
 
+    rospy.sleep(20)
+    msg6 = Float64()
+    msg6.data = 0.3
+    pub6.publish(msg6)
+    msg7 = Float64()
+    msg7.data = 0.15
+    pub7.publish(0.15)
 
+    rospy.sleep(20)
+    msg1.data = False
+    pub1.publish(msg1)

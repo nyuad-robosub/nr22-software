@@ -94,6 +94,7 @@ sudo apt-get install ros-melodic-camera-info-manager
 sudo apt-get install ros-melodic-pcl-ros
 sudo apt-get install ros-melodic-image-transport
 sudo apt-get install ros-melodic-tf2-sensor-msgs
+sudo apt-get install ros-melodic-smach
 sudo apt-get install libbz2-dev
 sudo apt install nlohmann-json-dev
 
@@ -112,12 +113,12 @@ cd build
 cmake .. 
 sudo make install
 
-#FOR ORBSLAM WE NEED SOPHUS #include <sophus/se3.hpp>
-cd $p/Sophus
-mkdir build
-cd build
-cmake ..
-sudo make install
+# #FOR ORBSLAM WE NEED SOPHUS #include <sophus/se3.hpp>
+# cd $p/Sophus
+# mkdir build
+# cd build
+# cmake ..
+# sudo make install
 
 #FOR ORBSLAM WE NEED FMT #include <sophus/se3.hpp>
 cd $p/fmt

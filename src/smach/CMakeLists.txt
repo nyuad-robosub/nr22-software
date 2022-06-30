@@ -7,7 +7,7 @@ project(smach)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS rospy std_msgs geometry_msgs tf2 tf2_ros )
+find_package(catkin REQUIRED COMPONENTS rospy std_msgs geometry_msgs tf2 tf2_ros smach)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -113,7 +113,7 @@ catkin_package(
 ## Your package locations should be listed before other locations
 include_directories(
 # include
-# ${catkin_INCLUDE_DIRS}
+  ${catkin_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -155,16 +155,11 @@ include_directories(
 
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
-# catkin_install_python(#PROGRAMS
-#   # scripts/test_pymavlink.py
-#   # scripts/test_control.py
-#   # scripts/send_viso_tf2.py
-#   # scripts/send_viso_pose.py
-#   # scripts/mavlink_publisher.py
-#   # scripts/controller.py
-#   # scripts/test_controller.py
-#   # DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
+catkin_install_python(PROGRAMS
+  scripts/smach_controller.py
+  scripts/states/lost.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
 
 ## Mark executables for installation
 ## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html

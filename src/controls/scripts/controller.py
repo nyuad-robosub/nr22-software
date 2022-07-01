@@ -282,6 +282,7 @@ def path_callback(path):
         return
 
     # set the desired operating mode
+    # hold position after done with path callback
     pos_hold = 'POSHOLD'
     pos_hold_mode = master.mode_mapping()[pos_hold]
     while not master.wait_heartbeat().custom_mode == pos_hold_mode:
@@ -333,13 +334,13 @@ def controller():
     # Make sure the connection is valid
     master.wait_heartbeat()
 
-    rospy.Subscriber(rospy.get_param('~arm_topic'), Bool, arm_callback)
+    rospy.Subscriber(rospy.get_param('~arm_topic'), Bool, arm_callback) #true or false 
     rospy.Subscriber(rospy.get_param('~pcl_topic'), Bool, pcl_callback)
-    rospy.Subscriber(rospy.get_param('~focus_topic'), geometry_msgs.msg.PointStamped, focus_callback)
-    rospy.Subscriber(rospy.get_param('~goal_topic'), geometry_msgs.msg.PointStamped, goal_callback)
-    rospy.Subscriber(rospy.get_param('~goal_path_topic'), visualization_msgs.msg.Marker, path_callback)
-    rospy.Subscriber(rospy.get_param('~segment_size_topic'), Float64, segment_size_callback)
-    rospy.Subscriber(rospy.get_param('~goal_threshold_topic'), Float64, goal_threshold_callback)
+    rospy.Subscriber(rospy.get_param('~focus_topic'), geometry_msgs.msg.PointStamped, focus_callback) # what to focus on visually while you move along path
+    rospy.Subscriber(rospy.get_param('~goal_topic'), geometry_msgs.msg.PointStamped, goal_callback) #just oen points
+    rospy.Subscriber(rospy.get_param('~goal_path_topic'), visualization_msgs.msg.Marker, path_callback) #the path to follow
+    rospy.Subscriber(rospy.get_param('~segment_size_topic'), Float64, segment_size_callback) #how much rov moves every step
+    rospy.Subscriber(rospy.get_param('~goal_threshold_topic'), Float64, goal_threshold_callback) #how close you want to be to the goal point
 
     # spin() simply keeps python from exiting until this node is stopped
     rospy.spin()

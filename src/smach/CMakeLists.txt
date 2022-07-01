@@ -7,7 +7,7 @@ project(smach)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS rospy std_msgs geometry_msgs tf2 tf2_ros smach)
+find_package(catkin REQUIRED COMPONENTS rospy std_msgs geometry_msgs tf2 tf2_ros smach controls)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -157,7 +157,7 @@ include_directories(
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
   scripts/smach_controller.py
-  scripts/states/lost.py
+  scripts/states/check_submerged.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

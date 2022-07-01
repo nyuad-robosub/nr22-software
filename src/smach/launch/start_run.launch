@@ -1,0 +1,6 @@
+<launch>
+    <arg name="base_frame" default="world" />
+    <arg name="publish_frame" default="base_link" />
+
+    <include file="$(find controls)/launch/mavlink_publisher.launch"></include>
+</launch>

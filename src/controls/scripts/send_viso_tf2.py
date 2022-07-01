@@ -1,4 +1,5 @@
-#!/usr/bin/env python
+#!/usr/bin/python2.7
+#/usr/bin/env python
 """
 Try to send external position to MAVlink
 Relevant links:
@@ -35,8 +36,8 @@ https://github.com/mavlink/mavros/issues/1641
 import tf2_py
 import time
 # Import mavutil
-import pymavlink.quaternion
-import transforms3d.quaternions
+#import pymavlink.quaternion
+#import transforms3d.quaternions
 from pymavlink import mavutil
 
 # Try to set home

@@ -13,7 +13,9 @@ https://www.ardusub.com/developers/pymavlink.html#receive-data-and-filter-by-mes
 
 import time
 # Import mavutil
+#import threading
 from pymavlink import mavutil, quaternion
+from std_msgs.msg import Float32
 
 # Request data stream
 def set_msg_interval(master, interval_us, message_id): # , x, y, z
@@ -29,6 +31,18 @@ def set_msg_interval(master, interval_us, message_id): # , x, y, z
         0,  # param5
         0,  # param6
         0)  # param7
+
+def tf_publish(t,last_pos,last_rot,br): #maybe make this a class?
+    t.header.stamp = rospy.Time.now()
+    t.transform.translation.x = last_pos[0]
+    t.transform.translation.y = last_pos[1]
+    t.transform.translation.z = last_pos[2]
+    t.transform.rotation.w = last_rot[0]
+    t.transform.rotation.x = last_rot[1]
+    t.transform.rotation.y = last_rot[2]
+    t.transform.rotation.z = last_rot[3]
+    br.sendTransform(t)
+    
 
 # ---------------------------------------------
 #   ROS area
@@ -61,6 +75,7 @@ if __name__== '__main__':
     # Set message interval (listening to LOCAL_POSITION_NED (#32) and ATTITUDE_QUATERNION (#31))
     set_msg_interval(master, 10000, 32)
     set_msg_interval(master, 10000, 31)
+    set_msg_interval(master, 10000, 178)
 
     # Retaining old information (position & quaternion, mavlink style wxyz)
     last_pos = [0.0, 0.0, 0.0]
@@ -70,6 +85,7 @@ if __name__== '__main__':
     # http://wiki.ros.org/tf2/Tutorials/Adding%20a%20frame%20%28Python%29
     br = tf2_ros.TransformBroadcaster()
     t = geometry_msgs.msg.TransformStamped()
+    alt_publisher = rospy.Publisher('altitude', Float32, queue_size=5)
 
     t.header.frame_id = rospy.get_param('~base_frame')
     t.child_frame_id = rospy.get_param('~publish_frame')
@@ -84,10 +100,10 @@ if __name__== '__main__':
         # Check if has not received data in a while
         if master.time_since('ATTITUDE_QUATERNION') >= 1:
             publishable[0] = False
-            print("WARN: Not received ATTITUDE_QUATERNION for a while")
+            #print("WARN: Not received ATTITUDE_QUATERNION for a while")
         if master.time_since('LOCAL_POSITION_NED') >= 1:
             publishable[1] = False
-            print("WARN: Not received LOCAL_POSITION_NED for a while")
+            #print("WARN: Not received LOCAL_POSITION_NED for a while")
         if fcu_msg is None:
             pass
         elif fcu_msg.get_type() != 'BAD_DATA':
@@ -110,15 +126,11 @@ if __name__== '__main__':
                             publishable[1] = True
 
                 if publishable[0] and publishable[1]:
-                    t.header.stamp = rospy.Time.now()
-                    t.transform.translation.x = last_pos[0]
-                    t.transform.translation.y = last_pos[1]
-                    t.transform.translation.z = last_pos[2]
-                    t.transform.rotation.w = last_rot[0]
-                    t.transform.rotation.x = last_rot[1]
-                    t.transform.rotation.y = last_rot[2]
-                    t.transform.rotation.z = last_rot[3]
+                    tf_publish(t,last_pos,last_rot,br)
+            elif fcu_msg.get_type() == 'AHRS2':
+                msg_dict = fcu_msg.to_dict()
+                alt = msg_dict['altitude']
+                alt_publisher.publish(Float32(alt))
 
-                    br.sendTransform(t)
                 # print(fcu_msg)
         rospy.sleep(0.001)

@@ -39,6 +39,7 @@ import time
 #import pymavlink.quaternion
 #import transforms3d.quaternions
 from pymavlink import mavutil
+from std_msgs.msg import Bool
 
 # Try to set home
 def cmd_set_home(master, lat, lon, alt):
@@ -89,10 +90,12 @@ import tf2_ros
 import geometry_msgs.msg
 from transforms3d import euler, quaternions, affines
 from datetime import datetime
+import threading 
 
 boot_time = datetime.now()
 last_time = datetime.now()
-
+mutex = threading.Lock()
+isLost = False
 # last_pos = [0.0, 0.0, 0.0]
 # last_rot = [0.0, 0.0, 0.0]
 # def processTransform(master, p_trans):
@@ -282,9 +285,15 @@ def processTransform(master, p_trans):
 
     send_vision(master, sys_time, delt_time, delt_pos, delt_rot, 90)
 
+def lost_callback(isl):
+    mutex.acquire()
+    isLost=isl
+    mutex.release()
+
 def receiver():
     # Create the connection
     master = mavutil.mavlink_connection(rospy.get_param('~mav_addr'), dialect='ardupilotmega')
+
     # Make sure the connection is valid
     master.wait_heartbeat()
 
@@ -297,6 +306,7 @@ def receiver():
 
     tfBuffer = tf2_ros.Buffer()
     listener = tf2_ros.TransformListener(tfBuffer)
+    lost_listener = rospy.Subscriber('/orb_slam_3_lost', Bool , lost_callback)
 
     rate = rospy.Rate(15.0)
     max_timeout = 10
@@ -304,7 +314,10 @@ def receiver():
     while not rospy.is_shutdown():
         try:
             trans = tfBuffer.lookup_transform(WORLD_FRAME, ROV_FRAME, rospy.Time(), rospy.Duration(4))
-            processTransform(master, trans)
+            mutex.acquire()
+            if(not isLost):
+                processTransform(master, trans)
+            mutex.release()
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             continue
         except AttributeError:

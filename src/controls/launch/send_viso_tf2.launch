@@ -2,7 +2,9 @@
 	<!-- base params -->
 	<arg name="mav_addr" default="udpin:0.0.0.0:14551" />
 	<arg name="world_frame" default="world" />
-	<arg name="rov_frame" default="bluerov2/base_link" />
+	<arg name="rov_frame" default="orb_slam3_camera" />
+	<!-- <arg name="rov_frame" default="bluerov2/base_link" /> -->
+
 
 	<!-- optional set home -->
 	<arg name="set_home" default="true" />

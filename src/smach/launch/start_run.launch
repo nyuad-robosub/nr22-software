@@ -1,6 +1,23 @@
 <launch>
     <arg name="base_frame" default="world" />
     <arg name="publish_frame" default="base_link" />
+    <arg name="orb_slam_3_frame" default="orb_slam3_camera" />
 
-    <include file="$(find controls)/launch/mavlink_publisher.launch"></include>
+	<arg name="world_frame" default="world" />
+	<arg name="rov_frame" default="base_link" />
+    
+    <!-- <include file="$(find controls)/launch/mavlink_publisher.launch"> </include> -->
+    <arg name="respawn_smach" default="false" />
+    <arg name="log_output" default="screen" />
+
+    <arg name="goal_topic" default ="controller/goalPoint" />
+
+	<node pkg="smach" type="smach_controller.py" name="smach_controller" required="$(eval not respawn_smach)"
+    clear_params="true" output="$(arg log_output)" respawn="$(arg respawn_smach)"> 
+        <param name="base_frame" value="$(arg base_frame)" />
+        <param name="publish_frame" value="$(arg publish_frame)" />
+        <param name="rov_frame" value="$(arg rov_frame)" />
+        <param name="world_frame" value="$(arg world_frame)" />
+        <param name="orb_slam_3_frame" value="$(arg orb_slam_3_frame)" />
+    </node>
 </launch>

@@ -32,17 +32,22 @@ def set_msg_interval(master, interval_us, message_id): # , x, y, z
         0,  # param6
         0)  # param7
 
-def tf_publish(t,last_pos,last_rot,br): #maybe make this a class?
+# Publish LOCAL_POSITION_NED
+def tf_publish(t,last_pos,last_rot,br): 
+    "Rectify and publish frame of ROV underwater"
     t.header.stamp = rospy.Time.now()
-    t.transform.translation.x = -last_pos[0]
-    t.transform.translation.y = -last_pos[1]
-    t.transform.translation.z = -last_pos[2]
+    t.transform.translation.x = last_pos[0]
+    t.transform.translation.y = - last_pos[1]
+    t.transform.translation.z = - last_pos[2]
+
+    # Rectifying rotation courtesy of:
+    # https://stackoverflow.com/a/32482386
     t.transform.rotation.w = last_rot[0]
-    t.transform.rotation.x = -last_rot[1]
+    t.transform.rotation.x = last_rot[1]
     t.transform.rotation.y = -last_rot[2]
     t.transform.rotation.z = -last_rot[3]
+
     br.sendTransform(t)
-    
 
 # ---------------------------------------------
 #   ROS area
@@ -126,11 +131,8 @@ if __name__== '__main__':
                             publishable[1] = True
             
                 if publishable[0] and publishable[1]:
-                    tf_publish(t,last_pos,last_rot,br)
-                # elif publishable[0]:
-                #     pass
-                #     #tf_publish(t,[0,0,0],last_rot,br)
-                tf_publish(t,[0,0,0],last_rot,br)
+                    tf_publish(t, last_pos, last_rot, br)
+
             elif fcu_msg.get_type() == 'AHRS2':
                 msg_dict = fcu_msg.to_dict()
                 alt = msg_dict['altitude']

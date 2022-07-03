@@ -1,6 +1,7 @@
 [submodule "src/deps/realsense-ros"]
 	path = src/deps/realsense-ros
 	url = https://github.com/nyuad-robosub/realsense-ros
+	branch = development-gazebo
 [submodule "include/fmt"]
 	path = include/fmt
 	url = https://github.com/fmtlib/fmt
@@ -10,6 +11,7 @@
 [submodule "include/depthai-core"]
 	path = include/depthai-core
 	url = https://github.com/luxonis/depthai-core
+	branch = main
 [submodule "include/ORB_SLAM2_OPENCV4"]
 	path = include/ORB_SLAM2_OPENCV4
 	url = https://github.com/dolf321/ORB_SLAM2_OPENCV4
@@ -26,3 +28,10 @@
 [submodule "include/libnop"]
 	path = include/libnop
 	url = https://github.com/google/libnop
+[submodule "src/deps/simulations/bluerov2"]
+	path = src/deps/simulations/bluerov2
+	url = https://github.com/nyuad-robosub/bluerov2
+[submodule "src/deps/simulations/realsense_gazebo_plugin"]
+	path = src/deps/simulations/realsense_gazebo_plugin
+	url = https://github.com/nyuad-robosub/realsense_gazebo_plugin
+	branch = melodic-devel

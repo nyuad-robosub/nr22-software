@@ -62,7 +62,7 @@ def set_target_attitude(master, sys_time, roll, pitch, yaw):
         # allow throttle to be controlled by depth_hold mode
         mavutil.mavlink.ATTITUDE_TARGET_TYPEMASK_THROTTLE_IGNORE,
         # -> attitude quaternion (w, x, y, z | zero-rotation is 1, 0, 0, 0)
-        QuaternionBase([math.radians(angle) for angle in (roll, pitch, yaw)]),
+        QuaternionBase([roll, pitch, yaw]), # math.radians(angle) for angle in (roll, pitch, yaw)
         0, 0, 0, 0 # roll rate, pitch rate, yaw rate, thrust
     )
 def set_target_yaw(master, yaw):
@@ -103,12 +103,66 @@ last_time = datetime.now()
 # Initialization here
 usePCL = False
 isArmed = False
+isRunning = False
 focusPoint = geometry_msgs.msg.Point(0, 0, 0)
 segmentSize = 3
 goalThreshold = 0.2
 
-# Undeclared master
+# Undeclared master & publisher
 master = None
+run_publisher = None
+
+def arm_callback(flag): 
+    """ Callback to set arm / disarm
+        Controller will monitor boolean to stop sending commands whenever disarmed
+    :param flag: std_msgs.msg.Bool flag monitored
+    """
+    global master, isArmed, isRunning, run_publisher
+    if flag.data:
+        # arm ArduSub autopilot and wait until confirmed
+        master.arducopter_arm()
+        master.motors_armed_wait()
+        isArmed = True
+        print("INFO: Armed!")
+    else:
+        # clean up (disarm) at the end
+        isArmed = False
+        master.arducopter_disarm()
+        master.motors_disarmed_wait()
+        print("INFO: Disarmed!")
+
+        if isRunning:
+            msg = Bool()
+            msg.data = False
+            run_publisher.publish(msg)
+
+def run_callback(flag): 
+    """ Callback to operate/stop the ROV
+        Controller will monitor boolean to stop sending commands whenever stopped
+    :param flag: std_msgs.msg.Bool flag monitored
+    """
+    global isRunning, isArmed, run_publisher
+    if flag.data:
+        if isArmed:
+            # run
+            if not isRunning:
+                print("INFO: Running!")
+                isRunning = True
+            else:
+                pass
+                # print("INFO: Has been running!")
+        else:
+            print("Disarmed, cannot run!")
+            msg = Bool()
+            msg.data = False
+            run_publisher.publish(msg)
+    else:
+        # stop
+        if isRunning:
+            isRunning = False
+            print("INFO: Holding position!")
+        else:
+            print("INFO: Has stopped!")
 
 def pcl_callback(flag):
     """ Callback to set PCL usage
@@ -123,25 +177,6 @@ def pcl_callback(flag):
         usePCL = False
         print("INFO: Not using PCL!")
 
-def arm_callback(flag):
-    """ Callback to set arm / disarm
-        Controller will monitor boolean to stop sending commands whenever disarmed
-    :param flag: std_msgs.msg.Bool flag monitored
-    """
-    global master, isArmed
-    if flag.data:
-        # arm ArduSub autopilot and wait until confirmed
-        master.arducopter_arm()
-        master.motors_armed_wait()
-        isArmed = True
-        print("INFO: Armed!")
-    else:
-        # clean up (disarm) at the end
-        isArmed = False
-        master.arducopter_disarm()
-        master.motors_disarmed_wait()
-        print("INFO: Disarmed!")
-
 def focus_callback(focus):
     """ Get point for the controller to orient the rov towards
     :param focus: geometry_msgs.msg.PointStamped, point to orient towards (only using xy as of now)"""
@@ -155,10 +190,20 @@ def path_callback(path):
         or passed directly from the goal_callback() below.
     :param path: visualization_msgs.Marker (LineStrip type, starting from the next position to go to)
     """
-    global focusPoint
+    global focusPoint, isArmed, isRunning
     if not isArmed:
         print("Trajectory planned but ROV not armed!")
         return
+    
+    if isRunning:
+        print("Another control process is running!")
+        return
+
+    # Starting the process
+    isRunning = True
+    msg = Bool()
+    msg.data = True
+    run_publisher.publish(msg)
 
     # Monitoring position of ROV
     WORLD_FRAME = rospy.get_param("~world_frame")
@@ -180,10 +225,10 @@ def path_callback(path):
                 trans = tfBuffer.lookup_transform(WORLD_FRAME, ROV_FRAME, rospy.Time(), rospy.Duration(4))
             except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
                 rospy.sleep(0.2)
-                if isArmed:
+                if isArmed and isRunning:
                     continue
             break
-        if not isArmed:
+        if not isArmed or not isRunning:
             break
         p_arr = np.array([p.x, p.y, p.z])
         trans_arr = np.array(
@@ -192,73 +237,59 @@ def path_callback(path):
         mag = np.linalg.norm(delt)
 
         while mag > goalThreshold:
-            if not isArmed:
+            if not isArmed or not isRunning:
                 break
             if mag < segmentSize:
                 nextPoint = p
             else:
-                # Move one meter at a time
+                # Move one segment at a time
                 tmp_arr = trans_arr + (delt / mag) * segmentSize
                 nextPoint = geometry_msgs.msg.Point(tmp_arr[0], tmp_arr[1], tmp_arr[2])
 
             # TRANSLATION
-            # # set the desired operating mode
-            # guided = 'GUIDED'
-            # guided_mode = master.mode_mapping()[guided]
-            # while not master.wait_heartbeat().custom_mode == guided_mode:
-            #     master.set_mode(guided_mode)
-            # if not isArmed:
-            #     break
-
             # set a position target
-            if focusPoint.x == nextPoint.x and focusPoint.y == nextPoint.y:
-                yaw = 0
-            else:
-                yaw = math.atan2(focusPoint.y - nextPoint.y, focusPoint.x - nextPoint.x)
-                if yaw < 0:
-                    yaw += 2 * math.pi
-                yaw = yaw * RAD_TO_DEG
             print("setting position")
             sys_time = (datetime.now() - boot_time).total_seconds() * 1e3
-            set_target_local_position(master, sys_time, nextPoint.x, nextPoint.y, nextPoint.z)
+            # Accounting for reversed z axis
+            # set_target_local_position(master, sys_time, nextPoint.x, nextPoint.y, nextPoint.z)
+            set_target_local_position(master, sys_time, nextPoint.x, -nextPoint.y, -nextPoint.z)
             np_arr = np.array([nextPoint.x, nextPoint.y, nextPoint.z])
             delt = np_arr - trans_arr
             mag = np.linalg.norm(delt)
-            while mag > 0.1:
+            while mag > goalThreshold:
                 # Find current location
                 while True:
                     try:
                         trans = tfBuffer.lookup_transform(WORLD_FRAME, ROV_FRAME, rospy.Time(), rospy.Duration(4))
                     except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
                         rospy.sleep(0.2)
-                        if isArmed:
+                        if isArmed and isRunning:
                             continue
                     break
-                if not isArmed:
+                if not isArmed or not isRunning:
                     break
                 trans_arr = np.array(
                     [trans.transform.translation.x, trans.transform.translation.y, trans.transform.translation.z])
                 delt = np_arr - trans_arr
                 mag = np.linalg.norm(delt)
-            # rospy.sleep(5)
 
-            # ROTATION
-            # # set the desired operating mode
-            # depth_hold = 'ALT_HOLD'
-            # depth_hold_mode = master.mode_mapping()[depth_hold]
-            # while not master.wait_heartbeat().custom_mode == depth_hold_mode:
-            #     master.set_mode(depth_hold)
-            # if not isArmed:
-            #     break
-            
-            # set a rotation target
-            print("setting rotation")
-            set_target_yaw(master, yaw)
-            # sys_time = (datetime.now() - boot_time).total_seconds() * 1e3
-            # set_target_attitude(master, sys_time, 0, 90, yaw)
-            rospy.sleep(2.5)
-            if not isArmed:
-                break
+                # ROTATION
+                # set a rotation target while moving
+                if focusPoint.x == trans_arr[0] and focusPoint.y == trans_arr[1]:
+                    yaw = 0
+                else:
+                    yaw = math.atan2(focusPoint.y - trans_arr[1], focusPoint.x - trans_arr[0])
+                    if yaw < 0:
+                        yaw += 2 * math.pi
+                    yaw = yaw * RAD_TO_DEG
+                    
+                # print("setting rotation")
+                # Accounting for reversed z axis
+                # set_target_yaw(master, yaw)
+                if yaw == 0:
+                    yaw = 360
+                set_target_yaw(master, 360 - yaw)
+                rospy.sleep(0.2)
 
             # Find current location
             while True:
@@ -266,10 +297,10 @@ def path_callback(path):
                     trans = tfBuffer.lookup_transform(WORLD_FRAME, ROV_FRAME, rospy.Time(), rospy.Duration(4))
                 except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
                     rospy.sleep(0.2)
-                    if isArmed:
+                    if isArmed and isRunning:
                         continue
                 break
-            if not isArmed:
+            if not isArmed or not isRunning:
                 break
             trans_arr = np.array(
                 [trans.transform.translation.x, trans.transform.translation.y, trans.transform.translation.z])
@@ -287,11 +318,18 @@ def path_callback(path):
     pos_hold_mode = master.mode_mapping()[pos_hold]
     while not master.wait_heartbeat().custom_mode == pos_hold_mode:
         master.set_mode(pos_hold)
+    
+    # Detect if stopped from successful trip
+    if isRunning:
+        print("Trajectory completed")
+        msg.data = False
+        run_publisher.publish(msg)
 
 def goal_callback(goal):
     """ Callback function when receiving destination
     :param goal: geometry_msgs.msg.PointStamped, position to go to
     """
+    global isArmed
     if not isArmed:
         print("Goal received but ROV not armed!")
         return
@@ -311,36 +349,98 @@ def goal_callback(goal):
         faux_msg.points.append(goal.point)
         path_callback(faux_msg)
     else:
-        pass
+        print("PCL usage not implemented!")
 
 def segment_size_callback(segment_size):
-    """ Get point for the controller to orient the rov towards
-    :param focus: geometry_msgs.msg.PointStamped, point to orient towards (only using xy as of now)"""
+    """ Maximum distance the ROV will move at a time
+    :param segment_size: Float64, segment size in meters"""
     global segmentSize
     segmentSize = segment_size.data
     print("INFO: Segment size set!")
 
 def goal_threshold_callback(goal_threshold):
-    """ Get point for the controller to orient the rov towards
-    :param focus: geometry_msgs.msg.PointStamped, point to orient towards (only using xy as of now)"""
+    """ How close to the goal is acceptable
+    :param goal_threshold: Float64, goal threshold in meters"""
     global goalThreshold
     goalThreshold = goal_threshold.data
     print("INFO: Goal threshold set!")
 
+def rotation_callback(rotation):
+    """ Callback function to do rotation.
+    :param rotation: geometry_msgs.msg.QuaternionStamped
+    """
+    global run_publisher, isArmed, isRunning
+    if not isArmed:
+        print("Rotation received but ROV not armed!")
+        return
+
+    if isRunning:
+        print("Another control process is running!")
+        return
+
+    # Starting the process
+    isRunning = True
+    msg = Bool()
+    msg.data = True
+    run_publisher.publish(msg)
+
+    # ROTATION
+    # set the desired operating mode
+    depth_hold = 'ALT_HOLD'
+    depth_hold_mode = master.mode_mapping()[depth_hold]
+    while not master.wait_heartbeat().custom_mode == depth_hold_mode:
+        master.set_mode(depth_hold)
+    
+    # set a rotation target over a period
+    print("setting rotation")
+    for i in range(12):
+        sys_time = (datetime.now() - boot_time).total_seconds() * 1e3
+        roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
+        set_target_attitude(master, sys_time, roll, pitch, yaw)
+        # print(math.degrees(roll), math.degrees(pitch), math.degrees(yaw))
+        if not isArmed or not isRunning:
+            break
+        rospy.sleep(0.25)
+
+    if not isArmed:
+        print("Robot disarmed, controls will stop")
+        return
+
+    # set the desired operating mode
+    # hold position after done with path callback
+    pos_hold = 'POSHOLD'
+    pos_hold_mode = master.mode_mapping()[pos_hold]
+    while not master.wait_heartbeat().custom_mode == pos_hold_mode:
+        master.set_mode(pos_hold)
+    
+    # Detect if stopped from successful rotation
+    if isRunning:
+        print("Rotation completed")
+        msg.data = False
+        run_publisher.publish(msg)
+
 def controller():
-    global master
+    global master, run_publisher
     # Create the connection
     master = mavutil.mavlink_connection(rospy.get_param('~mav_addr'), dialect='ardupilotmega')
     # Make sure the connection is valid
     master.wait_heartbeat()
 
+    # Base params
     rospy.Subscriber(rospy.get_param('~arm_topic'), Bool, arm_callback) #true or false 
+    rospy.Subscriber(rospy.get_param('~run_topic'), Bool, run_callback)
+    run_publisher = rospy.Publisher(rospy.get_param('~run_topic'), Bool, queue_size=1, latch=True)
+
+    # Translation params
     rospy.Subscriber(rospy.get_param('~pcl_topic'), Bool, pcl_callback)
     rospy.Subscriber(rospy.get_param('~focus_topic'), geometry_msgs.msg.PointStamped, focus_callback) # what to focus on visually while you move along path
     rospy.Subscriber(rospy.get_param('~goal_topic'), geometry_msgs.msg.PointStamped, goal_callback) #just oen points
     rospy.Subscriber(rospy.get_param('~goal_path_topic'), visualization_msgs.msg.Marker, path_callback) #the path to follow
     rospy.Subscriber(rospy.get_param('~segment_size_topic'), Float64, segment_size_callback) #how much rov moves every step
     rospy.Subscriber(rospy.get_param('~goal_threshold_topic'), Float64, goal_threshold_callback) #how close you want to be to the goal point
+
+    # Rotation params
+    rospy.Subscriber(rospy.get_param('~goal_rotation_topic'), geometry_msgs.msg.Quaternion, rotation_callback)
 
     # spin() simply keeps python from exiting until this node is stopped
     rospy.spin()
@@ -359,3 +459,146 @@ if __name__== '__main__':
 # ---------------------------------------------
 #   Code bank area
 # ---------------------------------------------
+
+# def path_callback(path):
+#     """ Callback function when receiving path to follow.
+#         This path will either be generated from pointcloud algorithms (usePCL = True)
+#         or passed directly from the goal_callback() below.
+#     :param path: visualization_msgs.Marker (LineStrip type, starting from the next position to go to)
+#     """
+#     global focusPoint
+#     if not isArmed:
+#         print("Trajectory planned but ROV not armed!")
+#         return
+
+#     if not isRunning:
+#         print("Trajectory planned but ROV not running!")
+#         return
+
+#     # Monitoring position of ROV
+#     WORLD_FRAME = rospy.get_param("~world_frame")
+#     ROV_FRAME = rospy.get_param("~rov_frame")
+
+#     tfBuffer = tf2_ros.Buffer()
+#     listener = tf2_ros.TransformListener(tfBuffer)
+
+#     # set the desired operating mode
+#     guided = 'GUIDED'
+#     guided_mode = master.mode_mapping()[guided]
+#     while not master.wait_heartbeat().custom_mode == guided_mode:
+#         master.set_mode(guided_mode)
+
+#     for p in path.points:
+#         # Find current location
+#         while True:
+#             try:
+#                 trans = tfBuffer.lookup_transform(WORLD_FRAME, ROV_FRAME, rospy.Time(), rospy.Duration(4))
+#             except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+#                 rospy.sleep(0.2)
+#                 if isArmed:
+#                     continue
+#             break
+#         if not isArmed or not isRunning:
+#             break
+#         p_arr = np.array([p.x, p.y, p.z])
+#         trans_arr = np.array(
+#             [trans.transform.translation.x, trans.transform.translation.y, trans.transform.translation.z])
+#         delt = p_arr - trans_arr
+#         mag = np.linalg.norm(delt)
+
+#         while mag > goalThreshold:
+#             if not isArmed or not isRunning:
+#                 break
+#             if mag < segmentSize:
+#                 nextPoint = p
+#             else:
+#                 # Move one meter at a time
+#                 tmp_arr = trans_arr + (delt / mag) * segmentSize
+#                 nextPoint = geometry_msgs.msg.Point(tmp_arr[0], tmp_arr[1], tmp_arr[2])
+
+#             # TRANSLATION
+#             # # set the desired operating mode
+#             # guided = 'GUIDED'
+#             # guided_mode = master.mode_mapping()[guided]
+#             # while not master.wait_heartbeat().custom_mode == guided_mode:
+#             #     master.set_mode(guided_mode)
+#             # if not isArmed or not isRunning:
+#             #     break
+
+#             # set a position target
+#             if focusPoint.x == nextPoint.x and focusPoint.y == nextPoint.y:
+#                 yaw = 0
+#             else:
+#                 yaw = math.atan2(focusPoint.y - nextPoint.y, focusPoint.x - nextPoint.x)
+#                 if yaw < 0:
+#                     yaw += 2 * math.pi
+#                 yaw = yaw * RAD_TO_DEG
+#             print("setting position")
+#             sys_time = (datetime.now() - boot_time).total_seconds() * 1e3
+#             set_target_local_position(master, sys_time, nextPoint.x, nextPoint.y, nextPoint.z)
+#             np_arr = np.array([nextPoint.x, nextPoint.y, nextPoint.z])
+#             delt = np_arr - trans_arr
+#             mag = np.linalg.norm(delt)
+#             while mag > goalThreshold:
+#                 # Find current location
+#                 while True:
+#                     try:
+#                         trans = tfBuffer.lookup_transform(WORLD_FRAME, ROV_FRAME, rospy.Time(), rospy.Duration(4))
+#                     except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+#                         rospy.sleep(0.2)
+#                         if isArmed:
+#                             continue
+#                     break
+#                 if not isArmed or not isRunning:
+#                     break
+#                 trans_arr = np.array(
+#                     [trans.transform.translation.x, trans.transform.translation.y, trans.transform.translation.z])
+#                 delt = np_arr - trans_arr
+#                 mag = np.linalg.norm(delt)
+#             # rospy.sleep(5)
+
+#             # ROTATION
+#             # # set the desired operating mode
+#             # depth_hold = 'ALT_HOLD'
+#             # depth_hold_mode = master.mode_mapping()[depth_hold]
+#             # while not master.wait_heartbeat().custom_mode == depth_hold_mode:
+#             #     master.set_mode(depth_hold)
+#             # if not isArmed or not isRunning:
+#             #     break
+            
+#             # set a rotation target
+#             print("setting rotation")
+#             set_target_yaw(master, yaw)
+#             # sys_time = (datetime.now() - boot_time).total_seconds() * 1e3
+#             # set_target_attitude(master, sys_time, 0, 90, yaw)
+#             rospy.sleep(2.5)
+#             if not isArmed or not isRunning:
+#                 break
+
+#             # Find current location
+#             while True:
+#                 try:
+#                     trans = tfBuffer.lookup_transform(WORLD_FRAME, ROV_FRAME, rospy.Time(), rospy.Duration(4))
+#                 except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+#                     rospy.sleep(0.2)
+#                     if isArmed:
+#                         continue
+#                 break
+#             if not isArmed or not isRunning:
+#                 break
+#             trans_arr = np.array(
+#                 [trans.transform.translation.x, trans.transform.translation.y, trans.transform.translation.z])
+#             delt = p_arr - trans_arr
+#             mag = np.linalg.norm(delt)
+#             print("Distance to goal:", mag)
+
+#     if not isArmed:
+#         print("Robot disarmed, controls will stop")
+#         return
+
+#     # set the desired operating mode
+#     # hold position after done with path callback
+#     pos_hold = 'POSHOLD'
+#     pos_hold_mode = master.mode_mapping()[pos_hold]
+#     while not master.wait_heartbeat().custom_mode == pos_hold_mode:
+#         master.set_mode(pos_hold)

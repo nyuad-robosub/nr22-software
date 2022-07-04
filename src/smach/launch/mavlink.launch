@@ -1,9 +1,9 @@
 <launch>
 	<include file="$(find controls)/launch/mavlink_publisher.launch">
-		<arg name="mav_addr" value="udpin:0.0.0.0:14550" />
+		<arg name="mav_addr" value="udpin:0.0.0.0:14552" />
 	</include>
 	<include file="$(find controls)/launch/controller.launch">
-		<arg name="mav_addr" value="udpin:0.0.0.0:14550" />
+		<arg name="mav_addr" value="udpin:0.0.0.0:14553" />
 	</include>
 
 	

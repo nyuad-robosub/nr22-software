@@ -157,7 +157,10 @@ include_directories(
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
   scripts/smach_controller.py
-  scripts/states/check_submerged.py
+  scripts/smach_controller_simulation.py
+  scripts/check_submerged.py
+  scripts/movement_controller.py
+  scripts/coin_flip.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

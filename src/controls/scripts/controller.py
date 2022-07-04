@@ -392,8 +392,19 @@ def rotation_callback(rotation):
         master.set_mode(depth_hold)
     
     # set a rotation target over a period
+    # Yaw
     print("setting rotation")
-    for i in range(12):
+    for i in range(8):
+        sys_time = (datetime.now() - boot_time).total_seconds() * 1e3
+        roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
+        set_target_attitude(master, sys_time, 0, 0, yaw)
+        # print(math.degrees(roll), math.degrees(pitch), math.degrees(yaw))
+        if not isArmed or not isRunning:
+            break
+        rospy.sleep(0.25)
+
+    # Roll & pitch
+    for i in range(8):
         sys_time = (datetime.now() - boot_time).total_seconds() * 1e3
         roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
         set_target_attitude(master, sys_time, roll, pitch, yaw)

@@ -54,12 +54,12 @@ def main_controller():
     isRunning_topic = rospy.get_param('~isrunning_topic')
 
     # initialize the mavlink_publisher launch file
-    global ls
-    ls = launch_stuff()
-    ls.launch("mavlink.launch")
+    # global ls
+    # ls = launch_stuff()
+    # ls.launch("mavlink.launch")
 
     # initialize mavproxy
-    os.system('mavproxy.py --out 0.0.0.0:14550 --out 0.0.0.0:14551 --out 0.0.0.0:14552 --out 0.0.0.0:14553 --out 0.0.0.0:14554')
+    os.system('mavproxy.py --out 0.0.0.0:14550 --out 0.0.0.0:14551 --out 0.0.0.0:14552 --out 0.0.0.0:14553 --out 0.0.0.0:14554 &> /dev/null &')
 
     # intialize movement controller
     global mov_control

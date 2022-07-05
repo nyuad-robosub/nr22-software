@@ -4,7 +4,8 @@ import rospy
 import smach
 import os
 from std_msgs.msg import Bool
-from movement_controller import movement_controller
+# from movement_controller import movement_controller
+import movement_controller as mc
 
 # just a class to run ros launch files
 
@@ -45,7 +46,8 @@ if __name__ == '__main__':
     isRunning_topic = rospy.get_param('~isrunning_topic')
 
     # intialize movement controller
-    mov_control=movement_controller(goal_topic,world_frame,rov_frame,isRunning_topic) #not global variable error
+    # mov_control=movement_controller(goal_topic,world_frame,rov_frame,isRunning_topic) #not global variable error
+    mc.init(goal_topic, world_frame, rov_frame, isRunning_topic)
         
     rospy.sleep(1)
     # state imports

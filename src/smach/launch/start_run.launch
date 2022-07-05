@@ -1,25 +1,38 @@
 <launch>
-    <arg name="base_frame" default="world" />
-    <arg name="publish_frame" default="base_link" />
+    <!-- SLAM visual args -->
+	<arg name="world_frame" default="world" />
     <arg name="orb_slam_3_frame" default="orb_slam3_camera" />
 
-	<arg name="world_frame" default="world" />
+    <!-- LOCAL_POSITION_NED args -->
+    <arg name="base_frame" default="world" />
 	<arg name="rov_frame" default="base_link" />
     
-    <!-- <include file="$(find controls)/launch/mavlink_publisher.launch"> </include> -->
+    <!-- Launch SEND_VISO_TF2 and MAVLink publisher node -->
+    <include file="$(find controls)/launch/send_viso_tf2.launch">
+        <arg name="world_frame" value="$(arg world_frame)" />
+        <arg name="rov_frame" default="$(arg orb_slam_3_frame)" />
+    </include>
+    <include file="$(find controls)/launch/mavlink_publisher.launch"> 
+        <arg name="base_frame" value="$(arg base_frame)" />
+        <arg name="publish_frame" value="$(arg rov_frame)" />
+    </include>
+
+    <!-- Launch SMACH node -->
     <arg name="respawn_smach" default="false" />
     <arg name="log_output" default="screen" />
-
-    <arg name="goal_topic" default ="controller/goalPoint" />
-    <arg name="goal_rotation_topic" default ="controller/goalRotation" />
-    <arg name="isrunning_topic" default ="controller/isRunning" />
-
-	<node pkg="smach" type="smach_controller.py" name="smach_controller" required="$(eval not respawn_smach)"
+	<node pkg="smach" type="smach_controller_simulation.py" name="smach_controller" required="$(eval not respawn_smach)"
     clear_params="true" output="$(arg log_output)" respawn="$(arg respawn_smach)"> 
         <param name="base_frame" value="$(arg base_frame)" />
         <param name="publish_frame" value="$(arg publish_frame)" />
         <param name="rov_frame" value="$(arg rov_frame)" />
+        <param name="goal_topic" value="$(arg goal_topic)" />
+        <param name="goal_rotation_topic" value ="$(arg goal_rotation_topic)" />
+        <param name="isrunning_topic" value ="$(arg isrunning_topic)"/>
         <param name="world_frame" value="$(arg world_frame)" />
         <param name="orb_slam_3_frame" value="$(arg orb_slam_3_frame)" />
     </node>
+    
+    <!-- <arg name="goal_topic" default ="controller/goalPoint" />
+    <arg name="goal_rotation_topic" default ="controller/goalRotation" />
+    <arg name="isrunning_topic" default ="controller/isRunning" /> -->
 </launch>

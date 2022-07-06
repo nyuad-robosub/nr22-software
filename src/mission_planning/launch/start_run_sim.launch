@@ -11,9 +11,18 @@
     <arg name="goal_topic" default ="controller/goalPoint" />
     <arg name="goal_rotation_topic" default ="controller/goalRotation" />
     <arg name="isrunning_topic" default ="controller/isRunning" />
+
+    <!-- Launch simulation -->
+    <arg name="paused" default="false"/>
+    <arg name="gui" default="false"/>
+
+    <include file="$(find pools)/launch/pool_v2.launch">
+        <arg name="paused" value="false"/>
+        <arg name="gui" value="$(arg gui)"/>
+    </include>
     
     <!-- Launch SEND_VISO_TF2 and MAVLink publisher node -->
-    <!-- <include file="$(find controls)/launch/send_viso_tf2.launch">
+    <include file="$(find controls)/launch/send_viso_tf2.launch">
         <arg name="world_frame" value="$(arg world_frame)" />
         <arg name="rov_frame" default="$(arg orb_slam_3_frame)" />
     </include>
@@ -25,21 +34,12 @@
         <arg name="goal_topic" value="$(arg goal_topic)" />
         <arg name="goal_rotation_topic" value="$(arg goal_rotation_topic)" />
         <arg name="run_topic" value="$(arg isrunning_topic)" />
-    </include> -->
-
-    <!-- Launch simulation -->
-    <!-- <arg name="paused" default="false"/>
-    <arg name="gui" default="false"/>
-
-    <include file="$(find pools)/launch/pool_v2.launch">
-        <arg name="paused" value="false"/>
-        <arg name="gui" value="$(arg gui)"/>
-    </include> -->
+    </include>
 
     <!-- Launch SMACH node -->
     <arg name="respawn_smach" default="false" />
     <arg name="log_output" default="screen" />
-	<node pkg="smach" type="smach_controller_simulation.py" name="smach_controller" required="$(eval not respawn_smach)"
+	<node pkg="mission_planning" type="smach_controller_simulation.py" name="mission_planning" required="$(eval not respawn_smach)"
     clear_params="true" output="$(arg log_output)" respawn="$(arg respawn_smach)"> 
         <param name="base_frame" value="$(arg base_frame)" />
         <!-- <param name="publish_frame" value="$(arg publish_frame)" /> -->

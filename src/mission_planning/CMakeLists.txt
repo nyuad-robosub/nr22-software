@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(smach)
+project(mission_planning)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -158,9 +158,11 @@ include_directories(
 catkin_install_python(PROGRAMS
   scripts/smach_controller.py
   scripts/smach_controller_simulation.py
-  scripts/check_submerged.py
   scripts/movement_controller.py
-  scripts/coin_flip.py
+
+  #states
+  scripts/states/coin_flip.py
+  scripts/states/check_submerged.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

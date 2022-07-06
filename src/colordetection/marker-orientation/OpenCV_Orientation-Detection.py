@@ -1,13 +1,14 @@
 """
-Import OpenCV & NumPy
-
+Install OpenCV, NumPy, DepthAI, MatplotLib
 %pip install opencv-python
 %pip install matplotlib
+%pip install depthai
 
 """
-
+# Import dependencies
 import cv2
 import matplotlib.pyplot as plt
+import depthai as dai
 import numpy as np
 from math import atan2, cos, sin, sqrt, pi
 
@@ -71,106 +72,89 @@ def getOrientation(pts, img):
  
   return angle
 
-# load image
-img = cv2.imread("/Users/nasheed-x/Desktop/Orientation/orange3.jpeg")
-cv2.imshow("Image",img)
+cap = cv2.VideoCapture(0)
 
-#convert to hsv
-hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+while True:
+    
+    # Captures the live stream frame-by-frame
+    _, frame = cap.read()
+      
+    # Converts images from BGR to HSV 
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    
+    # lower bound and upper bound for orange color
+    lower_bound = np.array([0,120,135])
+    upper_bound = np.array([65,255,255])
 
-# lower bound and upper bound for orange color
-lower_bound = np.array([5,50,50])
-upper_bound = np.array([15,255,255])
+    #find color within the boundaries
+    mask = cv2.inRange(hsv, lower_bound, upper_bound)
 
-#find color within the boundaries
-mask = cv2.inRange(hsv, lower_bound, upper_bound)
+    #define kernel size  
+    kernel = np.ones((7,7),np.uint8)
 
-#define kernel size  
-kernel = np.ones((9,9),np.uint8)
+    # remove unnecessary noise from mask
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
 
-# remove unnecessary noise from mask
-mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
-mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+    #create canvas
+    canvas = np.zeros(frame.shape)
+    canvas.fill(0)
 
-cv2.imshow("Mask", mask)
+    #create segmented image
+    segmented_img = cv2.bitwise_and(canvas, canvas, mask=mask)
 
-#create canvas
-canvas = np.zeros(img.shape)
-canvas.fill(0)
+    # find contours from the mask
+    contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    cont_output = cv2.drawContours(segmented_img, contours, -1, (0, 255, 0), 3)
 
-#create segmented image
-segmented_img = cv2.bitwise_and(canvas, canvas, mask=mask)
+    # get minAreaRect of contour with max area
+    max_area = -1
 
-# find contours from the mask
-contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-cont_output = cv2.drawContours(segmented_img, contours, -1, (0, 255, 0), 3)
-
-cv2.imshow("Contour", cont_output)
-cv2.imwrite("cont_output.jpeg", cont_output)
-
-# get minAreaRect of contour with max area
-max_area = -1
-
-#loop through contours
-for i in range(len(contours)):
-    area = cv2.contourArea(contours[i])
-    if area>max_area:
+    #loop through contours
+    for i in range(len(contours)):
+        area = cv2.contourArea(contours[i])
+        if area>max_area:
             cnt = contours[i]
             max_area = area
 
-areas = [cv2.contourArea(c) for c in contours]
-max_index = np.argmax(areas)
-cnt=contours[max_index]
+    areas = [cv2.contourArea(c) for c in contours]
+    if (len(areas) !=0):
+        max_index = np.argmax(areas)
+        cnt=contours[max_index]
 
-#assign minAreaRect to contour with max area
-rect = cv2.minAreaRect(cnt)
-box = cv2.boxPoints(rect)
-box = np.int0(box)
+    #assign minAreaRect to contour with max area
+    rect = cv2.minAreaRect(cnt)
+    box = cv2.boxPoints(rect)
+    box = np.int0(box)
 
-#draw minAreaRect
-cv2.drawContours(canvas,[box],0,(255, 0,0),2)
-cv2.imshow("minAreaRect", canvas)
-cv2.imwrite("cont_canvas.jpg", canvas)
+    #draw minAreaRect
+    cv2.drawContours(canvas,[box],0,(255, 0,0),2)
 
-"""
-Using minRectArea to get Angle
-"""
+    #center coordinates of min_rectangle also p1
+    x = int(rect[0][0])
+    y = int(rect[0][1])
 
-#center coordinates of min_rectangle also p1
-x = int(rect[0][0])
-y = int(rect[0][1])
+    #draw at center point
+    canvas = cv2.circle(canvas, (x,y), 10, (0,255,0), -5)
 
-l = -300
+    # get angle
+    getOrientation(cnt, canvas)
+    cv2.imshow('Output Angle', canvas)
 
-#angle of min_rectangle
-angle = rect[2] * 3.14 / 180
+    s_img = cv2.bitwise_and(frame, frame, mask=mask)
 
-#get p2 based on angle
-x_ = x + l * cos(angle)
-y_ = y + l * sin(angle)
+    cv2.imshow('Output', s_img)
 
-#get p3 based on angle
-x1_ = x + l * cos(3.14)
-y1_ = y + l * sin(3.14)
-
-#define line points as int
-p1 = (x,y)
-p2 = (int(x_),int(y_))
-p3 = (int(x1_),int(y1_))
-
-#draw lines and circle
-canvas = cv2.circle(canvas, (x,y), 20, (147,20,255), -5)
-canvas = cv2.line(canvas, p1, p2, (0, 0, 255), 5)
-canvas = cv2.line(canvas, p1, p3, (0, 0, 255), 5)
-
-cv2.imshow("Angle", canvas)
-cv2.imwrite("fin_canvas.jpg", canvas)
-
-"""
-Using getOrientation Function to Angle
-"""
-
-angle = getOrientation(cnt, canvas)
-cv2.imshow("Angle", canvas)
-cv2.imwrite("fin_canvas.jpg", canvas)
-
+    # wait for 1 sec
+    k =  cv2.waitKey(1)
+      
+    # break out of while loop
+    # if k value is 27
+    if k == 27:
+        break
+          
+# release the captured frames 
+cap.release()
+  
+# Destroys all windows. 
+cv2.destroyAllWindows()

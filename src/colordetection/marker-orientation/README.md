@@ -1,10 +1,10 @@
 This script takes a video as the input and returns the orientation of objects within a specific range of HSV values. 
 
 To Run, Install:
-  OpenCV Python
-  Matplotlib
-  NumPy
-  DepthAI
+  1. OpenCV Python
+  2. Matplotlib
+  3. NumPy
+  4. DepthAI
 
 Upcoming Changes:
   1. Possibly implement contour clustering.

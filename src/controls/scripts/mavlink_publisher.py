@@ -124,7 +124,7 @@ if __name__== '__main__':
                             publishable[0] = True
                     
                     # Publish attitude separately
-                    att = geometry_msgs.msg.Quaternion(w=msg_dict['q1'], x=msg_dict['q2'], y=msg_dict['q3'], z=msg_dict['q4'])
+                    att = geometry_msgs.msg.Quaternion(w=msg_dict['q1'], x=msg_dict['q2'], y=-msg_dict['q3'], z=-msg_dict['q4'])
                     att_publisher.publish(att)
 
                 if fcu_msg.get_type() == 'LOCAL_POSITION_NED':

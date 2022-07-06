@@ -46,7 +46,8 @@ def set_target_local_position(master, sys_time, x, y, z, yaw=0, vx=0, vy=0, vz=0
             # DON'T mavutil.mavlink.POSITION_TARGET_TYPEMASK_FORCE_SET |
             mavutil.mavlink.POSITION_TARGET_TYPEMASK_YAW_IGNORE |
             mavutil.mavlink.POSITION_TARGET_TYPEMASK_YAW_RATE_IGNORE
-        ), x=x, y=y, z=z, # (x, y WGS84 frame pos - not used), z [m]
+        # Accounting for reversed z axis
+        ), x=x, y=-y, z=-z, # (x, y WGS84 frame pos - not used), z [m]
         vx=vx, vy=vy, vz=vz, # velocities in NED frame [m/s] (not used)
         afx=0, afy=0, afz=0, yaw=yaw, yaw_rate=0
         # accelerations in NED frame [N], yaw, yaw_rate
@@ -54,39 +55,45 @@ def set_target_local_position(master, sys_time, x, y, z, yaw=0, vx=0, vy=0, vz=0
     )
 def set_target_attitude(master, sys_time, roll, pitch, yaw):
     """ Sets the target attitude while in depth-hold mode.
-    'roll', 'pitch', and 'yaw' are angles in degrees.
+    'roll', 'pitch', and 'yaw' are angles in radians.
     """
+    # Accounting for reversed z axis
+    q = QuaternionBase([roll, pitch, yaw])
+    q.q[2] = -q.q[2]
+    q.q[3] = -q.q[3]
     master.mav.set_attitude_target_send(
         sys_time, # int(1e3 * (time.time() - boot_time)), # ms since boot
         master.target_system, master.target_component,
         # allow throttle to be controlled by depth_hold mode
         mavutil.mavlink.ATTITUDE_TARGET_TYPEMASK_THROTTLE_IGNORE,
         # -> attitude quaternion (w, x, y, z | zero-rotation is 1, 0, 0, 0)
-        QuaternionBase([roll, pitch, yaw]), # math.radians(angle) for angle in (roll, pitch, yaw)
+        q, # QuaternionBase([roll, pitch, yaw]), # math.radians(angle) for angle in (roll, pitch, yaw)
         0, 0, 0, 0 # roll rate, pitch rate, yaw rate, thrust
     )
 def set_target_yaw(master, yaw):
     """ Sets the target yaw as angle in degrees.
     """
+    # Accounting for reversed z axis
+    r_yaw = 360 - yaw
     master.mav.command_long_send(
         master.target_system,
         master.target_component,
         mavutil.mavlink.MAV_CMD_CONDITION_YAW,
         0,
-        yaw, 5, 1, 0, 0, 0, 0)
+        r_yaw, 5, 1, 0, 0, 0, 0)
 
 # ---------------------------------------------
 #   ROS area
 # ---------------------------------------------
-
-import rospy
-from std_msgs.msg import String, Bool, Float64
+from datetime import datetime
+import geometry_msgs.msg
 import math
 import numpy as np
+import rospy
+from std_msgs.msg import String, Bool, Float64
 import tf2_ros
-import geometry_msgs.msg
+import threading
 from transforms3d import euler, quaternions
-from datetime import datetime
 RAD_TO_DEG = 180 / math.pi
 
 WORLD_FRAME = 'world'
@@ -107,6 +114,12 @@ isRunning = False
 focusPoint = geometry_msgs.msg.Point(0, 0, 0)
 segmentSize = 3
 goalThreshold = 0.2
+angleSize = 10
+angleThreshold = 4
+
+# Global monitor of attitude
+attitude = geometry_msgs.msg.Quaternion(0, 0, 0, 0)
+attitude_lock = threading.Lock()
 
 # Undeclared master & publisher
 master = None
@@ -254,9 +267,7 @@ def path_callback(path):
             # set a position target
             print("setting position")
             sys_time = (datetime.now() - boot_time).total_seconds() * 1e3
-            # Accounting for reversed z axis
-            # set_target_local_position(master, sys_time, nextPoint.x, nextPoint.y, nextPoint.z)
-            set_target_local_position(master, sys_time, nextPoint.x, -nextPoint.y, -nextPoint.z)
+            set_target_local_position(master, sys_time, nextPoint.x, nextPoint.y, nextPoint.z)
             np_arr = np.array([nextPoint.x, nextPoint.y, nextPoint.z])
             delt = np_arr - trans_arr
             mag = np.linalg.norm(delt)
@@ -288,11 +299,7 @@ def path_callback(path):
                     yaw = yaw * RAD_TO_DEG
                     
                 # print("setting rotation")
-                # Accounting for reversed z axis
-                # set_target_yaw(master, yaw)
-                if yaw == 0:
-                    yaw = 360
-                set_target_yaw(master, 360 - yaw)
+                set_target_yaw(master, yaw)
                 rospy.sleep(0.2)
 
             # Find current location
@@ -373,11 +380,28 @@ def goal_threshold_callback(goal_threshold):
 #   ROTATION
 # ---------------------------------------------
 
+# Helper functions
+def getDegsFromQuats(q): # input list in wxyz format
+    tmp = [math.degrees(x) for x in euler.quat2euler(q, 'sxyz')]
+    if tmp[2] < 0:
+        tmp[2] += 360
+    elif tmp[2] >= 360:
+        tmp[2] -= 360
+    return tmp
+
+def getDegsDiff(a, b): # get smallest angle from a to b
+    diff = a - b
+    if diff <= -180:
+        diff += 360
+    elif diff > 180:
+        diff -= 360
+    return diff
+
 def rotation_callback(rotation):
     """ Callback function to do rotation.
     :param rotation: geometry_msgs.msg.QuaternionStamped
     """
-    global run_publisher, isArmed, isRunning
+    global run_publisher, isArmed, isRunning, attitude, attitude_lock
     if not isArmed:
         print("Rotation received but ROV not armed!")
         return
@@ -398,28 +422,86 @@ def rotation_callback(rotation):
     depth_hold_mode = master.mode_mapping()[depth_hold]
     while not master.wait_heartbeat().custom_mode == depth_hold_mode:
         master.set_mode(depth_hold)
-    
-    # set a rotation target over a period
+
+    # Get goal orientation
+    goal_deg = getDegsFromQuats([rotation.w, rotation.x, rotation.y, rotation.z])
+
+    # Get current orientation
+    att = geometry_msgs.msg.Quaternion()
+    attitude_lock.acquire()
+    att = attitude
+    print(att)
+    attitude_lock.release()
+
     # Yaw
-    print("setting rotation")
-    for i in range(8):
-        sys_time = (datetime.now() - boot_time).total_seconds() * 1e3
-        roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
-        set_target_attitude(master, sys_time, 0, 0, yaw)
-        # print(math.degrees(roll), math.degrees(pitch), math.degrees(yaw))
+    curr_deg = getDegsFromQuats([att.w, att.x, att.y, att.z])
+    delt = getDegsDiff(goal_deg[2], curr_deg[2])
+    while abs(delt) > angleThreshold:
         if not isArmed or not isRunning:
             break
-        rospy.sleep(0.25)
+        if abs(getDegsDiff(goal_deg[2], curr_deg[2])) < angleSize:
+            next_deg = goal_deg
+        else:
+            # Move one segment at a time
+            next_deg = curr_deg
+            next_deg[2] += delt / abs(delt) * angleSize
+            if next_deg[2] < 0:
+                next_deg[2] += 360
+            elif next_deg[2] >= 360:
+                next_deg[2] -= 360
+
+        # set a rotation target
+        print("setting rotation")
+        sys_time = (datetime.now() - boot_time).total_seconds() * 1e3
+        set_target_attitude(master, sys_time, math.radians(next_deg[0]), math.radians(next_deg[1]), math.radians(next_deg[2]))
+        attitude_lock.acquire()
+        att = attitude
+        attitude_lock.release()
+        curr_deg = getDegsFromQuats([att.w, att.x, att.y, att.z])
+        delt = getDegsDiff(next_deg[2], curr_deg[2])
+        while abs(delt) > angleThreshold:
+            sys_time = (datetime.now() - boot_time).total_seconds() * 1e3
+            set_target_attitude(master, sys_time, math.radians(next_deg[0]), math.radians(next_deg[1]), math.radians(next_deg[2]))
+            rospy.sleep(0.3)
+            if not isArmed or not isRunning:
+                break
+            
+            attitude_lock.acquire()
+            att = attitude
+            attitude_lock.release()
+            curr_deg = getDegsFromQuats([att.w, att.x, att.y, att.z])
+            delt = getDegsDiff(next_deg[2], curr_deg[2])
+            # print("Next degs:", next_deg)
+            # print("Current degs:", curr_deg)
+
+        if not isArmed or not isRunning:
+            break
+    
+        attitude_lock.acquire()
+        att = attitude
+        attitude_lock.release()
+        curr_deg = getDegsFromQuats([att.w, att.x, att.y, att.z])
+        delt = getDegsDiff(goal_deg[2], curr_deg[2])
+        print("Angle to goal:", delt)
+    
+    # for i in range(8):
+    #     sys_time = (datetime.now() - boot_time).total_seconds() * 1e3
+    #     roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
+    #     set_target_attitude(master, sys_time, 0, 0, yaw)
+    #     # print(math.degrees(roll), math.degrees(pitch), math.degrees(yaw))
+    #     if not isArmed or not isRunning:
+    #         break
+    #     rospy.sleep(0.25)
 
     # Roll & pitch
-    for i in range(8):
-        sys_time = (datetime.now() - boot_time).total_seconds() * 1e3
-        roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
-        set_target_attitude(master, sys_time, roll, pitch, yaw)
-        # print(math.degrees(roll), math.degrees(pitch), math.degrees(yaw))
-        if not isArmed or not isRunning:
-            break
-        rospy.sleep(0.25)
+    # for i in range(8):
+    #     sys_time = (datetime.now() - boot_time).total_seconds() * 1e3
+    #     roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
+    #     set_target_attitude(master, sys_time, roll, pitch, yaw)
+    #     # print(math.degrees(roll), math.degrees(pitch), math.degrees(yaw))
+    #     if not isArmed or not isRunning:
+    #         break
+    #     rospy.sleep(0.25)
 
     if not isArmed:
         print("Robot disarmed, controls will stop")
@@ -437,6 +519,26 @@ def rotation_callback(rotation):
         print("Rotation completed")
         msg.data = False
         run_publisher.publish(msg)
+
+def angle_size_callback(angle_size):
+    """ Maximum angle the ROV will rotate at a time
+    :param angle_size: Float64, angle size in degrees"""
+    global angleSize
+    angleSize = angle_size.data
+    print("INFO: Angle size set!")
+
+def angle_threshold_callback(angle_threshold):
+    """ How close to the angle goal is acceptable
+    :param angle_threshold: Float64, angle threshold in degrees"""
+    global angleThreshold
+    angleThreshold = angle_threshold.data
+    print("INFO: Angle threshold set!")
+
+def attitude_callback(att):
+    global attitude, attitude_lock
+    attitude_lock.acquire()
+    attitude = att
+    attitude_lock.release()
 
 def controller():
     global master, run_publisher
@@ -460,6 +562,9 @@ def controller():
 
     # Rotation params
     rospy.Subscriber(rospy.get_param('~goal_rotation_topic'), geometry_msgs.msg.Quaternion, rotation_callback)
+    rospy.Subscriber(rospy.get_param('~angle_size_topic'), Float64, angle_size_callback) #how much rov rotates every step in degrees
+    rospy.Subscriber(rospy.get_param('~angle_threshold_topic'), Float64, angle_threshold_callback) #how close you want to be to the angle goal
+    rospy.Subscriber(rospy.get_param('~attitude_topic'), geometry_msgs.msg.Quaternion, attitude_callback)
 
     # spin() simply keeps python from exiting until this node is stopped
     rospy.spin()

@@ -164,6 +164,10 @@ def run_callback(flag):
         else:
             print("INFO: Has stopped!")
 
+# ---------------------------------------------
+#   PATH FOLLOW
+# ---------------------------------------------
+
 def pcl_callback(flag):
     """ Callback to set PCL usage
         If used, the controller will rely on the path produced from the path planning node
@@ -364,6 +368,10 @@ def goal_threshold_callback(goal_threshold):
     global goalThreshold
     goalThreshold = goal_threshold.data
     print("INFO: Goal threshold set!")
+
+# ---------------------------------------------
+#   ROTATION
+# ---------------------------------------------
 
 def rotation_callback(rotation):
     """ Callback function to do rotation.

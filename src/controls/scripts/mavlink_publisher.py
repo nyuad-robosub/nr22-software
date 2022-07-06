@@ -91,6 +91,7 @@ if __name__== '__main__':
     br = tf2_ros.TransformBroadcaster()
     t = geometry_msgs.msg.TransformStamped()
     alt_publisher = rospy.Publisher('altitude', Float32, queue_size=5)
+    att_publisher = rospy.Publisher('attitude', geometry_msgs.msg.Quaternion, queue_size=5)
 
     t.header.frame_id = rospy.get_param('~base_frame')
     t.child_frame_id = rospy.get_param('~publish_frame')
@@ -121,6 +122,10 @@ if __name__== '__main__':
                         if dataCount[0] == 2:
                             dataCount[0] = 0
                             publishable[0] = True
+                    
+                    # Publish attitude separately
+                    att = geometry_msgs.msg.Quaternion(w=msg_dict['q1'], x=msg_dict['q2'], y=msg_dict['q3'], z=msg_dict['q4'])
+                    att_publisher.publish(att)
 
                 if fcu_msg.get_type() == 'LOCAL_POSITION_NED':
                     last_pos = [msg_dict['x'], msg_dict['y'], msg_dict['z']]

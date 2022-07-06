@@ -1,6 +1,11 @@
-This script takes an image as the input and returns the orientation of objects within a specific range of specific HSV values. 
+This script takes a video as the input and returns the orientation of objects within a specific range of HSV values. 
+
+To Run, Install:
+  OpenCV Python
+  Matplotlib
+  NumPy
+  DepthAI
 
 Upcoming Changes:
-  1. Implementation of a color filtering algorithm replacing hardcoded HSV thresholds.
-  2. Applying image manipulation to a video stream instead of single images.
-  3. Refining contour detection. 
+  1. Possibly implement contour clustering.
+  2. Pull video from ROS stream.

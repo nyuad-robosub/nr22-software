@@ -430,7 +430,6 @@ def rotation_callback(rotation):
     att = geometry_msgs.msg.Quaternion()
     attitude_lock.acquire()
     att = attitude
-    print(att)
     attitude_lock.release()
 
     # Yaw

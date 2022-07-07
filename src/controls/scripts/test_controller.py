@@ -19,18 +19,18 @@ import geometry_msgs.msg
 import visualization_msgs.msg
 from transforms3d import euler
 
-focusPoint = geometry_msgs.msg.Point(-10, 5, 0)
+focusPoint = geometry_msgs.msg.Point(0, -10, 0)
 # goalPoint = geometry_msgs.msg.Point(4.2, -2.5, 1)
 # goalPoints = [geometry_msgs.msg.Point(8.2, -2.5, 3),
 #               geometry_msgs.msg.Point(2.5, 8.2, 2),
 #               geometry_msgs.msg.Point(-8.2, 2.5, 3),
 #               geometry_msgs.msg.Point(-2.5, -8.2, 2),
 #               geometry_msgs.msg.Point(8.2, -2.5, 3)]
-goalPoints = [geometry_msgs.msg.Point(5.2, 10.5, -4),
-              geometry_msgs.msg.Point(5.2, -10.5, -4),
+goalPoints = [geometry_msgs.msg.Point(10, -10, -2),
+              geometry_msgs.msg.Point(5.2, -10.5, -1),
               # geometry_msgs.msg.Point(0, 0, 2.75),
               # geometry_msgs.msg.Point(20.2, 2.5, 3),
-              geometry_msgs.msg.Point(-5.2, -10.5, -4)]
+              geometry_msgs.msg.Point(-5.2, -10.5, -1)]
             #   geometry_msgs.msg.Point(20.2, 8.5, 1),
             #   geometry_msgs.msg.Point(20.2, -10.5, 1)]
               # geometry_msgs.msg.Point(0, 9, 2.75)]
@@ -89,13 +89,14 @@ if __name__== '__main__':
         msg5.points.append(p)
     pub5.publish(msg5)
 
-    rospy.sleep(10)
+for i in range(4):
+    rospy.sleep(6)
     msg8 = Bool()
     msg8.data = False
     pub8.publish(msg8)
-    rospy.sleep(3)
+    rospy.sleep(1)
     msg9 = geometry_msgs.msg.Quaternion()
-    q = euler.euler2quat(math.radians(90), 0, math.radians(90), 'sxyz')
+    q = euler.euler2quat(math.radians(90), 0, math.radians(180 + i * 90), 'sxyz')
     msg9.w = q[0]
     msg9.x = q[1]
     msg9.y = q[2]

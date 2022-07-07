@@ -7,9 +7,10 @@
     <arg name="gui" value="$(arg gui)"/>
   </include>
 
-  <include file="$(find controls)/launch/send_viso_tf2.launch" />
+  <!-- <include file="$(find controls)/launch/send_viso_tf2.launch" />
   <include file="$(find controls)/launch/mavlink_publisher.launch" />
-  <include file="$(find controls)/launch/controller.launch" />
+  <include file="$(find controls)/launch/controller.launch" /> -->
+
   <!-- include file="$(find )/launch/.launch" />
 
   <node name="publish_world_models"

@@ -1,0 +1,22 @@
+<launch>
+	<!-- Base params -->
+	<arg name="image_topic" default="/camera/color/image_raw" />
+	<arg name="detection_topic" default="/detection" />
+	<arg name="model_file" default="/home/quan/nr22-software/src/faux_detection/trained_models/prequal.pb" />
+	<arg name="label_file" default="/home/quan/nr22-software/src/faux_detection/trained_models/prequal_labels.pbtxt" />
+	<arg name="min_score_thresh" default="0.3" />
+	<arg name="interval" default="50" />
+
+	<arg name="log_output" default="screen" />
+	<arg name="respawn_control" default="false" />
+
+	<node pkg="faux_detection" type="faux_detector.py" name="faux_detector" required="$(eval not respawn_control)"
+	    clear_params="true" output="$(arg log_output)" respawn="$(arg respawn_control)">
+		<param name="image_topic" value="$(arg image_topic)" />
+		<param name="detection_topic" value="$(arg detection_topic)" />
+		<param name="model_file" value="$(arg model_file)" />
+		<param name="label_file" value="$(arg label_file)" />
+		<param name="min_score_thresh" value="$(arg min_score_thresh)" />
+		<param name="interval" value="$(arg interval)" />
+	</node>
+</launch>

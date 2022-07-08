@@ -31,6 +31,9 @@ world_frame=""
 goal_topic=""
 goal_rotation_topic=""
 isRunning_topic=""
+detection_topic=""
+detection_label_path=""
+oakd_FOV=0
 if __name__ == '__main__':
     rospy.init_node('smach_controller', anonymous=True)
     print("EXECUTING SM")
@@ -48,8 +51,12 @@ if __name__ == '__main__':
 
     isRunning_topic = rospy.get_param('~isrunning_topic')
 
+    detection_topic = rospy.get_param('~detection_topic')
+
+    detection_label_path = rospy.get_param('~label_file')
+
     # intialize movement controller
-    mc.init(goal_topic, world_frame, rov_frame, isRunning_topic)
+    mc.init(goal_topic, world_frame, rov_frame, isRunning_topic,detection_topic,detection_label_path)
         
     rospy.sleep(1)
     # state imports
@@ -68,6 +75,6 @@ if __name__ == '__main__':
     outcome = sm.execute()
 
      
-    sm._set_current_state('coin_flip')
+    #sm._set_current_state('coin_flip')
     # create concurrent sm
 

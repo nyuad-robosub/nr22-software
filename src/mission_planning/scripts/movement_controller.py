@@ -8,15 +8,17 @@ import numpy as np
 import tf2_ros
 import geometry_msgs.msg
 from std_msgs.msg import Bool
+from vision_msgs.msg import Detection2DArray
 from transforms3d import euler, quaternions
 from datetime import datetime
+from object_detection.utils import label_map_util
 
 class movement_controller():
     # controlerr/goalRotation
     # controller/isRunning
     arm_wait_time=0.5
 
-    def __init__(self,goal_topic,world_frame,rov_frame,isRunning_topic):
+    def __init__(self,goal_topic,world_frame,rov_frame,isRunning_topic,detection_topic,detection_label_path):
         self.world_frame=world_frame
         self.rov_frame=rov_frame
         self.isRunning_topic=isRunning_topic
@@ -30,13 +32,48 @@ class movement_controller():
 
         self.goal_publisher = rospy.Publisher(goal_topic, geometry_msgs.msg.PointStamped, queue_size=5)
         self.goal_rotation_publisher = rospy.Publisher('controller/goalRotation', geometry_msgs.msg.Quaternion, queue_size=1, latch=True)
+        self.running_publisher = rospy.Publisher('controller/isRunning', Bool, queue_size=1, latch=True)
         self.running_subscriber = rospy.Subscriber(isRunning_topic, Bool, self.running_callback)
         self.arm_publisher = rospy.Publisher('controller/isArmed', Bool, queue_size=1, latch=True)
+
+        self.detection_subscriber = rospy.Subscriber(detection_topic, Detection2DArray , self.detection_callback)
 
         # Have two flags to keep track of the past
         self.wasRunning = False
         self.isRunning = False
 
+        self.label_to_id=label_map_util(detection_label_path)
+
+        #dictionary of detections and info 
+        # self.image_detections = {
+        #     "gate" : {
+        #         "label_id" : 0,
+        #         "center" : {
+        #             "x" : 0,
+        #             "y" : 0
+        #         },
+        #         "left_center" : 0,
+        #         "bbox_area" : 0
+        #     } 
+        # }
+
+        #for(obj in self.image_detections):
+            #obj["label_id"]=
+    def detection_callback(self,viso_detect):
+        label = viso_detect.detections.results.id
+        # for obj in self.image_detections:
+        #     if(label==obj['label_id']):
+        #         pose_x = viso_detect.bbox.center.x
+        #         pose_x = viso_detect.bbox.center.y
+
+        #         size_x = viso_detect.bbox.size_x
+        #         size_y = viso_detect.bbox.size_y
+        #     pass
+    def stop(self): 
+        msg1 = Bool()
+        msg1.data = False
+        self.running_publisher.publish(msg1)
+        #rospy.sleep(self.arm_wait_time) # Wait for stopping to finish
 
     def arm(self):
          # Arm
@@ -72,21 +109,20 @@ class movement_controller():
 
     def rotate_ccw(self, angle):
         self.update_tf()
-
         self.arm()
 
         # Rotate from initial orientation
         rotation = self.trans.transform.rotation
         roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
-        print(roll, pitch, yaw)
+        #print(roll, pitch, yaw)
 
         # Do a spin
         detected = False
         
         i = 0
         msg9 = geometry_msgs.msg.Quaternion()
-        while not detected and i < 12: 
-            angle = math.degrees(yaw) + i * 30 #is euler i ndegrees?
+        while not detected and i < 4: 
+            angle = math.degrees(yaw) + i * 90 #is euler i ndegrees?
             print(angle)
             if angle < 0:
                 angle += 360
@@ -98,16 +134,17 @@ class movement_controller():
             msg9.y = q[2]
             msg9.z = q[3]
             self.goal_rotation_publisher.publish(msg9)
-            # Wait until movement finished
-            while self.get_running_confirmation():    
-                rospy.sleep(0.5)
-            i += 1
-
+            self.await_completion()
+            i+=1
 
 
     def running_callback(self, flag):
         self.isRunning = flag.data
 
+    def await_completion(self):
+        # Wait until movement finished
+            while self.get_running_confirmation():    
+                rospy.sleep(0.1)
     def get_running_confirmation(self):
         # If current flag is the same as new flag:
         # - Either the controller has not registered the movement, or
@@ -123,13 +160,13 @@ class movement_controller():
         self.wasRunning = self.isRunning
         return self.wasRunning
 
-    def go_down(self, amount):
+    def change_height(self, amount):
         self.update_tf()
         self.target_point.header.frame_id = self.world_frame
         self.target_point.header.stamp = rospy.Time.now()
         self.target_point.point.x = self.trans.transform.translation.x
         self.target_point.point.y = self.trans.transform.translation.y
-        self.target_point.point.z = self.trans.transform.translation.z - amount
+        self.target_point.point.z = self.trans.transform.translation.z + amount
         self.goal_publisher.publish(self.target_point)
 
     def get_compass_angle():
@@ -141,6 +178,6 @@ class movement_controller():
 
 # Global variable courtesy of:
 # https://stackoverflow.com/a/13034908
-def init(goal_topic, world_frame, rov_frame, isRunning_topic):
+def init(goal_topic, world_frame, rov_frame, isRunning_topic,detection_topic,detection_label_path):
     global mov_control
-    mov_control = movement_controller(goal_topic, world_frame, rov_frame, isRunning_topic)
+    mov_control = movement_controller(goal_topic, world_frame, rov_frame, isRunning_topic,detection_topic,detection_label_path)

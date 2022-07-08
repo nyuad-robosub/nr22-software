@@ -12,6 +12,12 @@
     <arg name="goal_rotation_topic" default ="controller/goalRotation" />
     <arg name="isrunning_topic" default ="controller/isRunning" />
 
+    <!-- faux detection args -->
+    <arg name="detection_topic" default="/detection" />
+	<arg name="image_topic" default="/camera/color/image_raw" />
+	<arg name="model_file" default="/home/rami/nr22-software/src/faux_detection/trained_models/prequal.pb" />
+	<arg name="label_file" default="/home/rami/nr22-software/src/faux_detection/trained_models/prequal.pbtxt" />
+
     <!-- Launch simulation -->
     <arg name="paused" default="false"/>
     <arg name="gui" default="false"/>
@@ -36,6 +42,14 @@
         <arg name="run_topic" value="$(arg isrunning_topic)" />
     </include>
 
+    <!-- Run the detection simulator -->
+    <include file="$(find faux_detection)/launch/faux_detector.launch">
+        <arg name="detection_topic" value="$(arg detection_topic)" />
+        <arg name="image_topic" value="$(arg image_topic)" />
+        <arg name="model_file" value="$(arg model_file)" />
+        <arg name="label_file" value="$(arg label_file)" />
+    </include>
+
     <!-- Launch SMACH node -->
     <arg name="respawn_smach" default="false" />
     <arg name="log_output" default="screen" />
@@ -49,5 +63,7 @@
         <param name="isrunning_topic" value ="$(arg isrunning_topic)"/>
         <param name="world_frame" value="$(arg world_frame)" />
         <param name="orb_slam_3_frame" value="$(arg orb_slam_3_frame)" />
+        <param name="detection_topic" value="/detection" />
+        <param name="label_file" value="/home/rami/nr22-software/src/faux_detection/trained_models/prequal.pbtxt" />
     </node>
 </launch>

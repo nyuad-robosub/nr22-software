@@ -38,8 +38,8 @@ class check_sub(smach.State):
                 print("submerged")
                 #submerge the vehicle
                 mc.mov_control.update_tf()
-                mc.mov_control.go_down(0.8)
-                
+                mc.mov_control.change_height(-0.8)
+                mc.mov_control.await_completion()
 
                 #go to coin flip
                 return 'outcome1'

@@ -3,7 +3,7 @@
 	<arg name="image_topic" default="/camera/color/image_raw" />
 	<arg name="detection_topic" default="/detection" />
 	<arg name="model_file" default="/home/quan/nr22-software/src/faux_detection/trained_models/prequal.pb" />
-	<arg name="label_file" default="/home/quan/nr22-software/src/faux_detection/trained_models/prequal_labels.pbtxt" />
+	<arg name="label_file" default="/home/quan/nr22-software/src/faux_detection/trained_models/prequal.pbtxt" />
 	<arg name="min_score_thresh" default="0.3" />
 	<arg name="interval" default="50" />
 

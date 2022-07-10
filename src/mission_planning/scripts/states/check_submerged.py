@@ -28,8 +28,9 @@ class check_sub(smach.State):
             self.mutex.release()
         
     def execute(self, userdata):
-        
         print("EXEXUTING")
+        mc.mov_control.arm()
+        rospy.sleep(5)
         while(not rospy.is_shutdown()):
             self.mutex.acquire()
             if(self.is_submerged):
@@ -38,10 +39,13 @@ class check_sub(smach.State):
                 print("submerged")
                 #submerge the vehicle
                 mc.mov_control.update_tf()
-                mc.mov_control.change_height(-0.8)
-                mc.mov_control.await_completion()
-
+                mc.mov_control.set_height(-0.8)
+                
+                rospy.sleep(5)
+                mc.mov_control.await_completion() #doesnt work here
+                mc.mov_control.stop()
                 #go to coin flip
                 return 'outcome1'
+            
             self.mutex.release()
             rospy.sleep(0.05)

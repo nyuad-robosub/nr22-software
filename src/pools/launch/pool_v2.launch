@@ -17,6 +17,7 @@
     <arg name="x" value="0"/>
     <arg name="y" value="0"/>
     <arg name="z" value="0"/>
+    <arg name="yaw" value="10.0"/>
   </include>
 
   <node type="rviz" pkg="rviz" name="rviz" args="-d $(find avoid_obstacles)/rviz/view_trajectory.rviz"/>

@@ -11,3 +11,33 @@ If there is an issue with CUDA, possibly your graphics card is being used for di
 ```
 export CUDA_VISIBLE_DEVICES=1
 ```
+
+# Run these commands to install all dependencies:
+
+```
+pip2 install --user tensorflow==1.15.0
+pip2 install --user Cython
+pip2 install --user contextlib2
+pip2 install --user pillow
+pip2 install --user lxml
+pip2 install --user jupyter
+pip2 install --user matplotlib
+```
+
+Installing protobuf
+If you are on linux:
+
+Download and install the 3.0 release of protoc, then unzip the file.
+```
+# From tensorflow/models/research/(be in this directory)
+wget -O protobuf.zip https://github.com/google/protobuf/releases/download/v3.0.0/protoc-3.0.0-linux-x86_64.zip
+unzip protobuf.zip
+rm -rf protobuf.zip
+```
+
+Run the compilation process again, but use the downloaded version of protoc
+
+From tensorflow/models/research/
+```
+./bin/protoc object_detection/protos/*.proto --python_out=.
+```

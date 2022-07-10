@@ -59,7 +59,8 @@ def main_controller():
     # ls.launch("mavlink.launch")
 
     # initialize mavproxy
-    os.system('mavproxy.py --out 0.0.0.0:14550 --out 0.0.0.0:14551 --out 0.0.0.0:14552 --out 0.0.0.0:14553 --out 0.0.0.0:14554 &> /dev/null &')
+    #run AS.SH
+    #os.system('mavproxy.py --out 0.0.0.0:14550 --out 0.0.0.0:14551 --out 0.0.0.0:14552 --out 0.0.0.0:14553 --out 0.0.0.0:14554 &> /dev/null &')
 
     # intialize movement controller
     global mov_control
@@ -71,10 +72,10 @@ def main_controller():
         smach.StateMachine.add('check_submerged', check_submerged.check_sub(),
                                 transitions={'outcome1':'coin_flip'})
         smach.StateMachine.add('coin_flip', coin_flip.coin_flip(),
-                                transitions={'outcome1':'outcome4'})
-
+                                transitions={'outcome1':'outcome4',
+                                            'outcome2':'coin_flip'})
     # create concurrent sm
-
+    sm.execute()
 
 if __name__ == '__main__':
     main_controller()

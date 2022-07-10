@@ -7,7 +7,7 @@ project(mission_planning)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS rospy std_msgs geometry_msgs tf2 tf2_ros smach controls vision_msgs)
+find_package(catkin REQUIRED COMPONENTS rospy std_msgs geometry_msgs tf2 tf2_ros smach controls vision_msgs rospy_message_converter)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -159,10 +159,12 @@ catkin_install_python(PROGRAMS
   scripts/smach_controller.py
   scripts/smach_controller_simulation.py
   scripts/movement_controller.py
+  scripts/viso_controller.py
 
   #states
   scripts/states/coin_flip.py
   scripts/states/check_submerged.py
+  
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

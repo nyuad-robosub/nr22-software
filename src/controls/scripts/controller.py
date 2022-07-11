@@ -147,7 +147,7 @@ usePCL = False
 isArmed = False
 isRunning = False
 focusPoint = geometry_msgs.msg.Point(0, 0, 0)
-segmentSize = 3
+segmentSize = 1
 goalThreshold = 0.2
 angleSize = 10
 angleThreshold = 4
@@ -530,14 +530,15 @@ def rotation_callback(rotation):
     #     rospy.sleep(0.25)
 
     # Roll & pitch
-    # for i in range(8):
-    #     sys_time = (datetime.now() - boot_time).total_seconds() * 1e3
-    #     roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
-    #     set_target_attitude(master, sys_time, roll, pitch, yaw)
-    #     # print(math.degrees(roll), math.degrees(pitch), math.degrees(yaw))
-    #     if not isArmed or not isRunning:
-    #         break
-    #     rospy.sleep(0.25)
+    if isArmed and isRunning:
+        for i in range(8):
+            sys_time = (datetime.now() - boot_time).total_seconds() * 1e3
+            roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
+            set_target_attitude(master, sys_time, roll, pitch, yaw)
+            # print(math.degrees(roll), math.degrees(pitch), math.degrees(yaw))
+            if not isArmed or not isRunning:
+                break
+            rospy.sleep(0.25)
 
     if not isArmed:
         print("Robot disarmed, controls will stop")

@@ -35,3 +35,6 @@
 	path = src/deps/simulations/realsense_gazebo_plugin
 	url = https://github.com/nyuad-robosub/realsense_gazebo_plugin
 	branch = melodic-devel
+[submodule "src/deps/planar_pose"]
+	path = src/deps/planar_pose
+	url = https://github.com/paul-shuvo/planar_pose

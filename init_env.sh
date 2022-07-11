@@ -197,3 +197,5 @@ bash $p/include/ORB_SLAM3_OPENCV4/build_ros.sh
 #roslaunch realsense2_camera rs_rgbd.launch initial_reset:=true
 #rosrun ORB_SLAM2 RGBD /home/rami/nr22-software/include/ORB_SLAM2/Vocabulary/ORBvoc.txt /home/rami/nr22-software/include/ORB_SLAM2/Examples/ROS/ORB_SLAM2/Asus.yaml
 
+# CXX version fix 
+# sed -i 's/++11/++14/g' CMakeLists.txt

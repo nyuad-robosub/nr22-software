@@ -34,6 +34,7 @@ goal_rotation_topic=""
 isRunning_topic=""
 detection_topic=""
 detection_label_path=""
+camera_frame=""
 oakd_HFOV=50.41
 if __name__ == '__main__':
     rospy.init_node('smach_controller', anonymous=True)
@@ -57,15 +58,16 @@ if __name__ == '__main__':
 
     detection_label_path = rospy.get_param('~label_file')
 
+    camera_frame = rospy.get_param('~camera_frame')
+
     #oakd_HFOV = rospy.get_param('~oakd_HFOV')
     
 
     # intialize movement controller
     mc.init(goal_topic, world_frame, rov_frame, isRunning_topic)
-    vs.init(detection_topic, detection_label_path, oakd_HFOV, 640, 400)
+    vs.init(world_frame,camera_frame,detection_topic, detection_label_path, oakd_HFOV, 640, 400)
 
     rospy.sleep(5)
-
     # start state machine
     sm = smach.StateMachine(outcomes=['outcome4'])
     with sm:

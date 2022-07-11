@@ -14,6 +14,7 @@ import vision_msgs
 
 from vision_msgs.msg import Detection2DArray, BoundingBox2D
 from sensor_msgs.msg import PointCloud2
+import numpy as np
 
 def is_approx_equal(x,y):
     if(x>(y*0.95) and x<(y*1.05)):
@@ -52,6 +53,13 @@ def estimate_gate_pose(bbox1:BoundingBox2D,bbox2:BoundingBox2D,pc_sub: PointClou
     #get slope 
     slope= (bbox2.center.y-bbox2.center.y)/(bbox2.center.x-bbox2.center.x)
 
+    vectors_3D = np.zeros((3, 2))
+    for pt_count, dt in enumerate(pc2.read_points(
+                        pc_sub,
+                        field_names={'x', 'y', 'z'},
+                        skip_nans=False, uvs=[[bbox1.center.x,bbox1.center.x],[bbox2.center.y,bbox2.center.y]] # [u,v u,v u,v] a set of xy coords
+                    )):
+                vectors_3D[pt_count]=dt
     
     pass
         

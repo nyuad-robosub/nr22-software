@@ -62,7 +62,7 @@ if __name__ == '__main__':
 
     # intialize movement controller
     mc.init(goal_topic, world_frame, rov_frame, isRunning_topic)
-    vs.init(detection_topic,detection_label_path,oakd_HFOV,640,400)
+    vs.init(detection_topic, detection_label_path, oakd_HFOV, 640, 400)
 
     rospy.sleep(5)
 

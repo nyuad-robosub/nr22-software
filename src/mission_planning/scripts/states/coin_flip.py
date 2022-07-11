@@ -46,7 +46,7 @@ class coin_flip(smach.State):
                 if(temp_detect!=None or detect!=None):
                     print("DETECTED AND EXISTS")
                     detect=temp_detect
-                    if(is_approx_equal(detect.bbox.center.x,x_center) or is_approx_equal(detect.bbox.center.y,y_center)):
+                    if(is_approx_equal(detect.bbox.center.x,x_center)): # or is_approx_equal(detect.bbox.center.y,y_center)):
                         mc.mov_control.stop()
                         detected=True
                         break

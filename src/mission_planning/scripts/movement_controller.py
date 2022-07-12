@@ -15,7 +15,7 @@ from datetime import datetime
 class movement_controller():
     # controlerr/goalRotation
     # controller/isRunning
-    arm_wait_time=0.5
+    arm_wait_time=0.2
     
     def __init__(self,goal_topic,world_frame,rov_frame,isRunning_topic):
         self.world_frame=world_frame
@@ -61,7 +61,7 @@ class movement_controller():
         msg1 = Bool()
         msg1.data = False
         self.running_publisher.publish(msg1)
-        #rospy.sleep(self.arm_wait_time) # Wait for stopping to finish
+        rospy.sleep(self.arm_wait_time) # Wait for stopping to finish
 
     def arm(self):
          # Arm

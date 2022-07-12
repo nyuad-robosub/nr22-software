@@ -40,9 +40,9 @@ class coin_flip(smach.State):
         roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
         for i in range(4):
             mc.mov_control.set_rotation(roll,pitch,yaw+90*(i+1)) 
-
             while(mc.mov_control.get_running_confirmation()):
                 temp_detect = vs.viso_control.get_detection("gate")
+                rospy.sleep(0.05)
                 if(temp_detect!=None or detect!=None):
                     print("DETECTED AND EXISTS")
                     detect=temp_detect
@@ -50,7 +50,6 @@ class coin_flip(smach.State):
                         mc.mov_control.stop()
                         detected=True
                         break
-                rospy.sleep(0.05)
             if(detected):
                 break     
             
@@ -58,10 +57,6 @@ class coin_flip(smach.State):
 
         vs.viso_control.reset_detection_of_interest()
         if(detected):
-            mc.mov_control.go_straight(5)
-            mc.mov_control.await_completion()
-            mc.mov_control.stop()
-            print('EXITED LOOP')
             return 'outcome1'
         else: 
             return 'outcome2'

@@ -1,4 +1,6 @@
 from operator import truediv
+
+import numpy
 import rospy
 import threading
 import smach
@@ -8,58 +10,42 @@ from std_msgs.msg import Bool
 import movement_controller as mc
 import viso_controller as vs
 import geometry_msgs.msg
+import tf2_geometry_msgs
 import math
-from transforms3d import euler
 import vision_msgs
 
 from vision_msgs.msg import Detection2DArray, BoundingBox2D
 from sensor_msgs.msg import PointCloud2
-import numpy as np
-
-def is_approx_equal(x,y):
-    if(x>(y*0.95) and x<(y*1.05)):
-        return True
-    else:
-        return False
+import sensor_msgs.point_cloud2 as pc2
+import tf2_ros
         
-class coin_flip(smach.State):
+class pass_gate(smach.State):
     _outcomes=['outcome1','outcome2']
     _input_keys=[],
     _output_keys=[]
-    def __init__(self):
-        pass
+    def __init__(self,label_1,label_2):
+        self.label_1=label_1
+        self.label_2=label_2
     def execute(self, userdata):      
-        vs.viso_control.add_detection_of_interest("gate")
+        vs.viso_control.add_detection_of_interest(self.label_1)
+        vs.viso_control.add_detection_of_interest(self.label_2)
         x_center=320
         y_center=200
-        
-        return 'outcome2'
+        mc.mov_control.go_straight(5)
+        detect=[[BoundingBox2D()],[BoundingBox2D()]]
+        while(mc.mov_control.get_running_confirmation()):
+            #check if you detect them BOTH, if you do, estimate gate pose, stop, and set map points
+            temp_det1 = vs.viso_control.get_detection(self.label_1)
+            temp_det2 = vs.viso_control.get_detection(self.label_2)
+            
+            if(temp_det1!=None and temp_det2!=None):
+                pass
+            elif(temp_det1!=None):
+                detect[1][1]=temp_det1.bbox
+            elif(temp_det2!=None):
+                detect[1][1]=temp_det2.bbox
 
 
-    
-def estimate_gate_pose(bbox1:BoundingBox2D,bbox2:BoundingBox2D,pc_sub: PointCloud2):
-    x_center=bbox1.center.x
-    y_center=bbox1.center.y
-    
-    #decrease the bbox size by half because we might have some areas not in the detection if at an angle or slop
-    size_x=bbox1.size_x//2
-    size_y=bbox1.size_y//2
+        mc.mov_control.stop()
 
-    
-
-    #get midpoint between both points
-    midpoint=[(bbox1.center.x+bbox1.center.x)/2,bbox1.center.y]
-
-    #get slope 
-    slope= (bbox2.center.y-bbox2.center.y)/(bbox2.center.x-bbox2.center.x)
-
-    vectors_3D = np.zeros((3, 2))
-    for pt_count, dt in enumerate(pc2.read_points(
-                        pc_sub,
-                        field_names={'x', 'y', 'z'},
-                        skip_nans=False, uvs=[[bbox1.center.x,bbox1.center.x],[bbox2.center.y,bbox2.center.y]] # [u,v u,v u,v] a set of xy coords
-                    )):
-                vectors_3D[pt_count]=dt
-    
-    pass
         

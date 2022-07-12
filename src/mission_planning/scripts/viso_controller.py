@@ -13,6 +13,10 @@ import tf2_geometry_msgs
 import tf
 from object_detection.utils import label_map_util
 
+from transforms3d import euler
+from geometry_msgs.msg import PoseArray, Pose, Transform, PointStamped, PoseStamped
+import numpy as np
+
 class viso_controller():
     sleep_delay=0.05
     def __init__(self,world_frame,camera_frame,detection_topic,detection_label_path,oakd_Hfov,width,height): #should be passed in radians
@@ -28,6 +32,7 @@ class viso_controller():
         self.label_to_id=label_map_util.get_label_map_dict(detection_label_path) #dictionary mapping label -> id
         self.mutex = threading.Lock()
 
+
         self.detection_of_interest={}
         # {
         #   1 : {is_fetched:False,"detection": Detection2D}
@@ -39,13 +44,13 @@ class viso_controller():
          #print(f"RGB FOV {calibData.getFov(dai.CameraBoardSocket.RGB)}, Mono FOV {calibData.getFov(dai.CameraBoardSocket.LEFT)}")
 
     #UNTESTED
-    def get_angles(self,pixel_x: int,pixel_y: int):
+    def get_angles(self,pixel_x,pixel_y):
         L=self.width/(2*math.tan(self.oakd_Hfov/2))
         angle_x=math.atan(abs((self.width-pixel_x))/L)
         angle_y=math.atan(abs((self.height-pixel_y))/L)
         return angle_x, angle_y
 
-    def detection_callback(self,viso_detect: Detection2DArray): 
+    def detection_callback(self,viso_detect): 
         for det in viso_detect.detections:
             #check if the region is in array
             if(det.results[0].id in self.detection_of_interest):
@@ -55,7 +60,7 @@ class viso_controller():
                 self.detection_of_interest[det.results[0].id]['detection']=det
                 self.mutex.release()
 
-    def get_detection(self,label: str): #returns Detection2D if label is found, None if otherwise
+    def get_detection(self,label): #returns Detection2D if label is found, None if otherwise
 
         self.mutex.acquire()
         id=self.label_to_id[label]
@@ -69,12 +74,12 @@ class viso_controller():
             return None
         
 
-    def get_id_from_label(self,label: str): #lookup label_to_id dictionary and return label for a specific id
+    def get_id_from_label(self,label): #lookup label_to_id dictionary and return label for a specific id
         self.label_to_id[label]
         pass
 
     #set fields of interest to watch
-    def add_detection_of_interest(self,label_name: str):
+    def add_detection_of_interest(self,label_name):
         temp={}
         temp['is_fetched']=False
         temp['detection']=None #Detection2D object
@@ -92,9 +97,9 @@ class viso_controller():
     #Courtesy of https://github.com/paul-shuvo/planar_pose/blob/main/src/planar_pose_estimation.py
     def estimate_pose(
                 self,
-                object_name: str,
-                bbox: BoundingBox2D, #change this to bbox object and decreaese its size
-                pc_sub: PointCloud2
+                object_name,
+                bbox,#: BoundingBox2D, #change this to bbox object and decreaese its size
+                pc_sub#: PointCloud2
             ):
         """
         Estimates planar pose of detected objects and
@@ -160,12 +165,12 @@ class viso_controller():
                     )
                 ):
                 # # If any point returns nan, return
-                # if np.any(np.isnan(dt)):
-                #     if object_name in self.object_pose_info.keys():
-                #         del self.object_pose_info[object_name]
-                #     rospy.loginfo('No corresponding 3D point found')
-                #     return
-                # else:
+                if np.any(np.isnan(dt)):
+                    if object_name in self.object_pose_info.keys():
+                        del self.object_pose_info[object_name]
+                    rospy.loginfo('No corresponding 3D point found')
+                    return
+                else:
                     vectors_3D[pt_count] = dt
                     if pt_count == 2:
                         self.vectors_3D = vectors_3D
@@ -225,7 +230,7 @@ class viso_controller():
 
         return pose_msg
 
-    def recursive_pcl(pc_sub: PointCloud2, point : list, x_axis :bool): #fix along x_axis
+    def recursive_pcl(pc_sub, point, x_axis): #fix along x_axis
         # Get the corresponding 3D location of c, x, y
         for dt in enumerate(
             pc2.read_points(
@@ -244,6 +249,53 @@ class viso_controller():
                 return (viso_controller.recursive_pcl(pc_sub,point,x_axis))
             else:
                 return dt
+    
+    def np_to_point(numpy_array):
+        ros_point = PointStamped()
+        ros_point.point.x = numpy_array[0]
+        ros_point.point.y = numpy_array[1]
+        ros_point.point.z = numpy_array[2]
+        return ros_point
+    def estimate_gate_pose(self,bbox1,bbox2,pc_sub):
+        vectors_3D = np.zeros((3, 2))
+        for pt_count, dt in enumerate(pc2.read_points(
+                            pc_sub,
+                            field_names={'x', 'y', 'z'},
+                            skip_nans=False, uvs=[[bbox1.center.x,bbox1.center.x],[bbox2.center.y,bbox2.center.y]] # [u,v u,v u,v] a set of xy coords
+                        )):
+                    vectors_3D[pt_count]=dt
+        
+        transform=mc.mov_control.tfBuffer.lookup_transform(mc.mov_control.world_frame, self.camera_frame, rospy.Time(), rospy.Duration(1))
+        
+        #get 3D midpoint between both points in PCL frame
+        midpoint=[(vectors_3D[0]+vectors_3D[1])/2]
+        
+        vector_w=vectors_3D[1]-vectors_3D[0]
+        
+        midpoint=self.np_to_point(midpoint)
+        vector_w=self.np_to_point(vector_w)
+
+        #get points in world frame
+        midpoint=tf2_geometry_msgs.do_transform_point(midpoint,transform)
+        vector_w=tf2_geometry_msgs.do_transform_point(vector_w,transform)
+
+        vector_w=numpy.array([vector_w.point.x,vector_w.point.y,vector_w.point.z])
+        yaw=math.acos(vector_w[0]/np.linalg.norm(vector_w)) #gets yaw of frame of gate relative to x of world frame
+
+        #transform = self.tf_buffer.lookup_transform(frame, required_position, rospy.Time(0), rospy.Duration(1)) #transform stamped
+        gate_pose = PoseStamped()
+        gate_pose.pose.position.x=midpoint[0]
+        gate_pose.pose.position.y=midpoint[1]
+        gate_pose.pose.position.z=midpoint[2]
+
+        #get quaternion of pose
+        q=euler.euler2quat(0,0,yaw)
+        gate_pose.pose.orientation.x=q[0]
+        gate_pose.pose.orientation.y=q[1]
+        gate_pose.pose.orientation.z=q[2]
+        gate_pose.pose.orientation.w=q[3]
+
+        return gate_pose
     
 
 # Global variable courtesy of:

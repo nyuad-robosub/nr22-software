@@ -139,7 +139,10 @@ def process(img_source):
   a = getOrientation(cnt, canvas)
   rotation = int(np.rad2deg(a)) + 90
 
-  s_img = cv2.bitwise_and(frame, frame, mask=mask)
-  cv2.imwrite('Output.png', s_img)
+  cv2.imwrite('/Users/nasheed-x/Desktop/Orientation/test.jpeg', canvas)
 
   return rotation
+
+a = process('/Users/nasheed-x/Desktop/Orientation/orange.jpeg')
+print(a)
+

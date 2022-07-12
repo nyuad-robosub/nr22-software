@@ -57,14 +57,14 @@ def getOrientation(pts, img):
   cv2.circle(img, cntr, 3, (255, 0, 255), 2)
   p1 = (cntr[0] + 0.02 * eigenvectors[0,0] * eigenvalues[0,0], cntr[1] + 0.02 * eigenvectors[0,1] * eigenvalues[0,0])
   p2 = (cntr[0] - 0.02 * eigenvectors[1,0] * eigenvalues[1,0], cntr[1] - 0.02 * eigenvectors[1,1] * eigenvalues[1,0])
-  drawAxis(img, cntr, p1, (255, 255, 0), 1)
-  drawAxis(img, cntr, p2, (0, 0, 255), 5)
+  drawAxis(img, cntr, p1, (255, 255, 0), -1)
+  drawAxis(img, cntr, p2, (0, 0, 255), -5)
  
   angle = atan2(eigenvectors[0,1], eigenvectors[0,0]) # orientation in radians
   ## [visualization]
  
   # label with the rotation angle
-  label = "  Rotation Angle: " + str(-int(np.rad2deg(angle)) - 90) + " degrees"
+  label = "  Rotation Angle: " + str(int(np.rad2deg(angle)) + 90) + " degrees"
   textbox = cv2.rectangle(img, (cntr[0], cntr[1]-25), (cntr[0] + 250, cntr[1] + 10), (255,255,255), -1)
   cv2.putText(img, label, (cntr[0], cntr[1]), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0), 1, cv2.LINE_AA)
  
@@ -144,5 +144,4 @@ def process(img_source):
   return rotation
 
 a = process('/Users/nasheed-x/Desktop/Orientation/orange.jpeg')
-print(a)
-
+print(a) 

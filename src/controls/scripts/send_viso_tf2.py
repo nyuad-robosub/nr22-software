@@ -1,5 +1,4 @@
-#!/usr/bin/python2.7
-#/usr/bin/env python
+#!/usr/bin/env python
 """
 Try to send external position to MAVlink
 Relevant links:
@@ -33,6 +32,7 @@ https://github.com/mavlink/mavros/issues/1641
 # ---------------------------------------------
 #   Mavlink area
 # ---------------------------------------------
+from operator import pos
 import tf2_py
 import time
 # Import mavutil
@@ -96,6 +96,7 @@ boot_time = datetime.now()
 last_time = datetime.now()
 mutex = threading.Lock()
 isLost = False
+isSim = False
 
 # Message conversion courtesy of:
 # https://answers.ros.org/question/332407/transformstamped-to-transformation-matrix-python/
@@ -160,7 +161,7 @@ def processTransform(master, p_trans):
     """ Receive data and send to MAVLink
     :param master: FCU to send to
     """
-    global last_time, last_rot, last_pos, last_trans, initCount
+    global last_time, last_rot, last_pos, last_trans, initCount, isSim
     global last_delt_pos, last_delt_rot
 
     if initCount > 0:
@@ -173,6 +174,7 @@ def processTransform(master, p_trans):
     sys_time = (curr_time - boot_time).total_seconds() * 1e6
 
     curr_trans = msg_to_se3(p_trans)
+
     delt_trans = np.linalg.inv(last_trans).dot(curr_trans)
 
     delt_pos_vec, delt_rot_mat, z_vec, s_vec = affines.decompose44(delt_trans)
@@ -192,12 +194,14 @@ def processTransform(master, p_trans):
         delt_rot[2] += 2 * math.pi
 
     # Check for issues in the SLAM data
-    if not np.allclose(delt_pos, [0.0, 0.0, 0.0], atol=1e-6) and not np.allclose(delt_pos, last_delt_pos, atol=1e-6):
+    if not np.allclose(delt_pos, [0.0, 0.0, 0.0], atol=1e-8) and not np.allclose(delt_pos, last_delt_pos, atol=1e-8):
         last_time = curr_time
         last_trans = curr_trans
         last_delt_pos = delt_pos
         last_delt_rot = delt_rot
-        send_vision(master, sys_time, delt_time, delt_pos, delt_rot, 90)
+        # Check for large jumps
+        if np.linalg.norm(delt_pos) < 4:
+            send_vision(master, sys_time, delt_time, delt_pos, delt_rot, 90)
 
 def lost_callback(isl):
     global isLost
@@ -206,6 +210,10 @@ def lost_callback(isl):
     mutex.release()
 
 def receiver():
+    global isLost, isSim
+    # Check if is in simulation
+    isSim = rospy.get_param('~is_sim')
+
     # Create the connection
     master = mavutil.mavlink_connection(rospy.get_param('~mav_addr'), dialect='ardupilotmega')
 
@@ -227,44 +235,42 @@ def receiver():
     max_timeout = 10
     timeout_count = 0
     while not rospy.is_shutdown():
-        try:
-            trans = tfBuffer.lookup_transform(WORLD_FRAME, ROV_FRAME, rospy.Time(), rospy.Duration(4))
-            mutex.acquire()
-            if (not isLost):
+        # If in simulation: simple send
+        if isSim:
+            try:
+                trans = tfBuffer.lookup_transform(WORLD_FRAME, ROV_FRAME, rospy.Time(), rospy.Duration(4))
                 processTransform(master, trans)
-            mutex.release()
-        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-            continue
-        except AttributeError:
-            # Make sure the connection is valid
-            print("Fail to connect to MAVLink") # master.wait_heartbeat()
-            print("Retrying...")
-            # Create the connection
-            master = mavutil.mavlink_connection(rospy.get_param('~mav_addr'), dialect='ardupilotmega')
-            # Make sure the connection is valid
-            master.wait_heartbeat()
-            # while timeout_count != 10:
-            #     print("In exception block")
-            #     # Try to reconnect
-            #     master = mavutil.mavlink_connection(rospy.get_param('~mav_addr'), dialect='ardupilotmega')
-            #     connection_regained = False
-            #     try:
-            #         trans = tfBuffer.lookup_transform(WORLD_FRAME, ROV_FRAME, rospy.Time(), rospy.Duration(4))
-            #         processTransform(trans)
-            #         connection_regained = True
-            #     except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-            #         continue
-            #     except Exception, e:
-            #         continue
-            #     finally:
-            #         if connection_regained:
-            #             break
-            #     timeout_count += 1
-            #     print("Timeout count", timeout_count, "out of 10")
-            #     rospy.sleep(2)
-            # if timeout_count == 10:
-            #     return
-            # timeout_count = 0
+            except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+                continue
+            except AttributeError:
+                # Make sure the connection is valid
+                print("Fail to connect to MAVLink") # master.wait_heartbeat()
+                print("Retrying...")
+                # Create the connection
+                master = mavutil.mavlink_connection(rospy.get_param('~mav_addr'), dialect='ardupilotmega')
+                # Make sure the connection is valid
+                master.wait_heartbeat()
+
+        # If not is in simulation: add checks
+        else:
+            try:
+                trans = tfBuffer.lookup_transform(WORLD_FRAME, ROV_FRAME, rospy.Time(), rospy.Duration(4))
+                mutex.acquire()
+                if (not isLost):
+                    processTransform(master, trans)
+                mutex.release()
+            except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+                continue
+            except AttributeError:
+                # Make sure the connection is valid
+                print("Fail to connect to MAVLink") # master.wait_heartbeat()
+                print("Retrying...")
+                # rospy.sleep(5)
+                # Create the connection
+                master = mavutil.mavlink_connection(rospy.get_param('~mav_addr'), dialect='ardupilotmega')
+                # Make sure the connection is valid
+                master.wait_heartbeat()
+
         if rospy.is_shutdown():
             return
         rate.sleep()

@@ -60,12 +60,14 @@ if __name__ == '__main__':
 
     camera_frame = rospy.get_param('~camera_frame')
 
+    pcl_topic = rospy.get_param('~pcl_topic')
+
     #oakd_HFOV = rospy.get_param('~oakd_HFOV')
     
 
     # intialize movement controller
     mc.init(goal_topic, world_frame, rov_frame, isRunning_topic)
-    vs.init(world_frame,camera_frame,detection_topic, detection_label_path, oakd_HFOV, 640, 400)
+    vs.init(world_frame,camera_frame,detection_topic, pcl_topic, detection_label_path, oakd_HFOV, 640, 400)
 
     rospy.sleep(5)
     # start state machine

@@ -128,7 +128,7 @@ class movement_controller():
             i+=1
     def set_rotation(self,roll,pitch,yaw):
         msg9 = geometry_msgs.msg.Quaternion()
-        q = euler.euler2quat(math.radians(roll), math.radians(pitch), math.radians(yaw), 'sxyz')
+        q = euler.euler2quat(roll, pitch, yaw, 'sxyz')
         msg9.w = q[0]
         msg9.x = q[1]
         msg9.y = q[2]
@@ -142,7 +142,9 @@ class movement_controller():
     def await_completion(self):
         # Wait until movement finished
             while self.get_running_confirmation():    
+                print(self.get_running_confirmation())
                 rospy.sleep(0.01)
+            print("IM OUTSIDE")
     def get_running_confirmation(self):
         # If current flag is the same as new flag:
         # - Either the controller has not registered the movement, or

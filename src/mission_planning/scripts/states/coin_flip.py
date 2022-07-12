@@ -1,3 +1,4 @@
+from cmath import pi
 from operator import truediv
 import rospy
 import threading
@@ -22,10 +23,11 @@ class coin_flip(smach.State):
     _outcomes=['outcome1','outcome2']
     _input_keys=[],
     _output_keys=[]
-    def __init__(self):
+    def __init__(self):   
         pass
-    def execute(self, userdata):      
-        vs.viso_control.add_detection_of_interest("gate")
+        #vs.viso_control.add_detection_of_interest("gate")
+    def execute(self, userdata):     
+        rospy.sleep(3)
 
         x_center=320
         y_center=200
@@ -39,13 +41,18 @@ class coin_flip(smach.State):
         detect=None
         roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
         for i in range(4):
-            mc.mov_control.set_rotation(roll,pitch,yaw+90*(i+1)) 
+            print("ROTATING yaw:")
+            print(yaw)
+            print(yaw+math.pi/2*(i+1))
+            mc.mov_control.set_rotation(roll,pitch,yaw+math.pi/2*(i+1)) 
             while(mc.mov_control.get_running_confirmation()):
+                print("RUNNING")
                 temp_detect = vs.viso_control.get_detection("gate")
-                rospy.sleep(0.05)
+                rospy.sleep(0.1)
                 if(temp_detect!=None or detect!=None):
                     print("DETECTED AND EXISTS")
-                    detect=temp_detect
+                    if(temp_detect!=None):
+                        detect=temp_detect
                     if(is_approx_equal(detect.bbox.center.x,x_center)): # or is_approx_equal(detect.bbox.center.y,y_center)):
                         mc.mov_control.stop()
                         detected=True

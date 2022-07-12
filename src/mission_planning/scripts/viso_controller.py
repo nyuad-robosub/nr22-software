@@ -1,4 +1,6 @@
 import math
+
+import numpy
 import rospy
 import threading
 from vision_msgs.msg import Detection2DArray, BoundingBox2D
@@ -16,10 +18,16 @@ from object_detection.utils import label_map_util
 from transforms3d import euler
 from geometry_msgs.msg import PoseArray, Pose, Transform, PointStamped, PoseStamped
 import numpy as np
+import message_filters
+from copy import deepcopy
+
+# class det_obj():
+#     def __init__(self,):
+        
 
 class viso_controller():
     sleep_delay=0.05
-    def __init__(self,world_frame,camera_frame,detection_topic,detection_label_path,oakd_Hfov,width,height): #should be passed in radians
+    def __init__(self,world_frame,camera_frame,detection_topic,pcl_topic,detection_label_path,oakd_Hfov,width,height): #should be passed in radians
         aspect_ratio = width/height
         self.world_frame=world_frame
         self.camera_frame=camera_frame
@@ -28,21 +36,70 @@ class viso_controller():
         self.width=width
         self.height=height
 
-        self.detection_subscriber = rospy.Subscriber(detection_topic, Detection2DArray , self.detection_callback)
+        self.pcl_sub= message_filters.Subscriber(pcl_topic, PointCloud2)
+        self.detection_sub = message_filters.Subscriber(detection_topic, Detection2DArray)
+
+        ts = message_filters.ApproximateTimeSynchronizer([self.detection_sub, self.pcl_sub], 3,slop=0.2)
+        ts.registerCallback(self.pcl_detection_callback)
+
         self.label_to_id=label_map_util.get_label_map_dict(detection_label_path) #dictionary mapping label -> id
         self.mutex = threading.Lock()
 
+        self.is_fetched=False
 
-        self.detection_of_interest={}
-        # {
-        #   1 : {is_fetched:False,"detection": Detection2D}
-        # }
+        self.pointcloud=PointCloud2()
 
         self.viso_detect=Detection2DArray()
-        #50.41 VFOV 
-        #calibData = dai_device.readCalibration()
-         #print(f"RGB FOV {calibData.getFov(dai.CameraBoardSocket.RGB)}, Mono FOV {calibData.getFov(dai.CameraBoardSocket.LEFT)}")
+        
 
+    def get_id_from_label(self,label): #lookup label_to_id dictionary and return label for a specific id
+        return self.label_to_id[label]
+
+    def get_label_from_id(self, id):
+        return self.label_to_id.keys()[self.label_to_id.values().index(id)]
+
+    def detection_callback(self,viso_detect):
+        self.mutex.acquire()
+        self.viso_detect=viso_detect
+        self.is_fetched=True
+        self.mutex.release()
+
+    def get_detection(self, array_of_labels): #np array of labels passed, returns dictionary of detections for those id's
+        if(self.is_fetched):
+            if(array_of_labels.size >=0):
+                self.mutex.acquire()
+                detections=self.viso_detect.detections
+                det_ids={} #{id1 : [Detection2D,], id2}
+                req_ids=[self.get_id_from_label(x) for x in array_of_labels]
+
+                for det in list(detections):
+                    if det.results.id in req_ids:
+                        if det.results.id in det_ids:
+                            det_ids[self.get_label_from_id(det.results.id)].append(det)
+                        else:
+                            det_ids[self.get_label_from_id(det.results.id)]=[det]
+                self.is_fetched=False
+                self.mutex.release()
+                return det_ids
+            self.is_fetched=False
+
+            # list_new=list.copy(detections)
+            # for det in list(list_new): #this will remove ids we are not interested in
+            #     id=det.results.id
+            #     if(id in ids):
+            #         pass
+            #     else:
+            #         list_new.remove(det)   
+            
+            # #unordered list 
+
+            # self.mutex.release()
+            # return list_new 
+
+            #{id:Detection2DArray,id:}
+        else:
+            self.mutex.release()
+            return None
     #UNTESTED
     def get_angles(self,pixel_x,pixel_y):
         L=self.width/(2*math.tan(self.oakd_Hfov/2))
@@ -50,47 +107,46 @@ class viso_controller():
         angle_y=math.atan(abs((self.height-pixel_y))/L)
         return angle_x, angle_y
 
-    def detection_callback(self,viso_detect): 
-        for det in viso_detect.detections:
-            #check if the region is in array
-            if(det.results[0].id in self.detection_of_interest):
-                #if its an id of interest, store it in the dictionary
-                self.mutex.acquire()
-                self.detection_of_interest[det.results[0].id]['is_fetched']=True
-                self.detection_of_interest[det.results[0].id]['detection']=det
-                self.mutex.release()
+    def pcl_detection_callback(self,viso_detect,pointcloud):
+        self.detection_callback(viso_detect)
+        self.pointcloud=pointcloud
 
-    def get_detection(self,label): #returns Detection2D if label is found, None if otherwise
+    # def detection_callback(self,viso_detect): 
+    #     for det in viso_detect.detections:
+    #         #check if the region is in array
+    #         if(det.results[0].id in self.detection_of_interest):
+    #             #if its an id of interest, store it in the dictionary
+    #             self.mutex.acquire()
+    #             self.detection_of_interest[det.results[0].id]['is_fetched']=True
+    #             self.detection_of_interest[det.results[0].id]['detection']=det
+    #             self.mutex.release()
 
-        self.mutex.acquire()
-        id=self.label_to_id[label]
-        if(id in self.detection_of_interest):
-            if(len(self.detection_of_interest[id])!=0 and self.detection_of_interest[id]['is_fetched']):
-                self.detection_of_interest[id]['is_fetched']=False
-                self.mutex.release()
-                return self.detection_of_interest[id]['detection']
-        else:
-            self.mutex.release()
-            return None
+    # def get_detection(self,label): #returns Detection2D if label is found, None if otherwise
+
+    #     self.mutex.acquire()
+    #     id=self.label_to_id[label]
+    #     if(id in self.detection_of_interest):
+    #         if(len(self.detection_of_interest[id])!=0 and self.detection_of_interest[id]['is_fetched']):
+    #             self.detection_of_interest[id]['is_fetched']=False
+    #             self.mutex.release()
+    #             return self.detection_of_interest[id]['detection']
+    #     self.mutex.release()
+    #     return None
+
+    # #set fields of interest to watch
+    # def add_detection_of_interest(self,label_name):
         
+    #     temp={}
+    #     temp['is_fetched']=False
+    #     temp['detection']=None #Detection2D object
+    #     self.mutex.acquire()
+    #     self.detection_of_interest[self.label_to_id[label_name]]=temp
+    #     self.mutex.release()
 
-    def get_id_from_label(self,label): #lookup label_to_id dictionary and return label for a specific id
-        self.label_to_id[label]
-        pass
-
-    #set fields of interest to watch
-    def add_detection_of_interest(self,label_name):
-        temp={}
-        temp['is_fetched']=False
-        temp['detection']=None #Detection2D object
-        self.mutex.acquire()
-        self.detection_of_interest[self.label_to_id[label_name]]=temp
-        self.mutex.release()
-
-    def reset_detection_of_interest(self):
-        self.mutex.acquire()
-        self.detection_of_interest={}
-        self.mutex.release()
+    # def reset_detection_of_interest(self):
+    #     self.mutex.acquire()
+    #     self.detection_of_interest={}
+    #     self.mutex.release()
 
     def get_position_of_pixel(self,x_coord,y_coord): #get xyz of pixel from x,y coord in ros img frame
         pass
@@ -99,7 +155,6 @@ class viso_controller():
                 self,
                 object_name,
                 bbox,#: BoundingBox2D, #change this to bbox object and decreaese its size
-                pc_sub#: PointCloud2
             ):
         """
         Estimates planar pose of detected objects and
@@ -159,7 +214,7 @@ class viso_controller():
             # Get the corresponding 3D location of c, x, y
             for pt_count, dt in enumerate(
                 pc2.read_points(
-                        pc_sub,
+                        self.pointcloud,
                         field_names={'x', 'y', 'z'},
                         skip_nans=False, uvs=points # [u,v u,v u,v] a set of xy coords
                     )
@@ -174,8 +229,9 @@ class viso_controller():
                     vectors_3D[pt_count] = dt
                     if pt_count == 2:
                         self.vectors_3D = vectors_3D
-        except struct.error as err:
-            rospy.loginfo(err)
+        except:
+            #rospy.loginfo(err)
+            print("HORRIBLE ERROR REACHED IN PCL")
             return
 
         try:
@@ -256,50 +312,50 @@ class viso_controller():
         ros_point.point.y = numpy_array[1]
         ros_point.point.z = numpy_array[2]
         return ros_point
-    def estimate_gate_pose(self,bbox1,bbox2,pc_sub):
-        vectors_3D = np.zeros((3, 2))
-        for pt_count, dt in enumerate(pc2.read_points(
-                            pc_sub,
-                            field_names={'x', 'y', 'z'},
-                            skip_nans=False, uvs=[[bbox1.center.x,bbox1.center.x],[bbox2.center.y,bbox2.center.y]] # [u,v u,v u,v] a set of xy coords
-                        )):
-                    vectors_3D[pt_count]=dt
+    # def estimate_gate_pose(self,bbox1,bbox2,pc_sub):
+    #     vectors_3D = np.zeros((3, 2))
+    #     for pt_count, dt in enumerate(pc2.read_points(
+    #                         pc_sub,
+    #                         field_names={'x', 'y', 'z'},
+    #                         skip_nans=False, uvs=[[bbox1.center.x,bbox1.center.x],[bbox2.center.y,bbox2.center.y]] # [u,v u,v u,v] a set of xy coords
+    #                     )):
+    #                 vectors_3D[pt_count]=dt
         
-        transform=mc.mov_control.tfBuffer.lookup_transform(mc.mov_control.world_frame, self.camera_frame, rospy.Time(), rospy.Duration(1))
+    #     transform=mc.mov_control.tfBuffer.lookup_transform(mc.mov_control.world_frame, self.camera_frame, rospy.Time(), rospy.Duration(1))
         
-        #get 3D midpoint between both points in PCL frame
-        midpoint=[(vectors_3D[0]+vectors_3D[1])/2]
+    #     #get 3D midpoint between both points in PCL frame
+    #     midpoint=[(vectors_3D[0]+vectors_3D[1])/2]
         
-        vector_w=vectors_3D[1]-vectors_3D[0]
+    #     vector_w=vectors_3D[1]-vectors_3D[0]
         
-        midpoint=self.np_to_point(midpoint)
-        vector_w=self.np_to_point(vector_w)
+    #     midpoint=self.np_to_point(midpoint)
+    #     vector_w=self.np_to_point(vector_w)
 
-        #get points in world frame
-        midpoint=tf2_geometry_msgs.do_transform_point(midpoint,transform)
-        vector_w=tf2_geometry_msgs.do_transform_point(vector_w,transform)
+    #     #get points in world frame
+    #     midpoint=tf2_geometry_msgs.do_transform_point(midpoint,transform)
+    #     vector_w=tf2_geometry_msgs.do_transform_point(vector_w,transform)
 
-        vector_w=numpy.array([vector_w.point.x,vector_w.point.y,vector_w.point.z])
-        yaw=math.acos(vector_w[0]/np.linalg.norm(vector_w)) #gets yaw of frame of gate relative to x of world frame
+    #     vector_w=numpy.array([vector_w.point.x,vector_w.point.y,vector_w.point.z])
+    #     yaw=math.acos(vector_w[0]/np.linalg.norm(vector_w)) #gets yaw of frame of gate relative to x of world frame
 
-        #transform = self.tf_buffer.lookup_transform(frame, required_position, rospy.Time(0), rospy.Duration(1)) #transform stamped
-        gate_pose = PoseStamped()
-        gate_pose.pose.position.x=midpoint[0]
-        gate_pose.pose.position.y=midpoint[1]
-        gate_pose.pose.position.z=midpoint[2]
+    #     #transform = self.tf_buffer.lookup_transform(frame, required_position, rospy.Time(0), rospy.Duration(1)) #transform stamped
+    #     gate_pose = PoseStamped()
+    #     gate_pose.pose.position.x=midpoint[0]
+    #     gate_pose.pose.position.y=midpoint[1]
+    #     gate_pose.pose.position.z=midpoint[2]
 
-        #get quaternion of pose
-        q=euler.euler2quat(0,0,yaw)
-        gate_pose.pose.orientation.x=q[0]
-        gate_pose.pose.orientation.y=q[1]
-        gate_pose.pose.orientation.z=q[2]
-        gate_pose.pose.orientation.w=q[3]
+    #     #get quaternion of pose
+    #     q=euler.euler2quat(0,0,yaw)
+    #     gate_pose.pose.orientation.w=q[0]
+    #     gate_pose.pose.orientation.x=q[1]
+    #     gate_pose.pose.orientation.y=q[2]
+    #     gate_pose.pose.orientation.z=q[3]
 
-        return gate_pose
+    #     return gate_pose
     
 
 # Global variable courtesy of:
 # https://stackoverflow.com/a/13034908
-def init(world_frame,camera_frame,detection_topic,detection_label_path,oakd_Hfov,width,height):
+def init(world_frame,camera_frame,detection_topic,pcl_topic,detection_label_path,oakd_Hfov,width,height):
     global viso_control
-    viso_control=viso_controller(world_frame,camera_frame,detection_topic,detection_label_path,oakd_Hfov,width,height)
+    viso_control=viso_controller(world_frame,camera_frame,detection_topic,pcl_topic,detection_label_path,oakd_Hfov,width,height)

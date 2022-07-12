@@ -3,12 +3,10 @@ Install OpenCV, NumPy, DepthAI, MatplotLib
 %pip install opencv-python
 %pip install matplotlib
 %pip install depthai
-
 """
 # Import dependencies
 import cv2
 import matplotlib.pyplot as plt
-import depthai as dai
 import numpy as np
 from math import atan2, cos, sin, sqrt, pi
 
@@ -72,89 +70,76 @@ def getOrientation(pts, img):
  
   return angle
 
-cap = cv2.VideoCapture(0)
 
-while True:
-    
-    # Captures the live stream frame-by-frame
-    _, frame = cap.read()
-      
-    # Converts images from BGR to HSV 
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    
-    # lower bound and upper bound for orange color
-    lower_bound = np.array([0,120,135])
-    upper_bound = np.array([65,255,255])
-
-    #find color within the boundaries
-    mask = cv2.inRange(hsv, lower_bound, upper_bound)
-
-    #define kernel size  
-    kernel = np.ones((7,7),np.uint8)
-
-    # remove unnecessary noise from mask
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
-
-    #create canvas
-    canvas = np.zeros(frame.shape)
-    canvas.fill(0)
-
-    #create segmented image
-    segmented_img = cv2.bitwise_and(canvas, canvas, mask=mask)
-
-    # find contours from the mask
-    contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    cont_output = cv2.drawContours(segmented_img, contours, -1, (0, 255, 0), 3)
-
-    # get minAreaRect of contour with max area
-    max_area = -1
-
-    #loop through contours
-    for i in range(len(contours)):
-        area = cv2.contourArea(contours[i])
-        if area>max_area:
-            cnt = contours[i]
-            max_area = area
-
-    areas = [cv2.contourArea(c) for c in contours]
-    if (len(areas) !=0):
-        max_index = np.argmax(areas)
-        cnt=contours[max_index]
-
-    #assign minAreaRect to contour with max area
-    rect = cv2.minAreaRect(cnt)
-    box = cv2.boxPoints(rect)
-    box = np.int0(box)
-
-    #draw minAreaRect
-    cv2.drawContours(canvas,[box],0,(255, 0,0),2)
-
-    #center coordinates of min_rectangle also p1
-    x = int(rect[0][0])
-    y = int(rect[0][1])
-
-    #draw at center point
-    canvas = cv2.circle(canvas, (x,y), 10, (0,255,0), -5)
-
-    # get angle
-    getOrientation(cnt, canvas)
-    cv2.imshow('Output Angle', canvas)
-
-    s_img = cv2.bitwise_and(frame, frame, mask=mask)
-
-    cv2.imshow('Output', s_img)
-
-    # wait for 1 sec
-    k =  cv2.waitKey(1)
-      
-    # break out of while loop
-    # if k value is 27
-    if k == 27:
-        break
-          
-# release the captured frames 
-cap.release()
+def process(img_source):
   
-# Destroys all windows. 
-cv2.destroyAllWindows()
+  path = img_source
+  # Captures the live stream frame-by-frame
+  frame = cv2.imread(path)
+        
+  # Converts images from BGR to HSV 
+  hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+      
+  # lower bound and upper bound for orange color
+  lower_bound = np.array([0,120,135])
+  upper_bound = np.array([65,255,255])
+
+  #find color within the boundaries
+  mask = cv2.inRange(hsv, lower_bound, upper_bound)
+
+  #define kernel size  
+  kernel = np.ones((7,7),np.uint8)
+
+  # remove unnecessary noise from mask
+  mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+  mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+
+  #create canvas
+  canvas = np.zeros(frame.shape)
+  canvas.fill(0)
+
+  #create segmented image
+  segmented_img = cv2.bitwise_and(canvas, canvas, mask=mask)
+
+  # find contours from the mask
+  contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+  cont_output = cv2.drawContours(segmented_img, contours, -1, (0, 255, 0), 3)
+
+  # get minAreaRect of contour with max area
+  max_area = -1
+
+  #loop through contours
+  for i in range(len(contours)):
+    area = cv2.contourArea(contours[i])
+    if area>max_area:
+      cnt = contours[i]
+      max_area = area
+
+  areas = [cv2.contourArea(c) for c in contours]
+  if (len(areas) !=0):
+    max_index = np.argmax(areas)
+    cnt=contours[max_index]
+
+  #assign minAreaRect to contour with max area
+  rect = cv2.minAreaRect(cnt)
+  box = cv2.boxPoints(rect)
+  box = np.int0(box)
+
+  #draw minAreaRect
+  cv2.drawContours(canvas,[box],0,(255, 0,0),2)
+
+  #center coordinates of min_rectangle also p1
+  x = int(rect[0][0])
+  y = int(rect[0][1])
+
+  #draw at center point
+  canvas = cv2.circle(canvas, (x,y), 10, (0,255,0), -5)
+
+  # get angle
+  a = getOrientation(cnt, canvas)
+  rotation = int(np.rad2deg(a)) + 90
+
+  s_img = cv2.bitwise_and(frame, frame, mask=mask)
+  cv2.imwrite('Output.png', s_img)
+
+  return rotation

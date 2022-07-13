@@ -154,7 +154,7 @@ sudo make install
 
 #install opencv 4
 echo "Configuring and building Thirdpart/opencv"
-cd $p/include
+cd $p
 wget -O opencv.zip https://github.com/opencv/opencv/archive/refs/tags/4.4.0.zip
 unzip opencv
 rm opencv.zip

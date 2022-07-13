@@ -69,6 +69,12 @@ class movement_controller():
         msg1.data = True
         self.arm_publisher.publish(msg1)
         rospy.sleep(self.arm_wait_time) # Wait for arm to finish
+
+    def disarm(self): 
+        msg1 = Bool()
+        msg1.data = False
+        self.arm_publisher.publish(msg1)
+        rospy.sleep(self.arm_wait_time) # Wait for stopping to finish
     
     def update_tf(self, timeout=5):
         """Function to update stored tf of ROV

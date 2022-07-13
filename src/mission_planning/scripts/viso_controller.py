@@ -6,17 +6,17 @@ import threading
 from vision_msgs.msg import Detection2DArray, BoundingBox2D
 import sensor_msgs.point_cloud2 as pc2
 from sensor_msgs.msg import PointCloud2, Image
-from geometry_msgs.msg import PoseArray, Pose, Transform, Vector3
+from geometry_msgs.msg import PoseArray, Pose, Transform, Vector3Stamped, TransformStamped, Quaternion
 import tf2_ros
 import numpy as np
 from numpy.linalg import norm
 import movement_controller as mc
-import tf2_geometry_msgs
+import tf2_geometry_msgs.tf2_geometry_msgs as tfgmtfgm
 import tf
 from object_detection.utils import label_map_util
 
 from transforms3d import euler
-from geometry_msgs.msg import PoseArray, Pose, Transform, PointStamped, PoseStamped
+from geometry_msgs.msg import PoseArray, Pose, Transform, PointStamped, PoseStamped, Quaternion
 import numpy as np
 import message_filters
 from copy import deepcopy
@@ -50,6 +50,11 @@ class viso_controller():
         self.pointcloud=PointCloud2()
 
         self.viso_detect=Detection2DArray()
+
+        # Getting transformation from camera frame to world
+        self.trans = TransformStamped()
+        self.tfBuffer = tf2_ros.Buffer()
+        self.listener = tf2_ros.TransformListener(self.tfBuffer)
         
 
     def get_id_from_label(self,label): #lookup label_to_id dictionary and return label for a specific id
@@ -58,30 +63,42 @@ class viso_controller():
     def get_label_from_id(self, id):
         return self.label_to_id.keys()[self.label_to_id.values().index(id)]
 
-    def detection_callback(self,viso_detect):
+    def detection_callback(self, viso_detect):
         self.mutex.acquire()
-        self.viso_detect=viso_detect
-        self.is_fetched=True
+        self.viso_detect = viso_detect
+        # Only set true when something is detected, to save energy
+        if len(list(self.viso_detect.detections)) > 0:
+            self.is_fetched=True
         self.mutex.release()
 
     def get_detection(self, array_of_labels): #np array of labels passed, returns dictionary of detections for those id's
-        if(self.is_fetched):
-            if(array_of_labels.size >=0):
+        # if(self.is_fetched): # Might not need this if want to get again
+            detections = []
+            if len(array_of_labels) > 0:
                 self.mutex.acquire()
-                detections=self.viso_detect.detections
-                det_ids={} #{id1 : [Detection2D,], id2}
-                req_ids=[self.get_id_from_label(x) for x in array_of_labels]
+                req_ids = [self.get_id_from_label(x) for x in array_of_labels]
+                for det in self.viso_detect.detections:
+                    if det.results[0].id in req_ids:
+                        detections.append({
+                            'id': det.results[0].id,                            # ID / score
+                            'score': det.results[0].score,                      # Confi
+                            'center': (det.bbox.center.x, det.bbox.center.y),   # Center, tuple (x, y)
+                            'size': (det.bbox.size_x, det.bbox.size_y)          # Size, tuple (x, y)
+                        })
+                # detections=self.viso_detect.detections
+                # det_ids={} #{id1 : [Detection2D,], id2}
 
-                for det in list(detections):
-                    if det.results.id in req_ids:
-                        if det.results.id in det_ids:
-                            det_ids[self.get_label_from_id(det.results.id)].append(det)
-                        else:
-                            det_ids[self.get_label_from_id(det.results.id)]=[det]
+                # for det in list(detections):
+                #     if det.results.id in req_ids:
+                #         if det.results.id in det_ids:
+                #             det_ids[self.get_label_from_id(det.results.id)].append(det)
+                #         else:
+                #             det_ids[self.get_label_from_id(det.results.id)]=[det]
                 self.is_fetched=False
                 self.mutex.release()
-                return det_ids
-            self.is_fetched=False
+            return detections
+                # return det_ids
+            # self.is_fetched=False # keep is_fetched true as nothing was fetched
 
             # list_new=list.copy(detections)
             # for det in list(list_new): #this will remove ids we are not interested in
@@ -97,14 +114,14 @@ class viso_controller():
             # return list_new 
 
             #{id:Detection2DArray,id:}
-        else:
-            self.mutex.release()
-            return None
+        # else:
+        #     self.mutex.release()
+        #     return None
     #UNTESTED
     def get_angles(self,pixel_x,pixel_y):
-        L=self.width/(2*math.tan(self.oakd_Hfov/2))
-        angle_x=math.atan(abs((self.width-pixel_x))/L)
-        angle_y=math.atan(abs((self.height-pixel_y))/L)
+        L = self.width / (2 * math.tan(self.oakd_Hfov / 2))
+        angle_x = math.atan((pixel_x - self.width / 2) / L)
+        angle_y = math.atan((pixel_y - self.height / 2) / L)
         return angle_x, angle_y
 
     def pcl_detection_callback(self,viso_detect,pointcloud):
@@ -286,6 +303,46 @@ class viso_controller():
 
         return pose_msg
 
+    def estimate_pose_svd(self, center, size): # Estimate pose of flat thing with SVD
+        # Get points from pcl courtesy of:
+        # http://docs.ros.org/en/jade/api/sensor_msgs/html/point__cloud2_8py_source.html
+        # https://answers.ros.org/question/240491/point_cloud2read_points-and-then/
+        pose_time = self.pointcloud.header.stamp
+        points_region = np.mgrid[
+            math.ceil(center[0] - size[0] * 0.5):math.floor(center[0] + size[0] * 0.5),
+            math.ceil(center[1] - size[1] * 0.5):math.floor(center[1] + size[1] * 0.5)].reshape(2,-1).T
+
+        points = np.array(list(pc2.read_points(
+            self.pointcloud,
+            field_names={'x', 'y', 'z'},
+            skip_nans=True, uvs=points_region.tolist() # [u,v u,v u,v] a set of xy coords
+        )))
+        # # [[1,2,3],[,,], ..., dt]
+
+        # Approx. plane normal courtesy of:
+        # https://math.stackexchange.com/a/99317
+        centroid_cam = np.mean(points, axis=1, keepdims=True)
+        svd = np.linalg.svd(points - centroid_cam) # [:,-1]
+        left = svd[0]
+        normal_cam = left[:, -1] #normal direction vector relative to object plane
+        # center = np.mean(pcl_region,axis=0)
+        # norm_v=Vector3(norm[0],norm[1],norm[2])
+
+        # Transform to world frame
+        self.update_tf()
+        centroid_world = tfgmtfgm.do_transform_point(centroid_cam, self.trans)
+        normal_world = tfgmtfgm.do_transform_vector3(normal_cam, self.trans)
+
+        # Assume uprightness
+        pose_yaw =  math.atan2(normal_world.vector.y, normal_world.vector.x)
+        q = euler.euler2quat(0, 0, pose_yaw, 'sxyz')
+        pose_msg = PoseStamped()
+        pose_msg.header.stamp = pose_time
+        pose_msg.header.frame_id = self.world_frame
+        pose_msg.position = centroid_world
+        pose_msg.orientation = Quaternion(w=q[0], x=q[1], y=q[2], z=q[3])
+        return pose_msg
+
     def recursive_pcl(pc_sub, point, x_axis): #fix along x_axis
         # Get the corresponding 3D location of c, x, y
         for dt in enumerate(
@@ -352,6 +409,23 @@ class viso_controller():
     #     gate_pose.pose.orientation.z=q[3]
 
     #     return gate_pose
+
+    def update_tf(self, timeout=5):
+        """Function to update stored tf of ROV
+        :param timeout: How much time in seconds lookup should wait for"""
+        delay = 0.1
+        counter = 0
+        # Find current location
+        while counter < timeout / delay:
+            try:
+                self.trans = self.tfBuffer.lookup_transform(self.world_frame, self.camera_frame, rospy.Time(), rospy.Duration(4))
+            except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+                print("Cannot find transformation of ROV! Retrying...")
+                rospy.sleep(delay)
+                counter += 1
+            break
+        # Check if there were any issues
+        return (counter < timeout / delay)
     
 
 # Global variable courtesy of:

@@ -31,6 +31,7 @@
 [submodule "src/deps/simulations/bluerov2"]
 	path = src/deps/simulations/bluerov2
 	url = https://github.com/nyuad-robosub/bluerov2
+	branch = heavy
 [submodule "src/deps/simulations/realsense_gazebo_plugin"]
 	path = src/deps/simulations/realsense_gazebo_plugin
 	url = https://github.com/nyuad-robosub/realsense_gazebo_plugin

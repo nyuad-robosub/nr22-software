@@ -52,6 +52,7 @@
         <arg name="image_topic" value="$(arg image_topic)" />
         <arg name="model_file" value="$(arg model_file)" />
         <arg name="label_file" value="$(arg label_file)" />
+        <arg name="interval" value="100" />
     </include>
 
     <!-- Launch SMACH node -->
@@ -70,6 +71,7 @@
         <param name="detection_topic" value="/detection" />
         <param name="label_file" value="$(arg label_file)" />
         <param name="camera_frame" value="$(arg camera_frame)" />
+        <param name="pcl_topic" value="$(arg pcl_topic)" />
     </node>
     
     <!-- Static broadcasters for IMU <-> camera transforms courtesy of:

@@ -156,6 +156,10 @@ angleThreshold = 4
 attitude = geometry_msgs.msg.Quaternion(0, 0, 0, 0)
 attitude_lock = threading.Lock()
 
+# Global monitor of altitude
+altitude = 0.0
+altitude_lock = threading.Lock()
+
 # Undeclared master & publisher
 master = None
 run_publisher = None
@@ -436,7 +440,7 @@ def rotation_callback(rotation):
     """ Callback function to do rotation.
     :param rotation: geometry_msgs.msg.QuaternionStamped
     """
-    global run_publisher, isArmed, isRunning, attitude, attitude_lock
+    global run_publisher, isArmed, isRunning, attitude, attitude_lock, altitude, altitude_lock
     if not isArmed:
         print("Rotation received but ROV not armed!")
         return
@@ -463,11 +467,14 @@ def rotation_callback(rotation):
     # Get goal orientation
     goal_deg = getDegsFromQuats([rotation.w, rotation.x, rotation.y, rotation.z])
 
-    # Get current orientation
+    # Get current orientation & depth
     att = geometry_msgs.msg.Quaternion()
     attitude_lock.acquire()
     att = attitude
     attitude_lock.release()
+    altitude_lock.acquire()
+    alt = altitude
+    altitude_lock.release()
 
     # Yaw
     curr_deg = getDegsFromQuats([att.w, att.x, att.y, att.z])
@@ -485,6 +492,11 @@ def rotation_callback(rotation):
                 next_deg[2] += 360
             elif next_deg[2] >= 360:
                 next_deg[2] -= 360
+        
+        # set depth target
+        print("setting depth")
+        sys_time = (datetime.now() - boot_time).total_seconds() * 1e3
+        set_target_depth(sys_time, alt)
 
         # set a rotation target
         print("setting rotation")
@@ -577,6 +589,12 @@ def attitude_callback(att):
     attitude = att
     attitude_lock.release()
 
+def altitude_callback(alt):
+    global altitude, altitude_lock
+    altitude_lock.acquire()
+    altitude = alt.data
+    altitude_lock.release()
+
 def controller():
     global master, run_publisher
     # Create the connection
@@ -588,6 +606,8 @@ def controller():
     rospy.Subscriber(rospy.get_param('~arm_topic'), Bool, arm_callback) #true or false 
     rospy.Subscriber(rospy.get_param('~run_topic'), Bool, run_callback)
     run_publisher = rospy.Publisher(rospy.get_param('~run_topic'), Bool, queue_size=1, latch=True)
+    rospy.Subscriber(rospy.get_param('~altitude_topic'), Float64, altitude_callback)
+
 
     # Translation params
     rospy.Subscriber(rospy.get_param('~pcl_topic'), Bool, pcl_callback)

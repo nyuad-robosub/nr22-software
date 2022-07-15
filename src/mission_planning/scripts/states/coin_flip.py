@@ -68,15 +68,16 @@ class coin_flip(smach.State):
                             continue
 
                         # First time seeing the gate: maybe at edge
-                        angle_x, angle_y = vs.viso_control.get_angles(detections[0]['center'][0], detections[0]['center'][1])
+                        angle_x, angle_y = vs.viso_control.OAK_D.get_angles(detections[0]['center'][0], detections[0]['center'][1])
+                        print("ANGLE_X")
                         print(angle_x)
-                        if angle_sign == 0:
+                        if angle_sign == 0: #only set when first starting
                             print("Center of gate found...")
                             angle_sign = int(angle_x / abs(angle_x))
 
                         # if (is_approx_equal(detections[0]['center'][0], x_center, 0.4)): # or is_approx_equal(detect.bbox.center.y,y_center)):
                         # Otherwise see if the gate angle sign changed (crossed the center) or near the center
-                        elif is_approx_equal(angle_x, 0) or int(angle_x / abs(angle_x)) == -angle_sign:
+                        elif is_approx_equal(angle_x, 0) or int(angle_x / abs(angle_x)) == -angle_sign: #
                             print("DETECTED AND EXISTS")
                             mc.mov_control.stop()
                             center = detections[0]['center']
@@ -96,8 +97,9 @@ class coin_flip(smach.State):
             roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
 
             # Rotate and head thru center of the gate
-            angle_x, angle_y = vs.viso_control.get_angles(center[0] - size[0] / 2, 0)
-            mc.mov_control.set_rotation(0, 0, yaw - angle_x)
+            angle_x, angle_y = vs.viso_control.OAKD.get_angles(center[0] - size[0] / 2, 0) #get angle between center of bbox and image frame
+            rospy.sleep(0.05)
+            mc.mov_control.set_rotation(0, 0, yaw - angle_x) #does this work for y
             # Wait a bit for control to start 
             rospy.sleep(0.1)
             while (mc.mov_control.get_running_confirmation()):

@@ -196,6 +196,22 @@ class movement_controller():
         
         self.focus_publisher.publish(self.focus_point)
 
+    def go_angle(self,angle,amount): #angle in radians, amount in meters to move by
+        self.update_tf()
+        rotation = self.trans.transform.rotation
+        roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
+
+        self.focus_point.header.frame_id = self.world_frame
+        self.focus_point.header.stamp = rospy.Time.now()
+
+        xyz=[]
+        if xyz is None:
+            xyz[0]= self.trans.transform.translation.x + math.cos(angle) * amount
+            xyz[1]= self.trans.transform.translation.y + math.sin(angle) * amount
+            xyz[2] = self.trans.transform.translation.z
+        
+        self.set_goal_point(xyz)
+
     def set_goal_point(self, xyz):
         self.target_point.header.frame_id = self.world_frame
         self.target_point.header.stamp = rospy.Time.now()
@@ -262,6 +278,26 @@ class movement_controller():
         self.target_point.point.y = translation.y + math.cos(yaw) * amount
         self.target_point.point.z = translation.z
         self.goal_publisher.publish(self.target_point)
+        
+    def generate_zig_zag(self,amount): #UNTESTED
+        self.set_focus_point()
+        rotation = self.trans.transform.rotation
+        roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
+        translation = self.trans.transform.translation
+        Points=[]
+
+        target_point = geometry_msgs.msg.PointStamped()
+        for i in range(6):
+            if(i%2==0):
+                target_point.point.x = translation.x - math.sin(yaw) * amount
+                target_point.point.y = translation.y + math.cos(yaw) * amount
+            else:
+                target_point.point.x = translation.x + math.sin(yaw) * amount + math.cos(yaw) * amount # translate straight as well as right
+                target_point.point.y = translation.y - math.cos(yaw) * amount + math.sin(yaw) * amount
+            target_point.point.z = translation.z
+            
+            Points.append(target_point)
+        return Points
 
     def get_np_position(self):
         self.update_tf()

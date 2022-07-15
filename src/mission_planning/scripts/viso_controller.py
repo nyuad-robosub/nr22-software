@@ -27,18 +27,37 @@ from math import atan2, cos, sin, sqrt, pi
 
 # class det_obj():
 #     def __init__(self,):
-        
+class camera():
+    def __init__(self,Hfov,width,height):
+        self.aspect_ratio = width/height
+        self.width=width
+        self.height=height
+        self.Hfov=Hfov
+        self.Vfov= 2 * math.atan(math.tan(Hfov/2)*self.aspect_ratio)
+    #TESTED
+    def get_angles(self,pixel_x,pixel_y):
+        #Input: pixel coordinates
+        #Returns: (angle relative to center along x axis, angle relative to center along y axis)
+        L = self.width / (2 * math.tan(self.Hfov / 2))
+        angle_x = math.atan((pixel_x - self.width / 2) / L)
+        angle_y = math.atan((pixel_y - self.height / 2) / L)
+        return angle_x, angle_y
+
+    def set_HFOV(self,Hfov):
+        self.Hfov=Hfov
+        self.Vfov= 2 * math.atan(math.tan(Hfov/2)*self.aspect_ratio)
+
+    def get_center_coord(self):
+        return [self.width/2,self.height/2]
 
 class viso_controller():
     sleep_delay=0.05
-    def __init__(self,world_frame,camera_frame,detection_topic,pcl_topic,detection_label_path,oakd_Hfov,width,height): #should be passed in radians
-        aspect_ratio = width/height
+    OAK_D=camera(50.41,640,400)
+    OAK_1=camera(69,1920,1080)
+    def __init__(self,world_frame,camera_frame,detection_topic,pcl_topic,detection_label_path): #should be passed in radians
+
         self.world_frame=world_frame
         self.camera_frame=camera_frame
-        self.oakd_Hfov=oakd_Hfov
-        oakd_Vfov= 2 * math.atan(math.tan(oakd_Hfov/2)*aspect_ratio)
-        self.width=width
-        self.height=height
 
         self.pcl_sub= message_filters.Subscriber(pcl_topic, PointCloud2)
         self.detection_sub = message_filters.Subscriber(detection_topic, Detection2DArray)
@@ -46,7 +65,6 @@ class viso_controller():
         ts = message_filters.ApproximateTimeSynchronizer([self.detection_sub, self.pcl_sub], 3,slop=0.2)
         ts.registerCallback(self.pcl_detection_callback)
         #self.detection_sub = rospy.Subscriber(detection_topic, Detection2DArray, self.detection_callback)
-
 
         self.label_to_id=label_map_util.get_label_map_dict(detection_label_path) #dictionary mapping label -> id
         self.mutex = threading.Lock()
@@ -130,12 +148,6 @@ class viso_controller():
         # else:
         #     self.mutex.release()
         #     return None
-    #TESTED
-    def get_angles(self,pixel_x,pixel_y):
-        L = self.width / (2 * math.tan(self.oakd_Hfov / 2))
-        angle_x = math.atan((pixel_x - self.width / 2) / L)
-        angle_y = math.atan((pixel_y - self.height / 2) / L)
-        return angle_x, angle_y
 
     def pcl_detection_callback(self,viso_detect,pointcloud):
         self.detection_callback(viso_detect)
@@ -397,6 +409,8 @@ class viso_controller():
                         )):
                     vectors_3D[pt_count]=dt
         self.pointcloud_mutex.release()
+
+        import movement_controller as mc
         transform=mc.mov_control.tfBuffer.lookup_transform(self.world_frame, self.camera_frame, rospy.Time(), rospy.Duration(1))
         
         #get 3D midpoint between both points in PCL frame
@@ -471,7 +485,7 @@ class viso_controller():
         ## [visualization1]
 
     # getOrientation function definition
-    def getOrientation(pts, img):
+    def getOrientation(self,pts, img):
         ## [pca]
         # Construct a buffer used by the pca analysis
         sz = len(pts)
@@ -507,7 +521,7 @@ class viso_controller():
         return angle
 
 
-    def process(img_source):
+    def process(self,img_source):
 
         cnt = []
 
@@ -550,8 +564,8 @@ class viso_controller():
         for i in range(len(contours)):
             area = cv2.contourArea(contours[i])
             if area>max_area:
-            cnt = contours[i]
-            max_area = area
+                cnt = contours[i]
+                max_area = area
 
         areas = [cv2.contourArea(c) for c in contours]
         if (len(areas) !=0):
@@ -574,7 +588,7 @@ class viso_controller():
         canvas = cv2.circle(canvas, (x,y), 10, (0,255,0), -5)
 
         # get angle
-        a = getOrientation(cnt, canvas)
+        a = self.getOrientation(cnt, canvas)
         rotation = int(np.rad2deg(a)) + 90
 
         cv2.imwrite('/Users/nasheed-x/Desktop/Orientation/test.jpeg', canvas)
@@ -585,4 +599,4 @@ class viso_controller():
 # https://stackoverflow.com/a/13034908
 def init(world_frame,camera_frame,detection_topic,pcl_topic,detection_label_path,oakd_Hfov,width,height):
     global viso_control
-    viso_control=viso_controller(world_frame,camera_frame,detection_topic,pcl_topic,detection_label_path,oakd_Hfov,width,height)
+    viso_control=viso_controller(world_frame,camera_frame,detection_topic,pcl_topic,detection_label_path)

@@ -73,6 +73,8 @@ def getOrientation(pts, img):
 
 def process(img_source):
   
+  cnt = []
+  
   path = img_source
   # Captures the live stream frame-by-frame
   frame = cv2.imread(path)

@@ -7,11 +7,15 @@ from std_msgs.msg import Bool
 # from movement_controller import movement_controller
 import movement_controller as mc
 import viso_controller as vs
+import progress_tracker as pt
 
 import sys
 sys.path.insert(0, './states')
+
 from states.check_submerged import check_sub
 from states.coin_flip import coin_flip
+from states.pass_gate import pass_gate
+from states.marker import marker
 
 # just a class to run ros launch files FIX LANCH FILE NO LOGGING NEEDED
 class launch_stuff:
@@ -62,12 +66,15 @@ if __name__ == '__main__':
 
     pcl_topic = rospy.get_param('~pcl_topic')
 
+    bottom_camera_topic = rospy.get_param('~bottom_camera_topic')
+
     #oakd_HFOV = rospy.get_param('~oakd_HFOV')
     
 
     # intialize movement controller
     mc.init(goal_topic, world_frame, rov_frame, isRunning_topic)
-    vs.init(world_frame,camera_frame,detection_topic, pcl_topic, detection_label_path, oakd_HFOV, 640, 400)
+    vs.init(world_frame,camera_frame,detection_topic, pcl_topic, bottom_camera_topic, detection_label_path, oakd_HFOV, 640, 400)
+    pt.init()
 
     rospy.sleep(5)
     # start state machine
@@ -76,12 +83,17 @@ if __name__ == '__main__':
         smach.StateMachine.add('check_submerged',check_sub(),
                                 transitions={'outcome1':'coin_flip'})
         smach.StateMachine.add('coin_flip', coin_flip(),
-                                transitions={'outcome1':'outcome4',
+                                transitions={'outcome1':'pass_gate',
                                             'outcome2':'coin_flip'})
-        
-    
+        smach.StateMachine.add('pass_gate', pass_gate(),
+                                transitions={'outcome1':'marker',
+                                            'outcome2':'pass_gate'})
+        smach.StateMachine.add('marker', marker("marker"),
+                                transitions={'outcome1':'outcome4',
+                                            'outcome2':'marker'})
+                                            
     print("EXECUTING SM")
-   
+    
     outcome = sm.execute()
 
      

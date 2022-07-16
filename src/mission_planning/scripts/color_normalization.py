@@ -29,6 +29,7 @@ def box(img, r):
 
     return imDst
 
+#https://github.com/swehrwein/python-guided-filter/blob/master/gf.py
 def _gf_gray(I, p, r, eps, s=None):
     """ grayscale (fast) guided filter
         I - guide image (1 channel)
@@ -247,9 +248,9 @@ def histogram_equalization(j):
     rarr=rarr/255
 
     #Assigning the wanted means from each channel
-    bidx=0.48
-    gidx=0.48
-    ridx=0.5
+    bidx=0.5
+    gidx=0.49
+    ridx=0.49
 
     #Equalizing the blue channel
     if (bidx>0):

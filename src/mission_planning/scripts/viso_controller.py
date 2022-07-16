@@ -38,6 +38,7 @@ class camera():
         if(sub_topic!=None):
             self.image_sub=rospy.Subscriber(sub_topic, Image, self.image_callback)
         self.cv_image=None
+        self.bridge = CvBridge()
 
     def init_subsriber(self,sub_topic):
         self.image_sub=rospy.Subscriber(sub_topic, Image, self.image_callback)
@@ -94,7 +95,7 @@ class viso_controller():
         self.OAK_1.init_subsriber(bottom_camera_topic)
 
         ts = message_filters.ApproximateTimeSynchronizer([self.detection_sub, self.pcl_sub], 3,slop=0.2)
-        ts.registerCallback(self.pcl_detection_callback)
+        ts.registerCallback(self.detection_callback)
         #self.detection_sub = rospy.Subscriber(detection_topic, Detection2DArray, self.detection_callback)
 
         self.label_to_id=label_map_util.get_label_map_dict(detection_label_path) #dictionary mapping label -> id

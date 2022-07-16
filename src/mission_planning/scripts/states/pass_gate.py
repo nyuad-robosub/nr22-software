@@ -9,6 +9,7 @@ from std_msgs.msg import Bool
 # import smach_controller_simulation
 import movement_controller as mc
 import viso_controller as vs
+import progress_tracker as pt
 import geometry_msgs.msg
 import tf2_geometry_msgs
 import math
@@ -20,6 +21,7 @@ import sensor_msgs.point_cloud2 as pc2
 import tf2_ros
 
 import numpy as np
+from transforms3d import euler
         
 class pass_gate(smach.State):
     _outcomes=['outcome1','outcome2']
@@ -28,6 +30,10 @@ class pass_gate(smach.State):
     def __init__(self,label_1,label_2):
         self.label_1=label_1 # "image_bootlegger"
         self.label_2=label_2 # "image_gman"
+    def save(self,detection): #saving data
+        pt.pr_track.progress['pass_gate']['done']=True #better to save automatically based off state machine?
+        pt.pr_track.progress['pass_gate']['chosen_detection']=detection[0]['label']
+
     def execute(self, userdata):      
         x_center=320
         y_center=200
@@ -42,23 +48,32 @@ class pass_gate(smach.State):
 
                     #get pose of object
                     pose_obj = vs.viso_control.estimate_pose_svd(detections[0]['center'],detections[0]['size'])
-
-                    #align camera with detection
+                    roll, pitch, yaw = euler.quat2euler([pose_obj.orientation.w, pose_obj.orientation.x, pose_obj.orientation.y, pose_obj.orientation.z], 'sxyz')
+                    #get position data
                     position_data=[pose_obj.position.x,pose_obj.position.y,pose_obj.position.z]
+                    
+                    # #align camera with detection
+                    # position_temp=list(position_data)
+                    # position_data[0]+=
 
                     position_data[2]-= 0.6 #translate z under
                     mc.mov_control.set_goal_point(position_data) #go under the object
 
-
                     #wait for that to finish
                     mc.mov_control.await_completion()
 
-                    position_data[0]-= 1 
+                    #translate 1 meter opposite objects +x axis 
+                    position_data[0]=position_data[0]-math.cos(yaw)*1
+                    position_data[1]=position_data[1]-math.sin(yaw)*1
 
                     if(detections[0]['center'][0]<gate_detection[0]['center']): #image on the left of frame y axis is on our left
-                        position_data[1]-=0.762
+                        #translate 0.762 meter opposite objects along y axis 
+                        position_data[1]=position_data[0]-math.cos(yaw)*0.762
+                        position_data[0]=position_data[1]-math.sin(yaw)*0.762
                     else:
-                        position_data[1]+=0.762
+                        #translate 0.762 meter opposite objects along y axis 
+                        position_data[1]=position_data[0]-math.cos(yaw)*0.762
+                        position_data[0]=position_data[1]-math.sin(yaw)*0.762
 
                     mc.mov_control.set_goal_point(position_data)
                     
@@ -67,9 +82,13 @@ class pass_gate(smach.State):
                     
                     mc.mov_control.await_completion()
 
+                    mc.mov_control.stop()
+
+                    self.save(pass_gate)
                     return "outcome1"
             else:
                 continue
-        mc.mov_control.stop()
+        return "outcome2"
+
 
         

@@ -102,37 +102,50 @@ class movement_controller():
     def get_tf(self):
         self.update_tf()
         return self.trans
-
-    def rotate_ccw(self):
+    def rotate_ccw(self,amount):
         self.update_tf()
-        self.arm()
-
         # Rotate from initial orientation
         rotation = self.trans.transform.rotation
         roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
-        #print(roll, pitch, yaw)
-
-        # Do a spin
-        detected = False
-
-        #SEPERATE THREAD NEEDED
-        i = 0
         msg9 = geometry_msgs.msg.Quaternion()
-        while not detected and i < 4: 
-            angle = math.degrees(yaw) + i * 90 #is euler i ndegrees?
-            print(angle)
-            if angle < 0:
-                angle += 360
-            if angle >= 360:
-                angle -= 360
-            q = euler.euler2quat(0, 0, math.radians(angle), 'sxyz')
-            msg9.w = q[0]
-            msg9.x = q[1]
-            msg9.y = q[2]
-            msg9.z = q[3]
-            self.goal_rotation_publisher.publish(msg9)
-            self.await_completion()
-            i+=1
+        q = euler.euler2quat(0, 0, yaw+rotation, 'sxyz')
+        msg9.w = q[0]
+        msg9.x = q[1]
+        msg9.y = q[2]
+        msg9.z = q[3]
+        self.goal_rotation_publisher.publish(msg9)
+
+
+    # def rotate_ccw(self):
+    #     self.update_tf()
+    #     self.arm()
+
+    #     # Rotate from initial orientation
+    #     rotation = self.trans.transform.rotation
+    #     roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
+    #     #print(roll, pitch, yaw)
+
+    #     # Do a spin
+    #     detected = False
+
+    #     #SEPERATE THREAD NEEDED
+    #     i = 0
+    #     msg9 = geometry_msgs.msg.Quaternion()
+    #     while not detected and i < 4: 
+    #         angle = math.degrees(yaw) + i * 90 #is euler i ndegrees?
+    #         print(angle)
+    #         if angle < 0:
+    #             angle += 360
+    #         if angle >= 360:
+    #             angle -= 360
+    #         q = euler.euler2quat(0, 0, math.radians(angle), 'sxyz')
+    #         msg9.w = q[0]
+    #         msg9.x = q[1]
+    #         msg9.y = q[2]
+    #         msg9.z = q[3]
+    #         self.goal_rotation_publisher.publish(msg9)
+    #         self.await_completion()
+    #         i+=1
     def set_rotation(self,roll,pitch,yaw):
         msg9 = geometry_msgs.msg.Quaternion()
         q = euler.euler2quat(roll, pitch, yaw, 'sxyz')

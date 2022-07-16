@@ -17,6 +17,10 @@ class progress_tracker():
                 'start_yaw': 0.0,
                 'detected_gate': False,
                 'gate_center_yaw': 0.0
+            },
+            'pass_gate': {
+                'done': False,
+                'chosen_detection': "" #g_man or bootlegger
             }
         }
         self.last_known_position = Point(0, 0, 0)

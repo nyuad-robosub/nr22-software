@@ -10,7 +10,6 @@ from geometry_msgs.msg import PoseArray, Pose, Transform, Vector3Stamped, Transf
 import tf2_ros
 import numpy as np
 from numpy.linalg import norm
-import movement_controller as mc
 import tf2_geometry_msgs.tf2_geometry_msgs as tfgmtfgm
 import tf
 from object_detection.utils import label_map_util
@@ -28,24 +27,44 @@ from math import atan2, cos, sin, sqrt, pi
 
 # class det_obj():
 #     def __init__(self,):
-        
+class camera():
+    def __init__(self,Hfov,width,height):
+        self.aspect_ratio = width/height
+        self.width=width
+        self.height=height
+        self.Hfov=Hfov
+        self.Vfov= 2 * math.atan(math.tan(Hfov/2)*self.aspect_ratio)
+    #TESTED
+    def get_angles(self,pixel_x,pixel_y):
+        #Input: pixel coordinates
+        #Returns: (angle relative to center along x axis, angle relative to center along y axis)
+        L = self.width / (2 * math.tan(self.Hfov / 2))
+        angle_x = math.atan((pixel_x - self.width / 2) / L)
+        angle_y = math.atan((pixel_y - self.height / 2) / L)
+        return angle_x, angle_y
+
+    def set_HFOV(self,Hfov):
+        self.Hfov=Hfov
+        self.Vfov= 2 * math.atan(math.tan(Hfov/2)*self.aspect_ratio)
+
+    def get_center_coord(self):
+        return [self.width/2,self.height/2]
 
 class viso_controller():
     sleep_delay=0.05
-    def __init__(self,world_frame,camera_frame,detection_topic,pcl_topic,detection_label_path,oakd_Hfov,width,height): #should be passed in radians
-        aspect_ratio = width/height
+    OAK_D=camera(50.41,640,400)
+    OAK_1=camera(69,1920,1080)
+    def __init__(self,world_frame,camera_frame,detection_topic,pcl_topic,detection_label_path): #should be passed in radians
+
         self.world_frame=world_frame
         self.camera_frame=camera_frame
-        self.oakd_Hfov=oakd_Hfov
-        oakd_Vfov= 2 * math.atan(math.tan(oakd_Hfov/2)*aspect_ratio)
-        self.width=width
-        self.height=height
 
         self.pcl_sub= message_filters.Subscriber(pcl_topic, PointCloud2)
         self.detection_sub = message_filters.Subscriber(detection_topic, Detection2DArray)
 
         ts = message_filters.ApproximateTimeSynchronizer([self.detection_sub, self.pcl_sub], 3,slop=0.2)
         ts.registerCallback(self.pcl_detection_callback)
+        #self.detection_sub = rospy.Subscriber(detection_topic, Detection2DArray, self.detection_callback)
 
         self.label_to_id=label_map_util.get_label_map_dict(detection_label_path) #dictionary mapping label -> id
         self.mutex = threading.Lock()
@@ -53,6 +72,7 @@ class viso_controller():
         self.is_fetched=False
 
         self.pointcloud=PointCloud2()
+        self.pointcloud_mutex=threading.Lock()
 
         self.viso_detect=Detection2DArray()
 
@@ -68,13 +88,18 @@ class viso_controller():
     def get_label_from_id(self, id):
         return self.label_to_id.keys()[self.label_to_id.values().index(id)]
 
-    def detection_callback(self, viso_detect):
+    def detection_callback(self, viso_detect,pointcloud):
+
         self.mutex.acquire()
         self.viso_detect = viso_detect
         # Only set true when something is detected, to save energy
         if len(list(self.viso_detect.detections)) > 0:
             self.is_fetched=True
         self.mutex.release()
+
+        self.pointcloud_mutex.acquire()
+        self.pointcloud=pointcloud
+        self.pointcloud_mutex.release()
 
     def get_detection(self, array_of_labels): #np array of labels passed, returns dictionary of detections for those id's
         # if(self.is_fetched): # Might not need this if want to get again
@@ -88,7 +113,8 @@ class viso_controller():
                             'id': det.results[0].id,                            # ID / score
                             'score': det.results[0].score,                      # Confi
                             'center': (det.bbox.center.x, det.bbox.center.y),   # Center, tuple (x, y)
-                            'size': (det.bbox.size_x, det.bbox.size_y)          # Size, tuple (x, y)
+                            'size': (det.bbox.size_x, det.bbox.size_y),   
+                            'label':  self.get_label_from_id(det.results[0].id)# Size, tuple (x, y)
                         })
                 # detections=self.viso_detect.detections
                 # det_ids={} #{id1 : [Detection2D,], id2}
@@ -122,12 +148,6 @@ class viso_controller():
         # else:
         #     self.mutex.release()
         #     return None
-    #UNTESTED
-    def get_angles(self,pixel_x,pixel_y):
-        L = self.width / (2 * math.tan(self.oakd_Hfov / 2))
-        angle_x = math.atan((pixel_x - self.width / 2) / L)
-        angle_y = math.atan((pixel_y - self.height / 2) / L)
-        return angle_x, angle_y
 
     def pcl_detection_callback(self,viso_detect,pointcloud):
         self.detection_callback(viso_detect)
@@ -234,6 +254,7 @@ class viso_controller():
 
         try:
             # Get the corresponding 3D location of c, x, y
+            self.pointcloud_mutex.acquire()
             for pt_count, dt in enumerate(
                 pc2.read_points(
                         self.pointcloud,
@@ -246,14 +267,17 @@ class viso_controller():
                     if object_name in self.object_pose_info.keys():
                         del self.object_pose_info[object_name]
                     rospy.loginfo('No corresponding 3D point found')
+                    self.pointcloud_mutex.acquire()
                     return
                 else:
                     vectors_3D[pt_count] = dt
                     if pt_count == 2:
                         self.vectors_3D = vectors_3D
+                self.pointcloud_mutex.acquire()
         except:
             #rospy.loginfo(err)
             print("HORRIBLE ERROR REACHED IN PCL")
+            self.pointcloud_mutex.acquire()
             return
 
         try:
@@ -316,13 +340,14 @@ class viso_controller():
         points_region = np.mgrid[
             math.ceil(center[0] - size[0] * 0.5):math.floor(center[0] + size[0] * 0.5),
             math.ceil(center[1] - size[1] * 0.5):math.floor(center[1] + size[1] * 0.5)].reshape(2,-1).T
-
+        self.pointcloud_mutex.acquire()
         points = np.array(list(pc2.read_points(
             self.pointcloud,
             field_names={'x', 'y', 'z'},
             skip_nans=True, uvs=points_region.tolist() # [u,v u,v u,v] a set of xy coords
         )))
-        # # [[1,2,3],[,,], ..., dt]
+        self.pointcloud_mutex.release()
+        # [[1,2,3],[,,], ..., dt]
 
         # Approx. plane normal courtesy of:
         # https://math.stackexchange.com/a/99317
@@ -374,46 +399,49 @@ class viso_controller():
         ros_point.point.y = numpy_array[1]
         ros_point.point.z = numpy_array[2]
         return ros_point
-    # def estimate_gate_pose(self,bbox1,bbox2,pc_sub):
-    #     vectors_3D = np.zeros((3, 2))
-    #     for pt_count, dt in enumerate(pc2.read_points(
-    #                         pc_sub,
-    #                         field_names={'x', 'y', 'z'},
-    #                         skip_nans=False, uvs=[[bbox1.center.x,bbox1.center.x],[bbox2.center.y,bbox2.center.y]] # [u,v u,v u,v] a set of xy coords
-    #                     )):
-    #                 vectors_3D[pt_count]=dt
+    def estimate_gate_pose(self,bbox1,bbox2,pc_sub):
+        vectors_3D = np.zeros((3, 2))
+        self.pointcloud_mutex.acquire()
+        for pt_count, dt in enumerate(pc2.read_points(
+                            pc_sub,
+                            field_names={'x', 'y', 'z'},
+                            skip_nans=False, uvs=[[bbox1.center.x,bbox1.center.x],[bbox2.center.y,bbox2.center.y]] # [u,v u,v u,v] a set of xy coords
+                        )):
+                    vectors_3D[pt_count]=dt
+        self.pointcloud_mutex.release()
+
+        import movement_controller as mc
+        transform=mc.mov_control.tfBuffer.lookup_transform(self.world_frame, self.camera_frame, rospy.Time(), rospy.Duration(1))
         
-    #     transform=mc.mov_control.tfBuffer.lookup_transform(mc.mov_control.world_frame, self.camera_frame, rospy.Time(), rospy.Duration(1))
+        #get 3D midpoint between both points in PCL frame
+        midpoint=[(vectors_3D[0]+vectors_3D[1])/2]
         
-    #     #get 3D midpoint between both points in PCL frame
-    #     midpoint=[(vectors_3D[0]+vectors_3D[1])/2]
+        vector_w=vectors_3D[1]-vectors_3D[0]
         
-    #     vector_w=vectors_3D[1]-vectors_3D[0]
-        
-    #     midpoint=self.np_to_point(midpoint)
-    #     vector_w=self.np_to_point(vector_w)
+        midpoint=self.np_to_point(midpoint)
+        vector_w=self.np_to_point(vector_w)
 
-    #     #get points in world frame
-    #     midpoint=tf2_geometry_msgs.do_transform_point(midpoint,transform)
-    #     vector_w=tf2_geometry_msgs.do_transform_point(vector_w,transform)
+        #get points in world frame
+        midpoint=tfgmtfgm.do_transform_point(midpoint,transform)
+        vector_w=tfgmtfgm.do_transform_point(vector_w,transform)
 
-    #     vector_w=numpy.array([vector_w.point.x,vector_w.point.y,vector_w.point.z])
-    #     yaw=math.acos(vector_w[0]/np.linalg.norm(vector_w)) #gets yaw of frame of gate relative to x of world frame
+        vector_w=numpy.array([vector_w.point.x,vector_w.point.y,vector_w.point.z])
+        yaw=math.acos(vector_w[0]/np.linalg.norm(vector_w)) #gets yaw of frame of gate relative to x of world frame
 
-    #     #transform = self.tf_buffer.lookup_transform(frame, required_position, rospy.Time(0), rospy.Duration(1)) #transform stamped
-    #     gate_pose = PoseStamped()
-    #     gate_pose.pose.position.x=midpoint[0]
-    #     gate_pose.pose.position.y=midpoint[1]
-    #     gate_pose.pose.position.z=midpoint[2]
+        #transform = self.tf_buffer.lookup_transform(frame, required_position, rospy.Time(0), rospy.Duration(1)) #transform stamped
+        gate_pose = PoseStamped()
+        gate_pose.pose.position.x=midpoint[0]
+        gate_pose.pose.position.y=midpoint[1]
+        gate_pose.pose.position.z=midpoint[2]
 
-    #     #get quaternion of pose
-    #     q=euler.euler2quat(0,0,yaw)
-    #     gate_pose.pose.orientation.w=q[0]
-    #     gate_pose.pose.orientation.x=q[1]
-    #     gate_pose.pose.orientation.y=q[2]
-    #     gate_pose.pose.orientation.z=q[3]
+        #get quaternion of pose
+        q=euler.euler2quat(0,0,yaw)
+        gate_pose.pose.orientation.w=q[0]
+        gate_pose.pose.orientation.x=q[1]
+        gate_pose.pose.orientation.y=q[2]
+        gate_pose.pose.orientation.z=q[3]
 
-    #     return gate_pose
+        return gate_pose
 
     def update_tf(self, timeout=5):
         """Function to update stored tf of ROV
@@ -432,9 +460,76 @@ class viso_controller():
         # Check if there were any issues
         return (counter < timeout / delay)
     
+<<<<<<< HEAD
     def getOrientation(img_source):
     
         cnt=[]
+=======
+    # drawAxis function definition
+    def drawAxis(img, p_, q_, color, scale):
+        p = list(p_)
+        q = list(q_)
+
+        ## [visualization1]
+        angle = atan2(p[1] - q[1], p[0] - q[0]) # angle in radians
+        hypotenuse = sqrt((p[1] - q[1]) * (p[1] - q[1]) + (p[0] - q[0]) * (p[0] - q[0]))
+
+        # Here we lengthen the arrow by a factor of scale
+        q[0] = p[0] - scale * hypotenuse * cos(angle)
+        q[1] = p[1] - scale * hypotenuse * sin(angle)
+        cv2.line(img, (int(p[0]), int(p[1])), (int(q[0]), int(q[1])), color, 3, cv2.LINE_AA)
+
+        # create the arrow hooks
+        p[0] = q[0] + 9 * cos(angle + pi / 4)
+        p[1] = q[1] + 9 * sin(angle + pi / 4)
+        cv2.line(img, (int(p[0]), int(p[1])), (int(q[0]), int(q[1])), color, 3, cv2.LINE_AA)
+
+        p[0] = q[0] + 9 * cos(angle - pi / 4)
+        p[1] = q[1] + 9 * sin(angle - pi / 4)
+        cv2.line(img, (int(p[0]), int(p[1])), (int(q[0]), int(q[1])), color, 3, cv2.LINE_AA)
+        ## [visualization1]
+
+    # getOrientation function definition
+    def getOrientation(self,pts, img):
+        ## [pca]
+        # Construct a buffer used by the pca analysis
+        sz = len(pts)
+        data_pts = np.empty((sz, 2), dtype=np.float64)
+        for i in range(data_pts.shape[0]):
+            data_pts[i,0] = pts[i,0,0]
+            data_pts[i,1] = pts[i,0,1]
+
+        # perform PCA analysis
+        mean = np.empty((0))
+        mean, eigenvectors, eigenvalues = cv2.PCACompute2(data_pts, mean)
+
+        # store the center of the object
+        cntr = (int(mean[0,0]), int(mean[0,1]))
+        ## [pca]
+
+        ## [visualization]
+        # draw the principal components
+        cv2.circle(img, cntr, 3, (255, 0, 255), 2)
+        p1 = (cntr[0] + 0.02 * eigenvectors[0,0] * eigenvalues[0,0], cntr[1] + 0.02 * eigenvectors[0,1] * eigenvalues[0,0])
+        p2 = (cntr[0] - 0.02 * eigenvectors[1,0] * eigenvalues[1,0], cntr[1] - 0.02 * eigenvectors[1,1] * eigenvalues[1,0])
+        drawAxis(img, cntr, p1, (255, 255, 0), -1)
+        drawAxis(img, cntr, p2, (0, 0, 255), -5)
+
+        angle = atan2(eigenvectors[0,1], eigenvectors[0,0]) # orientation in radians
+        ## [visualization]
+
+        # label with the rotation angle
+        label = "  Rotation Angle: " + str(int(np.rad2deg(angle)) + 90) + " degrees"
+        textbox = cv2.rectangle(img, (cntr[0], cntr[1]-25), (cntr[0] + 250, cntr[1] + 10), (255,255,255), -1)
+        cv2.putText(img, label, (cntr[0], cntr[1]), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0), 1, cv2.LINE_AA)
+
+        return angle
+
+
+    def process(self,img_source):
+
+        cnt = []
+>>>>>>> af296e4f0038d11b31a538458aadc80c2473d37f
 
         path = img_source
         # Captures the live stream frame-by-frame
@@ -475,8 +570,8 @@ class viso_controller():
         for i in range(len(contours)):
             area = cv2.contourArea(contours[i])
             if area>max_area:
-            cnt = contours[i]
-            max_area = area
+                cnt = contours[i]
+                max_area = area
 
         if cnt==[]:
             print("No Marker Detected")
@@ -535,7 +630,12 @@ class viso_controller():
 
 
         # get angle
+<<<<<<< HEAD
         rotation = int(np.rad2deg(angle)) + 90
+=======
+        a = self.getOrientation(cnt, canvas)
+        rotation = int(np.rad2deg(a)) + 90
+>>>>>>> af296e4f0038d11b31a538458aadc80c2473d37f
 
         cv2.imwrite('/Users/nasheed-x/Desktop/Orientation/test.jpeg', canvas)
 
@@ -545,4 +645,4 @@ class viso_controller():
 # https://stackoverflow.com/a/13034908
 def init(world_frame,camera_frame,detection_topic,pcl_topic,detection_label_path,oakd_Hfov,width,height):
     global viso_control
-    viso_control=viso_controller(world_frame,camera_frame,detection_topic,pcl_topic,detection_label_path,oakd_Hfov,width,height)
+    viso_control=viso_controller(world_frame,camera_frame,detection_topic,pcl_topic,detection_label_path)

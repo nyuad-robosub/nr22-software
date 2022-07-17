@@ -125,7 +125,7 @@ import geometry_msgs.msg
 import math
 import numpy as np
 import rospy
-from std_msgs.msg import String, Bool, Float64
+from std_msgs.msg import String, Bool, Float64, Float32
 import tf2_ros
 import threading
 from transforms3d import euler, quaternions
@@ -606,7 +606,7 @@ def controller():
     rospy.Subscriber(rospy.get_param('~arm_topic'), Bool, arm_callback) #true or false 
     rospy.Subscriber(rospy.get_param('~run_topic'), Bool, run_callback)
     run_publisher = rospy.Publisher(rospy.get_param('~run_topic'), Bool, queue_size=1, latch=True)
-    rospy.Subscriber(rospy.get_param('~altitude_topic'), Float64, altitude_callback)
+    rospy.Subscriber(rospy.get_param('~altitude_topic'), Float32, altitude_callback)
 
 
     # Translation params

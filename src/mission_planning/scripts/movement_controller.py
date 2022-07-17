@@ -12,8 +12,15 @@ from std_msgs.msg import Bool
 from transforms3d import euler, quaternions
 from datetime import datetime
 import viso_controller as vs
+from enum import Enum
+
+class axis_enum(Enum):
+    x_axis = 1
+    y_axis = 2
+    z_axis = 3
 
 class movement_controller():
+
     # controlerr/goalRotation
     # controller/isRunning
     arm_wait_time=0.2
@@ -291,7 +298,61 @@ class movement_controller():
         self.target_point.point.y = translation.y + math.cos(yaw) * amount
         self.target_point.point.z = translation.z
         self.goal_publisher.publish(self.target_point)
+
+    def __translate_axis(self,position_data,yaw,amount,axis_mode : axis_enum): #UNTESTED 
+        #translate along an axis given pose and orientation
+        #input [x,y,z] numpy pose array of translation along specified axis
+        # #return [x,y,z]
+
+        # roll, pitch, yaw = euler.quat2euler([pose_msg.orientation.w, pose_msg.orientation.x, pose_msg.orientation.y, pose_msg.orientation.z], 'sxyz')
+        # #get position data
+        # position_data=[pose_msg.position.x,pose_msg.position.y,pose_msg.position.z]
+        if(axis_mode==axis_enum.x_axis):
+            #translate 1 meter opposite objects +x axis 
+            position_data[0]+=math.cos(yaw)*amount
+            position_data[1]+=math.sin(yaw)*amount
+        elif(axis_mode==axis_enum.y_axis):
+            position_data[1]+=math.cos(yaw)*amount
+            position_data[0]+=math.sin(yaw)*amount
+        else:
+            position_data[0]+=amount
+            position_data[1]+=amount
+
+    # def translate_axis_xyz(self,pose_msg,xyz):
+    #     #input:
+    #     # pose_msg: Pose
+    #     # xyz: [x,y,z] you want to translate along
+    #     #return: [x,y,z] of translated point
         
+    #     roll, pitch, yaw = euler.quat2euler([pose_msg.orientation.w, pose_msg.orientation.x, pose_msg.orientation.y, pose_msg.orientation.z], 'sxyz')
+    #     #get position data
+    #     position_data=[pose_msg.position.x,pose_msg.position.y,pose_msg.position.z]
+
+    #     position_data=self.__translate_axis(position_data,yaw,xyz[0],axis_enum.x_axis)
+    #     position_data=self.__translate_axis(position_data,yaw,xyz[1],axis_enum.y_axis)
+    #     position_data=self.__translate_axis(position_data,yaw,xyz[2],axis_enum.z_axis)
+
+    #     pose_msg.point.x=position_data[0]
+    #     pose_msg.point.x=position_data[1]
+    #     pose_msg.point.x=position_data[2]
+
+    #     return pose_msg
+
+    def translate_axis_xyz(self,xyz,xyz_delta,yaw):
+        #input:
+        # pose_msg: Pose
+        # xyz: [x,y,z] you want to translate along
+        #return: [x,y,z] of translated point
+        
+        #roll, pitch, yaw = euler.quat2euler([pose_msg.orientation.w, pose_msg.orientation.x, pose_msg.orientation.y, pose_msg.orientation.z], 'sxyz')
+        #get position data
+
+        xyz=self.__translate_axis(xyz,yaw,xyz_delta[0],axis_enum.x_axis)
+        xyz=self.__translate_axis(xyz,yaw,xyz_delta[1],axis_enum.y_axis)
+        xyz=self.__translate_axis(xyz,yaw,xyz_delta[2],axis_enum.z_axis)
+
+        return xyz
+
     def generate_zig_zag(self,amount): #UNTESTED
         self.set_focus_point()
         rotation = self.trans.transform.rotation
@@ -299,7 +360,7 @@ class movement_controller():
         translation = self.trans.transform.translation
         Points=[]
 
-        target_point = geometry_msgs.msg.PointStamped()
+        target_point = geometry_msgs.msg.PointStamped() #this is wrong
         for i in range(6):
             if(i%2==0):
                 target_point.point.x = translation.x - math.sin(yaw) * amount

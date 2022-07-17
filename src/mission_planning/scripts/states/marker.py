@@ -31,7 +31,7 @@ class marker(smach.State):
         self.zigzag_threshold=0.7
     def execute(self, userdata):  
         #call search which returns once any bbox is detected
-        detection=self.search(self.zigzag_threshold,0.7,self.marker_label,"center")
+        detection=self.search(self.zigzag_threshold,0.7,self.marker_label)
     
         #next begin the adjustment function
         self.adjustment(detection)
@@ -42,6 +42,12 @@ class marker(smach.State):
         rotation_angle=self.getMarkerOrientation()
 
         mc.mov_control.rotate_ccw(rotation_angle)
+
+        mc.mov_control.await_completion()
+
+        mc.mov_control.stop()
+
+        return "outcome1"
         
 
     def search(self,threshold, straight_amount,detection_label): #recursive function to go in zig zags till gate detected

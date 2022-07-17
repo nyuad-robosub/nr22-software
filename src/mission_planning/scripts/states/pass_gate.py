@@ -49,32 +49,27 @@ class pass_gate(smach.State):
                     #get pose of object
                     pose_obj = vs.viso_control.estimate_pose_svd(detections[0]['center'],detections[0]['size'])
                     roll, pitch, yaw = euler.quat2euler([pose_obj.orientation.w, pose_obj.orientation.x, pose_obj.orientation.y, pose_obj.orientation.z], 'sxyz')
+
                     #get position data
                     position_data=[pose_obj.position.x,pose_obj.position.y,pose_obj.position.z]
-                    
-                    # #align camera with detection
-                    # position_temp=list(position_data)
-                    # position_data[0]+=
 
-                    position_data[2]-= 0.6 #translate z under
+                    # position_data[2]-= 0.6 #translate z under
+                    position_data=mc.mov_control.translate_axis_xyz(position_data,[0,0,0.6],yaw)
                     mc.mov_control.set_goal_point(position_data) #go under the object
 
                     #wait for that to finish
                     mc.mov_control.await_completion()
 
-                    #translate 1 meter opposite objects +x axis 
-                    position_data[0]=position_data[0]-math.cos(yaw)*1
-                    position_data[1]=position_data[1]-math.sin(yaw)*1
-
+                    y_delta=0
                     if(detections[0]['center'][0]<gate_detection[0]['center']): #image on the left of frame y axis is on our left
                         #translate 0.762 meter opposite objects along y axis 
-                        position_data[1]=position_data[0]-math.cos(yaw)*0.762
-                        position_data[0]=position_data[1]-math.sin(yaw)*0.762
+                        y_delta=-0.762
                     else:
-                        #translate 0.762 meter opposite objects along y axis 
-                        position_data[1]=position_data[0]-math.cos(yaw)*0.762
-                        position_data[0]=position_data[1]-math.sin(yaw)*0.762
-
+                        #translate 0.762 meter along y axis 
+                        y_delta=0.762
+                    
+                    #translate 1 meter opposite objects +x axis  and 0.76 opposite or along +y axis
+                    position_data=mc.mov_control.translate_axis_xyz(position_data,[1,y_delta,0],yaw)
                     mc.mov_control.set_goal_point(position_data)
                     
                     position_data[0]-=100

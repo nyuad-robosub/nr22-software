@@ -6,18 +6,12 @@
     <!-- LOCAL_POSITION_NED args -->
     <arg name="base_frame" default="world" />
 	<arg name="rov_frame" default="base_link" />
-	<arg name="camera_frame" default="oakd_link" />
+	<arg name="front_camera_frame" default="oakd_link" />
 
     <!-- Controller args -->
     <arg name="goal_topic" default ="controller/goalPoint" />
     <arg name="goal_rotation_topic" default ="controller/goalRotation" />
     <arg name="isrunning_topic" default ="controller/isRunning" />
-
-    <!-- faux detection args -->
-    <arg name="detection_topic" default="/detection" />
-	<arg name="image_topic" default="/camera/color/image_raw" />
-	<arg name="model_file" default="/home/rami/nr22-software/src/faux_detection/trained_models/prequal.pb" />
-	<arg name="label_file" default="/home/rami/nr22-software/src/faux_detection/trained_models/prequal.pbtxt" />
 
     <!-- Launch simulation -->
     <arg name="paused" default="false"/>
@@ -46,16 +40,50 @@
         <arg name="run_topic" value="$(arg isrunning_topic)" />
     </include>
 
-    <!-- Run the detection simulator -->
-    <include file="$(find faux_detection)/launch/faux_detector.launch">
-        <arg name="detection_topic" value="$(arg detection_topic)" />
-        <arg name="image_topic" value="$(arg image_topic)" />
-        <arg name="model_file" value="$(arg model_file)" />
-        <arg name="label_file" value="$(arg label_file)" />
+    <!-- Front Camera -->
+    <!-- <arg name="front_camera_topic" default=""/> -->
+    <arg name="front_camera_width" default="640"/>
+    <arg name="front_camera_height" default="400"/>
+    <arg name="front_camera_HFOV" default="50.41"/>
+
+    <!-- front camera faux detection args -->
+    <arg name="front_detection_topic" default="/detection" />
+	<arg name="front_image_topic" default="/camera/color/image_raw" />
+	<arg name="front_model_file" default="/home/rami/nr22-software/src/faux_detection/trained_models/prequal.pb" />
+	<arg name="front_label_file" default="/home/rami/nr22-software/src/faux_detection/trained_models/prequal.pbtxt" />
+
+
+    <!-- Bottom Camera -->
+    <arg name="bottom_camera_topic" default="/bluerov2/camera_down/camera_image"/>
+    <arg name="bottom_camera_width" default="1920"/>
+    <arg name="bottom_camera_height" default="1080"/>
+    <arg name="bottom_camera_HFOV" default="69"/>
+
+    <!-- bottom camera faux detection args -->
+    <arg name="bottom_detection_topic" default="/detection" />
+    <arg name="bottom_image_topic" default="/camera/color/image_raw" />
+    <arg name="bottom_model_file" default="/home/rami/nr22-software/src/faux_detection/trained_models/prequal.pb" />
+    <arg name="bottom_label_file" default="/home/rami/nr22-software/src/faux_detection/trained_models/prequal.pbtxt" />
+
+
+    <!-- Run the front camera detection simulator -->
+    <include file="$(find faux_detection)/launch/faux_detector.launch" ns="front_cam">
+        <arg name="detection_topic" value="$(arg front_detection_topic)" />
+        <arg name="image_topic" value="$(arg front_image_topic)" />
+        <arg name="model_file" value="$(arg front_model_file)" />
+        <arg name="label_file" value="$(arg front_label_file)" />
         <arg name="interval" value="100" />
     </include>
 
-    <arg name="bottom_camera_topic" default="/bluerov2/camera_down/camera_image"/>
+    <!-- Run the bottom camera detection simulator -->
+    <include file="$(find faux_detection)/launch/faux_detector.launch" ns="bottom_cam">
+        <arg name="detection_topic" value="$(arg bottom_detection_topic)" />
+        <arg name="image_topic" value="$(arg bottom_image_topic)" />
+        <arg name="model_file" value="$(arg bottom_model_file)" />
+        <arg name="label_file" value="$(arg bottom_label_file)" />
+        <arg name="interval" value="100" />
+    </include>
+
 
     <!-- Launch SMACH node -->
     <arg name="respawn_smach" default="false" />
@@ -70,15 +98,24 @@
         <param name="isrunning_topic" value ="$(arg isrunning_topic)"/>
         <param name="world_frame" value="$(arg world_frame)" />
         <param name="orb_slam_3_frame" value="$(arg orb_slam_3_frame)" />
-        <param name="detection_topic" value="/detection" />
-        <param name="label_file" value="$(arg label_file)" />
-        <param name="camera_frame" value="$(arg camera_frame)" />
+        <param name="front_label_file" value="$(arg front_label_file)" />
         <param name="pcl_topic" value="$(arg pcl_topic)" />
+
+        <param name="bottom_detection_topic" value="$(arg bottom_detection_topic)" />
         <param name="bottom_camera_topic" value="$(arg bottom_camera_topic)"/>
+        <param name="bottom_camera_width" value="$(arg bottom_camera_width)"/>
+        <param name="bottom_camera_height" value="$(arg bottom_camera_height)"/>
+        <param name="bottom_camera_HFOV" value="$(arg bottom_camera_HFOV)"/>
+        
+        <param name="front_detection_topic" value="$(arg front_detection_topic)" />
+        <param name="front_camera_width" value="$(arg front_camera_width)"/>
+        <param name="front_camera_height" value="$(arg front_camera_height)"/>
+        <param name="front_camera_HFOV" value="$(arg front_camera_HFOV)"/>
+        <param name="front_camera_frame" value="$(arg front_camera_frame)" />
     </node>
     
     <!-- Static broadcasters for IMU <-> camera transforms courtesy of:
 	 	http://wiki.ros.org/tf2/Tutorials/Writing%20a%20tf2%20static%20broadcaster%20%28C%2B%2B%29
 		https://www.andre-gaschler.com/rotationconverter/ -->
-	<node pkg="tf2_ros" type="static_transform_publisher" name="cam_imu_broadcaster" args="0.2 0 0 0 0 0 1 $(arg rov_frame) $(arg camera_frame)" />
+	<node pkg="tf2_ros" type="static_transform_publisher" name="cam_imu_broadcaster" args="0.2 0 0 0 0 0 1 $(arg rov_frame) $(arg front_camera_frame)" />
 </launch>

@@ -55,20 +55,20 @@ class coin_flip(smach.State):
             rospy.sleep(0.1)
             while(mc.mov_control.get_running_confirmation()):
                 # print("RUNNING")
-                if vs.viso_control.is_fetched:
-                    detections = vs.viso_control.get_detection(["gate"])
+                if vs.front_camera.is_fetched:
+                    detections = vs.front_camera.get_detection(["gate"])
                     # rospy.sleep(0.1) # delay already present in get_running_confirmation
                     if len(detections) > 0: # or detect != None:
                         # if(temp_detect!=None):
                         #     detect=temp_detect
 
                         # If area of bounding box too small (< 1/10 area of image): maybe not our gate
-                        if detections[0]['size'][0] * detections[0]['size'][1] < vs.viso_control.height * vs.viso_control.width / 10:
+                        if detections[0]['size'][0] * detections[0]['size'][1] < vs.front_camera.height * vs.front_camera.width / 10:
                             print("Gate too small, ignoring...")
                             continue
 
                         # First time seeing the gate: maybe at edge
-                        angle_x, angle_y = vs.viso_control.OAK_D.get_angles(detections[0]['center'][0], detections[0]['center'][1])
+                        angle_x, angle_y = vs.front_camera.get_angles(detections[0]['center'][0], detections[0]['center'][1])
                         print("ANGLE_X")
                         print(angle_x)
                         if angle_sign == 0: #only set when first starting
@@ -97,7 +97,7 @@ class coin_flip(smach.State):
             roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
 
             # Rotate and head thru center of the gate
-            angle_x, angle_y = vs.viso_control.OAKD.get_angles(center[0] - size[0] / 2, 0) #get angle between center of bbox and image frame
+            angle_x, angle_y = vs.front_camera.get_angles(center[0] - size[0] / 2, 0) #get angle between center of bbox and image frame
             rospy.sleep(0.05)
             mc.mov_control.set_rotation(0, 0, yaw - angle_x) #does this work for y
             # Wait a bit for control to start 

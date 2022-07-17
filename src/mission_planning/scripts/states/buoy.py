@@ -46,13 +46,28 @@ class bouy(smach.State):
             else: # image_gman
                 detection=mc.mov_control.await_completion_detection(["image_badge"])
 
-            #get pose of object
-            pose_obj = vs.viso_control.estimate_pose_svd(detection[0]['center'],detection[0]['size'])
+            #get pose of object of interest
+            pose_obji = vs.front_camera.estimate_pose_svd(detection[0]['center'],detection[0]['size'])
+            pose_objo = vs.front_camera.estimate_pose_svd(detection[1]['center'],detection[1]['size'])
 
             #align camera with detection
-            position_data=[pose_obj.position.x,pose_obj.position.y,pose_obj.position.z]
+            position_i=[pose_obji.position.x,pose_obji.position.y,pose_obji.position.z]
+            position_o=[pose_objo.position.x,pose_objo.position.y,pose_objo.position.z]
+
+            focus_point=list(position_i)
+            #align with bouys center
+            center=(position_i+position_o)/2
+
+            # L=d/(2*math.tan(oakd.fov))
+            L=vs.front_camera.height/(4*math.tan(vs.front_camera.Vfov))
+
+            mc.mov_control.set_goal_point(mc.mov_control.translate_axis_xyz(center,[L,0,0],))
+
             
-            focus_point=list(position_data)
+            
+            
+            
+            
             # if(detections[0]['center'][0]<detections[1]['center']): #image on the left of frame y axis is on our left
             #     position_data[1]-=0.762
             # else:

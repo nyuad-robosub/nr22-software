@@ -40,14 +40,14 @@ class pass_gate(smach.State):
         mc.mov_control.go_straight(5)
         while(mc.mov_control.get_running_confirmation()):#should this be by time? what if it stops
             #check if you detect them BOTH, if you do, estimate gate pose, stop, and set map points
-            detections = vs.viso_control.get_detection([self.label_1],[self.label_2])
-            gate_detection = vs.viso_control.get_detection(["gate"])
+            detections = vs.front_camera.get_detection([self.label_1],[self.label_2])
+            gate_detection = vs.front_camera.get_detection(["gate"])
             if len(detections)>1 and len(gate_detection)>1:
                 if detections[0]['score'] > 0.5:
                     mc.mov_control.stop() #stop the machine and now begin alignment
 
                     #get pose of object
-                    pose_obj = vs.viso_control.estimate_pose_svd(detections[0]['center'],detections[0]['size'])
+                    pose_obj = vs.front_camera.estimate_pose_svd(detections[0]['center'],detections[0]['size'])
                     roll, pitch, yaw = euler.quat2euler([pose_obj.orientation.w, pose_obj.orientation.x, pose_obj.orientation.y, pose_obj.orientation.z], 'sxyz')
 
                     #get position data

@@ -52,7 +52,7 @@ class marker(smach.State):
 
     def search(self,threshold, straight_amount,detection_label): #recursive function to go in zig zags till gate detected
         #TODO MAKE STRAIGHT AMOUNT DETERMINED FROM OUR DEPTH TO SWEEP BOTTOM CAMERA FRAME
-        detection = vs.viso_control.get_detection([detection_label])
+        detection = vs.bottom_camera.get_detection([detection_label])
         if(len(detection)==0):
             Points=mc.mov_control.generate_zig_zag(threshold)
             for p in Points:
@@ -100,11 +100,11 @@ class marker(smach.State):
         #input: detection()
         #if the detection bbox is close to center STOP
 
-        if(np.allclose(detection['center'],vs.viso_controller.OAK_1.get_center_coord(),0.05)):
+        if(np.allclose(detection['center'],vs.front_camera.OAK_1.get_center_coord(),0.05)):
             mc.mov_control.stop()
             return True
         else:
-            angle_2D = math.atan2(detection[0]['center'][1]-vs.viso_control.OAK_1.width/2,detection[0]['center'][0]-vs.viso_control.OAK_1.height/2) #angle in radians with x y at center of image frame
+            angle_2D = math.atan2(detection[0]['center'][1]-vs.front_camera.width/2,detection[0]['center'][0]-vs.front_camera.height/2) #angle in radians with x y at center of image frame
             mc.mov_control.go_angle(angle_2D,0.25)
             rospy.sleep(0.2)
             detection=mc.mov_control.await_completion_detection(detection['label'])
@@ -123,7 +123,7 @@ class marker(smach.State):
         #path = img_source
         # Captures the live stream frame-by-frame
         #frame = cv2.imread(path) #BGR which encoding?
-        frame=vs.viso_control.OAK_1.get_cv_img()
+        frame=vs.front_camera.get_cv_img()
                 
         # Converts images from BGR to HSV 
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)

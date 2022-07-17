@@ -299,7 +299,7 @@ class movement_controller():
         self.target_point.point.z = translation.z
         self.goal_publisher.publish(self.target_point)
 
-    def __translate_axis(self,position_data,yaw,amount,axis_mode : axis_enum): #UNTESTED 
+    def __translate_axis(self,position_data,yaw,amount,axis_mode): #UNTESTED 
         #translate along an axis given pose and orientation
         #input [x,y,z] numpy pose array of translation along specified axis
         # #return [x,y,z]
@@ -361,15 +361,17 @@ class movement_controller():
         Points=[]
 
         target_point = geometry_msgs.msg.PointStamped() #this is wrong
+        target_point.point.z = translation.z
+        target_point.x = translation.x
+        target_point.y = translation.y
         for i in range(6):
             if(i%2==0):
-                target_point.point.x = translation.x - math.sin(yaw) * amount
-                target_point.point.y = translation.y + math.cos(yaw) * amount
+                target_point.point.x -= math.sin(yaw) * amount
+                target_point.point.y += math.cos(yaw) * amount
             else:
-                target_point.point.x = translation.x + math.sin(yaw) * amount + math.cos(yaw) * amount # translate straight as well as right
-                target_point.point.y = translation.y - math.cos(yaw) * amount + math.sin(yaw) * amount
-            target_point.point.z = translation.z
-            
+                target_point.point.x += math.sin(yaw) * amount + math.cos(yaw) * amount # translate straight as well as right
+                target_point.point.y += -math.cos(yaw) * amount + math.sin(yaw) * amount
+
             Points.append(target_point)
         return Points
 

@@ -30,6 +30,7 @@ class launch_stuff:
         os.system("roslaunch mission_planning"+filename+"&> /dev/null &")
 
 
+
 #mov_control, rov_frame,world_frame,goal_topic,goal_rotation_topic,isRunning_topic,ls = None
 rov_frame=""
 world_frame=""
@@ -58,11 +59,11 @@ if __name__ == '__main__':
 
     isRunning_topic = rospy.get_param('~isrunning_topic')
 
-    detection_topic = rospy.get_param('~detection_topic')
+    front_detection_topic = rospy.get_param('~front_detection_topic')
 
-    detection_label_path = rospy.get_param('~label_file')
+    detection_label_path = rospy.get_param('~front_label_file')
 
-    camera_frame = rospy.get_param('~camera_frame')
+    front_camera_frame = rospy.get_param('~front_camera_frame')
 
     pcl_topic = rospy.get_param('~pcl_topic')
 
@@ -73,7 +74,7 @@ if __name__ == '__main__':
 
     # intialize movement controller
     mc.init(goal_topic, world_frame, rov_frame, isRunning_topic)
-    vs.init(world_frame,camera_frame,detection_topic, pcl_topic, bottom_camera_topic, detection_label_path, oakd_HFOV, 640, 400)
+    vs.init()
     pt.init()
 
     rospy.sleep(5)
@@ -85,7 +86,7 @@ if __name__ == '__main__':
         smach.StateMachine.add('coin_flip', coin_flip(),
                                 transitions={'outcome1':'pass_gate',
                                             'outcome2':'coin_flip'})
-        smach.StateMachine.add('pass_gate', pass_gate(),
+        smach.StateMachine.add('pass_gate', pass_gate("image_bootlegger","image_gman"),
                                 transitions={'outcome1':'marker',
                                             'outcome2':'pass_gate'})
         smach.StateMachine.add('marker', marker("marker"),

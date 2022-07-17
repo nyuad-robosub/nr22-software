@@ -32,7 +32,7 @@ class progress_tracker():
             if not self.progress[key]['done']:
                 return key
     
-    def __str__(self) -> str:
+    def __str__(self):
         """ Print the dictionary
         """
         return json.dumps(self.progress, indent=4)

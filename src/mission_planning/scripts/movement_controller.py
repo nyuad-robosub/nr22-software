@@ -13,6 +13,7 @@ from transforms3d import euler, quaternions
 from datetime import datetime
 import viso_controller as vs
 from enum import Enum
+import visualization_msgs.msg
 
 class axis_enum(Enum):
     x_axis = 1
@@ -39,6 +40,7 @@ class movement_controller():
         self.listener = tf2_ros.TransformListener(self.tfBuffer)
 
         self.goal_publisher = rospy.Publisher(goal_topic, geometry_msgs.msg.PointStamped, queue_size=5)
+        self.goal_array_publisher = rospy.Publisher('controller/goalPath', visualization_msgs.msg.Marker, queue_size=1, latch=True)
         self.focus_publisher = rospy.Publisher('controller/focusPoint', geometry_msgs.msg.PointStamped, queue_size=1, latch=True)
         self.goal_rotation_publisher = rospy.Publisher('controller/goalRotation', geometry_msgs.msg.Quaternion, queue_size=1, latch=True)
         self.running_publisher = rospy.Publisher('controller/isRunning', Bool, queue_size=1, latch=True)
@@ -114,14 +116,7 @@ class movement_controller():
         # Rotate from initial orientation
         rotation = self.trans.transform.rotation
         roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
-        msg9 = geometry_msgs.msg.Quaternion()
-        q = euler.euler2quat(0, 0, yaw+rotation, 'sxyz')
-        msg9.w = q[0]
-        msg9.x = q[1]
-        msg9.y = q[2]
-        msg9.z = q[3]
-        self.goal_rotation_publisher.publish(msg9)
-
+        self.set_rotation(0,0,yaw+rotation)
 
     # def rotate_ccw(self):
     #     self.update_tf()
@@ -360,7 +355,7 @@ class movement_controller():
         translation = self.trans.transform.translation
         Points=[]
 
-        target_point = geometry_msgs.msg.PointStamped() #this is wrong
+        target_point = geometry_msgs.msg.PointStamped()
         target_point.point.z = translation.z
         target_point.x = translation.x
         target_point.y = translation.y
@@ -369,8 +364,8 @@ class movement_controller():
                 target_point.point.x -= math.sin(yaw) * amount
                 target_point.point.y += math.cos(yaw) * amount
             else:
-                target_point.point.x += math.sin(yaw) * amount + math.cos(yaw) * amount # translate straight as well as right
-                target_point.point.y += -math.cos(yaw) * amount + math.sin(yaw) * amount
+                target_point.point.x += amount*(math.sin(yaw) + math.cos(yaw)) # translate straight as well as right
+                target_point.point.y += amount*(-math.cos(yaw)+ math.sin(yaw))
 
             Points.append(target_point)
         return Points

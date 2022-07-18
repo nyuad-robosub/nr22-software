@@ -126,6 +126,9 @@ class Detector():
                     size_y = ymax - ymin
                 )
                 self.detection_msg.detections.append(det)
+
+                # Notify
+                # print(self.category_index[output_dict['detection_classes'][i]]['name'])
         
         self.detection_pub.publish(self.detection_msg)
 

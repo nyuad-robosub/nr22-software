@@ -34,9 +34,7 @@ class pass_gate(smach.State):
         pt.pr_track.progress['pass_gate']['done']=True #better to save automatically based off state machine?
         pt.pr_track.progress['pass_gate']['chosen_detection']=detection[0]['label']
 
-    def execute(self, userdata):      
-        x_center=320
-        y_center=200
+    def execute(self, userdata):  
         mc.mov_control.go_straight(5)
         while(mc.mov_control.get_running_confirmation()):#should this be by time? what if it stops
             #check if you detect them BOTH, if you do, estimate gate pose, stop, and set map points

@@ -31,10 +31,6 @@ class coin_flip(smach.State):
     def execute(self, userdata):     
         rospy.sleep(3)
 
-        x_center=320
-        y_center=200
-        detect=None
-
         # Rotate from initial orientation
         mc.mov_control.update_tf()
         mc.mov_control.arm()

@@ -84,8 +84,6 @@ def dark_channel(i):
 
 def bright_channel(i):
     M, N, _ = i.shape #Dimensions of the image array
-    print(M)
-    print(N)
     #Padding an array with the values of i
     padded = np.pad(i, ((int(w/2), int (w/2)), (int (w/2), int (w/2)), (0, 0)),'edge').astype('float32')
     #Creating the bright channel array
@@ -130,7 +128,6 @@ def bgsubr (i, bright) :
     bgsubrr = np.zeros((M, N))
     #Seprating i into the three color channels accordingly
     arrcmax = i[..., cmax]
-    print(arrcmax)
     arrcmid = i[..., cmid]
     arrcmin = i[..., cmid]
     #Calculating the maximum channel difference in each pixel
@@ -270,13 +267,11 @@ def histogram_equalization(j):
                 j[mi,ni, 2] = 1
 
     #Getting the means and arrays of each channel with any numbers of channe
-    print("BARR")
     _, _, _, b,g,r, barr, garr, rarr = channel_intensities(j*255)
 
     #Converting the intensity range to [0,1]
 
     barr=barr/255
-    print(barr)
     garr=garr/255
     rarr=rarr/255
 
@@ -317,26 +312,21 @@ def histogram_equalization(j):
             j[mi,ni,2]=rarr[mi,ni]
 
     return j
+
 def get_normalized_image(imagee):
     global w,bi,gi,ri,image,bright
     w = 15 #Window size
     bi,gi,ri=0,1,2 #Color channels indexes
-    #image=imagee
-    #cv2.namedWindow("inputt")
+    image=imagee
+
     #Name of the file
-    print(imagee)
-    image = imagee#cv2.imread('/home/rami/Downloads/underr.jpg')
     i = np.asarray(image).astype('float32')
-    #print(i.shape)
     i = i[:, :, :3]/255
 
     height, width, _ = i.shape
     bright = bright_channel(i)
-    #print(bright)
     bgsubrr = bgsubr(i, bright)
-    #print(bgsubrr)
     ibright = rectify_bright(bgsubrr)
-    #print(ibright)
     a = atmospheric_light(i, bright)
     init = initial_transmission(a, ibright)
     white = np.full_like(bright, 255)
@@ -345,6 +335,6 @@ def get_normalized_image(imagee):
     j = restoration_image(i, a, refined)
     result = histogram_equalization(j)
 
-    cv2.imwrite("/home/rami/nr22-software/src/markernorm.png",np.uint8(result*255))
+    #cv2.imwrite("/home/rami/nr22-software/src/markernorm.png",np.uint8(result*255))
     return np.uint8(result*255)
 

@@ -23,6 +23,7 @@ import tf2_ros
 import numpy as np
 import cv2
         
+from transforms3d import euler
 class bouy(smach.State):
     _outcomes=['outcome1','outcome2']
     _input_keys=[],
@@ -37,18 +38,21 @@ class bouy(smach.State):
         
         #move till you detect any one of them
         detections=mc.mov_control.await_completion_detection(["image_tommygun","image_badge"])
-
         mc.mov_control.stop()
-        if(len(detection>0)):
+        if(len(detections>1)):
+            mc.mov_control.update_tf()
+
             #detected the object
             if(side=="image_bootlegger"):    
-                detection=mc.mov_control.await_completion_detection(["image_tommygun"])
+                detection_i=mc.mov_control.await_completion_detection(["image_tommygun"])
+                detection_o=mc.mov_control.await_completion_detection(["image_badge"])
             else: # image_gman
-                detection=mc.mov_control.await_completion_detection(["image_badge"])
+                detection_i=mc.mov_control.await_completion_detection(["image_badge"])
+                detection_o=mc.mov_control.await_completion_detection(["image_tommygun"])
 
             #get pose of object of interest
-            pose_obji = vs.front_camera.estimate_pose_svd(detection[0]['center'],detection[0]['size'])
-            pose_objo = vs.front_camera.estimate_pose_svd(detection[1]['center'],detection[1]['size'])
+            pose_obji = vs.front_camera.estimate_pose_svd(detection_i[0]['center'],detection_i[0]['size'])
+            pose_objo = vs.front_camera.estimate_pose_svd(detection_o[0]['center'],detection_o[0]['size'])
 
             #align camera with detection
             position_i=[pose_obji.position.x,pose_obji.position.y,pose_obji.position.z]
@@ -59,25 +63,19 @@ class bouy(smach.State):
             center=(position_i+position_o)/2
 
             # L=d/(2*math.tan(oakd.fov))
-            L=vs.front_camera.height/(4*math.tan(vs.front_camera.Vfov))
+            L=vs.front_camera.height/(4*math.tan(vs.front_camera.Vfov))*1.1
 
-            mc.mov_control.set_goal_point(mc.mov_control.translate_axis_xyz(center,[L,0,0],))
+            rotation = mc.mov_control.trans.transform.rotation
+            roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
 
-            
-            
-            
-            
-            
-            # if(detections[0]['center'][0]<detections[1]['center']): #image on the left of frame y axis is on our left
-            #     position_data[1]-=0.762
-            # else:
-            #     position_data[1]+=0.762
-            # position_data[2]-= 0.6 #translate z under
-            # mc.mov_control.set_goal_point(position_data) #go under the object
-        
+            mc.mov_control.set_goal_point(mc.mov_control.translate_axis_xyz(center,[L,0,0],yaw))
+            mc.mov_control.await_completion()
 
+            position_i[2]+=1.1 #better way to define the top?
+            position_i[0]-=2
 
-
+            mc.mov_control.set_goal_point(position_i)
+            mc.mov_control.await_completion()
             return "outcome1"
 
         return "outcome2"

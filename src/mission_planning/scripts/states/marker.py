@@ -99,11 +99,11 @@ class marker(smach.State):
         #input: detection()
         #if the detection bbox is close to center STOP
 
-        if(np.allclose(detection['center'],vs.front_camera.OAK_1.get_center_coord(),0.05)):
+        if(np.allclose(detection['center'],vs.bottom_camera.OAK_1.get_center_coord(),0.05)):
             mc.mov_control.stop()
             return True
         else:
-            angle_2D = math.atan2(detection[0]['center'][1]-vs.front_camera.width/2,detection[0]['center'][0]-vs.front_camera.height/2) #angle in radians with x y at center of image frame
+            angle_2D = math.atan2(detection[0]['center'][1]-vs.bottom_camera.width/2,detection[0]['center'][0]-vs.bottom_camera.height/2) #angle in radians with x y at center of image frame
             mc.mov_control.go_angle(angle_2D,0.25)
             rospy.sleep(0.2)
             detection=mc.mov_control.await_completion_detection(detection['label'])

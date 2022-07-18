@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.ndimage as nd
 import heapq
-
 def box(img, r):
     """ O(1) box filter
         img - >= 2d image
@@ -29,7 +28,6 @@ def box(img, r):
 
     return imDst
 
-#https://github.com/swehrwein/python-guided-filter/blob/master/gf.py
 def _gf_gray(I, p, r, eps, s=None):
     """ grayscale (fast) guided filter
         I - guide image (1 channel)
@@ -72,27 +70,30 @@ def _gf_gray(I, p, r, eps, s=None):
     q = meanA * I + meanB
     return q
 
+
 def dark_channel(i):
     M, N, _ = i.shape #Dimensions of the image array
     #Padding an array with the values of i
-    padded = np.pad(i, ((int(w/2), int(w/2)), (int (w/2),int (w/2)), (0, 0)), 'edge')
+    padded = np.pad(i, ((int(w/2), int(w/2)), (int (w/2),int (w/2)), (0, 0)), 'edge').astype('float32')
     #Creating the dark channel array
-    dark = np.zeros ((M, N))
+    dark = np.zeros ((M, N)).astype('float32')
     #Selecting the lowest intensity pixels out of the three channels of i
-    for i, j in np.ndindex (dark.shape) :
-        dark[i, j] = np.min (padded[i:i + w, j:j + w, :])
+    for ij, j in np.ndindex (dark.shape) :
+        dark[ij, j] = np.min (padded[ij:(ij + w), j:(j + w), :])
     return dark
 
 def bright_channel(i):
     M, N, _ = i.shape #Dimensions of the image array
+    print(M)
+    print(N)
     #Padding an array with the values of i
-    padded = np.pad(i, ((int(w/2), int (w/2)), (int (w/2), int (w/2)), (0, 0)),'edge')
+    padded = np.pad(i, ((int(w/2), int (w/2)), (int (w/2), int (w/2)), (0, 0)),'edge').astype('float32')
     #Creating the bright channel array
-    bright = np.zeros((M, N))
+    brightt = np.zeros((M, N)).astype('float32')
     #Selecting the highest intensity pixels out of the three channels
-    for i, j in np.ndindex (bright.shape):
-        bright[i, j] = np.max(padded[i:i + w, j:j + w, :])
-    return bright
+    for ij, j in np.ndindex (brightt.shape):
+        brightt[ij, j] = np.max(padded[ij:(ij + w), j:(j + w), :])
+    return brightt
 
 def channel_intensities(image):
 
@@ -129,7 +130,7 @@ def bgsubr (i, bright) :
     bgsubrr = np.zeros((M, N))
     #Seprating i into the three color channels accordingly
     arrcmax = i[..., cmax]
-
+    print(arrcmax)
     arrcmid = i[..., cmid]
     arrcmin = i[..., cmid]
     #Calculating the maximum channel difference in each pixel
@@ -138,6 +139,14 @@ def bgsubr (i, bright) :
             bgsubrr[mi][ni] = 1 - max(max(arrcmax[mi][ni]-arrcmin[mi][ni], 0), max(arrcmid[mi][ni]-arrcmin[mi][ni],0))
             
     return bgsubrr
+# def atmospheric_light(I, brightch, p=0.01):
+#     M, N = brightch.shape
+#     flatI = I.reshape(M*N, 3) # reshaping image array
+#     flatbright = brightch.ravel() #flattening image array
+
+#     searchidx = (-flatbright).argsort()[:int(M*N*p)] # sorting and slicing
+#     A = np.mean(flatI.take(searchidx, axis=0), dtype=np.float64, axis=0)
+#     return A
 
 def atmospheric_light(i, ibright):
     M, N = ibright.shape #Dimensions of the rectified bright channel array
@@ -177,10 +186,10 @@ def atmospheric_light(i, ibright):
 
     return at
 
-def rectify_bright (bgsubr,bright):
+def rectify_bright (bgsubr):
     #Calculating the saturation channel of the image
-    rgb = cv2. cvtColor(image, cv2.COLOR_BGR2RGB)
-    hsv = cv2. cvtColor(rgb, cv2.COLOR_RGB2HSV)
+    rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    hsv = cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV)
 
     #Calculating the coefficient lambda
     lambd = (hsv[...,1].max ())/255
@@ -189,16 +198,24 @@ def rectify_bright (bgsubr,bright):
     ibright = (bright*lambd) + (bgsubr*(1-lambd))
     return ibright 
     
-def initial_transmission(a, ibright):
-    M, N = ibright.shape #Dimensions of the image array
-    init = np.zeros ((M,N)) #Initial transmittance
-    #Calulating the transmittance over each channel
-    for i in range(3) :
-        init = init + ((ibright-a[i])/(1.-a[i]))
-        init = (init - np.min(init))/(np.max(init) - np.min(init))
-    init = init/3
-    #Calculating the average value of the transmittance
-    return (init - np.min(init))/(np.max(init) - np.min(init))
+# def initial_transmission(a, ibright):
+#     M, N = ibright.shape #Dimensions of the image array
+#     init = np.zeros ((M,N)) #Initial transmittance
+#     #Calulating the transmittance over each channel
+#     for i in range(3) :
+#         init = init + ((ibright-a[i])/(1.-a[i]))
+#         init = (init - np.min(init))/(np.max(init) - np.min(init))
+#     init = init/3
+#     #Calculating the average value of the transmittance
+#     return (init - np.min(init))/(np.max(init) - np.min(init))
+
+def initial_transmission(A, brightch):
+    A_c = np.max(A)
+    init_t = (brightch-A_c)/(1.-A_c) # finding initial transmission map
+    # if(np.max(init_t) - np.min(init_t) ==0 ):
+    #     return init_t
+    # else:
+    return (init_t - np.min(init_t))/(np.max(init_t) - np.min(init_t)) # normalized initial transmission map
     
 def refined_transmission(init):
     refined = np.full_like(init, 0)
@@ -214,14 +231,21 @@ def refined_transmission(init):
 
     return refined
 
-def restoration_image(i, a, refined):
-    M, N, _ = i. shape
-    #Broadcasting the refined transmission into a 3D array
-    corrected = np.broadcast_to(refined[:,:,None], (refined.shape[0], refined.shape[1], 3))
+# def restoration_image(i, a, refined):
+#     M, N, _ = i. shape
+#     #Broadcasting the refined transmission into a 3D array
+#     corrected = np.broadcast_to(refined[:,:,None], (refined.shape[0], refined.shape[1], 3))
     
-    #Restoring the original image
-    j = ((i-a)/corrected) + a
-    return j
+#     #Restoring the original image
+#     j = ((i-a)/corrected) + a
+#     return j
+
+def restoration_image(I, A, refined_t, tmin=0.1):
+    refined_t_broadcasted = np.broadcast_to(refined_t[:, :, None], (refined_t.shape[0], refined_t.shape[1], 3)) # duplicating the channel of 2D refined map to 3 channels
+    J = (I-A) / (np.where(refined_t_broadcasted < tmin, tmin, refined_t_broadcasted)) + A # finding result 
+
+    return (J - np.min(J))/(np.max(J) - np.min(J)) # normalized image
+
 
 def histogram_equalization(j):
     M, N, _ = j. shape #Dimensions of the restored image
@@ -238,19 +262,28 @@ def histogram_equalization(j):
                 j[mi,ni,1] = 0
             if (j[mi,ni,2] <= 0):
                 j[mi,ni, 2] = 0
+            if (j[mi,ni,0] >1):
+                j[mi,ni,0] = 1
+            if (j[mi,ni,1] >1):
+                j[mi,ni,1] = 1
+            if (j[mi,ni,2] > 1):
+                j[mi,ni, 2] = 1
 
     #Getting the means and arrays of each channel with any numbers of channe
+    print("BARR")
     _, _, _, b,g,r, barr, garr, rarr = channel_intensities(j*255)
 
     #Converting the intensity range to [0,1]
+
     barr=barr/255
+    print(barr)
     garr=garr/255
     rarr=rarr/255
 
     #Assigning the wanted means from each channel
     bidx=0.5
-    gidx=0.49
-    ridx=0.49
+    gidx=0.5
+    ridx=0.5
 
     #Equalizing the blue channel
     if (bidx>0):
@@ -284,36 +317,34 @@ def histogram_equalization(j):
             j[mi,ni,2]=rarr[mi,ni]
 
     return j
-
-global w,bi,gi,ri,image
-w = 15 #Window size
-bi,gi,ri=0,1,2 #Color channels indexes
-
-def get_normalized_image(image):
-    #Converting image into numpy array
-    i = np.asarray(image)
+def get_normalized_image(imagee):
+    global w,bi,gi,ri,image,bright
+    w = 15 #Window size
+    bi,gi,ri=0,1,2 #Color channels indexes
+    #image=imagee
+    #cv2.namedWindow("inputt")
+    #Name of the file
+    print(imagee)
+    image = imagee#cv2.imread('/home/rami/Downloads/underr.jpg')
+    i = np.asarray(image).astype('float32')
+    #print(i.shape)
     i = i[:, :, :3]/255
 
     height, width, _ = i.shape
     bright = bright_channel(i)
-    bgsubr = bgsubr(i, bright)
-    ibright = rectify_bright(bgsubr,bright)
+    #print(bright)
+    bgsubrr = bgsubr(i, bright)
+    #print(bgsubrr)
+    ibright = rectify_bright(bgsubrr)
+    #print(ibright)
     a = atmospheric_light(i, bright)
     init = initial_transmission(a, ibright)
-    white = np.full_like(bright, 0)
+    white = np.full_like(bright, 255)
 
-    refined = refined_transmission(init) #fucker
+    refined = refined_transmission(init)
     j = restoration_image(i, a, refined)
     result = histogram_equalization(j)
 
-    return result
-    # plt.imshow(result)
-    # image = cv2.cvtColor(result.astype('float32'), cv2.COLOR_BGR2RGB)
-
-    # pixels = np.array(image)
-
-    # plt.imshow(pixels)
-
-# #Name of the file
-# image = cv2.imread('/home/rami/Downloads/marker_304r.jpg')
+    cv2.imwrite("/home/rami/nr22-software/src/markernorm.png",np.uint8(result*255))
+    return np.uint8(result*255)
 

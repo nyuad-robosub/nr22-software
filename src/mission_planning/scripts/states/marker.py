@@ -32,17 +32,17 @@ class marker(smach.State):
     def execute(self, userdata):  
         #call search which returns once any bbox is detected
         detection=self.search(self.zigzag_threshold,0.7,self.marker_label)
-    
+
         #next begin the adjustment function
         self.adjustment(detection)
 
-        #next begin rotation to align pose with object
-        
-        #get rotation
+        # #get rotation
         rotation_angle=self.getMarkerOrientation()
-
+        print(rotation_angle)
+        
+        #next begin rotation to align pose with object
         mc.mov_control.rotate_ccw(rotation_angle)
-
+        
         mc.mov_control.await_completion()
 
         mc.mov_control.stop()
@@ -55,9 +55,8 @@ class marker(smach.State):
         detection = vs.bottom_camera.get_detection([detection_label])
         if(len(detection)==0):
             Points=mc.mov_control.generate_zig_zag(threshold)
-            for p in Points:
-                mc.mov_control.set_goal_point(p)
-                rospy.sleep(0.1)
+            mc.mov_control.set_goal_points(Points)
+
             detection=mc.mov_control.await_completion_detection(detection_label)
             mc.mov_control.stop()
 
@@ -123,18 +122,21 @@ class marker(smach.State):
         #path = img_source
         # Captures the live stream frame-by-frame
         #frame = cv2.imread(path) #BGR which encoding?
-        frame=vs.front_camera.get_cv_img()
-                
+        frame=vs.bottom_camera.get_cv_img()
+        frame = np.uint8(frame)
+        
+        # if not cv2.imwrite("/home/rami/nr22-software/src/markernorm.jpg",frame):
+        #     raise Exception("Could not write image") 
         # Converts images from BGR to HSV 
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-            
+        print(hsv)
         # lower bound and upper bound for orange color
-        lower_bound = np.array([0,120,135])
+        lower_bound = np.array([0,120,60])
         upper_bound = np.array([65,255,255])
 
         #find color within the boundaries
         mask = cv2.inRange(hsv, lower_bound, upper_bound)
-
+        cv2.imwrite("/home/rami/nr22-software/src/markernonormmmmask.png",mask)
         #define kernel size  
         kernel = np.ones((7,7),np.uint8)
 
@@ -150,7 +152,7 @@ class marker(smach.State):
         segmented_img = cv2.bitwise_and(canvas, canvas, mask=mask)
 
         # find contours from the mask
-        contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2:]
         cont_output = cv2.drawContours(segmented_img, contours, -1, (0, 255, 0), 3)
 
         # get minAreaRect of contour with max area
@@ -211,17 +213,11 @@ class marker(smach.State):
 
         
         angle = math.atan2(eigenvectors[0,1], eigenvectors[0,0]) # orientation in radians
-        ## [visualization]
-        
-        # label with the rotation angle
-        #label = "  Rotation Angle: " + str(int(np.rad2deg(angle)) + 90) + " degrees"
-        #textbox = cv2.rectangle(canvas, (cntr[0], cntr[1]-25), (cntr[0] + 250, cntr[1] + 10), (255,255,255), -1)
-        #cv2.putText(canvas, label, (cntr[0], cntr[1]), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0), 1, cv2.LINE_AA)
-
 
         # get angle
         rotation = int(np.rad2deg(angle)) + 90
 
-        #cv2.imwrite('/Users/nasheed-x/Desktop/Orientation/test.jpeg', canvas)
+        if(rotation >= 180):
+            rotation-=180
 
         return rotation

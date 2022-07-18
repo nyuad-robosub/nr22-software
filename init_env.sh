@@ -101,6 +101,8 @@ sudo apt install nlohmann-json-dev
 cd ./include
 p=$(pwd)
 
+pip2 install opencv-contrib-python
+
 # # Get Pangolin
 # wget "https://codeload.github.com/stevenlovegrove/Pangolin/zip/refs/tags/v0.5"
 # unzip v0.5

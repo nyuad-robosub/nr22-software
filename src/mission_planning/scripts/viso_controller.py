@@ -203,37 +203,39 @@ class mono(camera, object):
         self.set_params()
 
         self.image_mutex=threading.Lock()
-        self.image_sub=message_filters.Subscriber(self.sub_topic, Image)
+        self.image_sub=rospy.Subscriber(self.sub_topic, Image, self.image_callback)
         self.cv_image=None
         self.bridge = CvBridge()
         
-        ts = message_filters.ApproximateTimeSynchronizer([self.detection_sub,self.image_sub], 3,slop=0.2)
-        ts.registerCallback(self.detection_callback)
+        #ts = message_filters.ApproximateTimeSynchronizer([self.detection_sub,self.image_sub], 3,slop=0.2)
+        #ts.registerCallback(self.detection_callback)
     
-    def detection_callback(self, viso_detect,image):
-        self.mutex.acquire()
-        self.viso_detect = viso_detect
-        # Only set true when something is detected, to save energy
-        if len(list(self.viso_detect.detections)) > 0:
-            self.is_fetched=True
-        self.mutex.release()
+    # def detection_callback(self, viso_detect,image):
+    #     self.mutex.acquire()
+    #     self.viso_detect = viso_detect
+    #     # Only set true when something is detected, to save energy
+    #     if len(list(self.viso_detect.detections)) > 0:
+    #         self.is_fetched=True
+    #     self.mutex.release()
 
-        self.image_callback(image)
+    #     self.image_callback(image)
     
     def image_callback(self,data):
         self.image_mutex.acquire()
         try:
-            self.cv_image = cv2.resize(self.bridge.imgmsg_to_cv2(data, "bgr8"),(200,150))
+            self.cv_image = cv2.resize(self.bridge.imgmsg_to_cv2(data, desired_encoding='bgr8'),(150,150))
         except CvBridgeError as e:
             print(e)
         self.image_mutex.release()
 
     def get_cv_img(self):
         self.image_mutex.acquire()
-        img=self.cv_image
+        print("GETTING CV IMAGE")
+        #imgn=color_normalization.get_normalized_image(self.cv_image)FOR REAL TESTING
+        imgn=self.cv_image.copy()
         self.image_mutex.release()
-        img=color_normalization.get_normalized_image(img)
-        return img
+       
+        return imgn
     def get_ros_img(self):
         self.image_mutex.acquire()
         try:

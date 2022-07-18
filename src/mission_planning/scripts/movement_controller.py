@@ -14,6 +14,7 @@ from datetime import datetime
 import viso_controller as vs
 from enum import Enum
 import visualization_msgs.msg
+import copy
 
 class axis_enum(Enum):
     x_axis = 1
@@ -116,7 +117,7 @@ class movement_controller():
         # Rotate from initial orientation
         rotation = self.trans.transform.rotation
         roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
-        self.set_rotation(0,0,yaw+rotation)
+        self.set_rotation(0,0,yaw+amount)
 
     # def rotate_ccw(self):
     #     self.update_tf()
@@ -164,7 +165,7 @@ class movement_controller():
     def await_completion(self):
         # Wait until movement finished
             while self.get_running_confirmation():    
-                print(self.get_running_confirmation())
+                #print(self.get_running_confirmation())
                 rospy.sleep(0.01)
     def await_completion_detection(self,detection_label):
         # Wait until movement finished
@@ -235,6 +236,16 @@ class movement_controller():
         self.target_point.point.z = xyz[2]
         
         self.goal_publisher.publish(self.target_point)
+
+    def set_goal_points(self,point_arr):
+        #Point_arr : Point()
+        #Publish Marker
+        msg5 = visualization_msgs.msg.Marker()
+        msg5.header.stamp = rospy.Time.now()
+        msg5.header.frame_id = 'world'
+        for p in point_arr:
+            msg5.points.append(p)
+        self.goal_array_publisher.publish(msg5)
 
     def change_height(self, amount):
         self.set_height(self.trans.transform.translation.z + amount)
@@ -348,26 +359,27 @@ class movement_controller():
 
         return xyz
 
-    def generate_zig_zag(self,amount): #UNTESTED
+    def generate_zig_zag(self,amount): #TESTED
+        #returns an array of Point msgs 
         self.set_focus_point()
         rotation = self.trans.transform.rotation
         roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
         translation = self.trans.transform.translation
         Points=[]
-
-        target_point = geometry_msgs.msg.PointStamped()
-        target_point.point.z = translation.z
+        target_point = geometry_msgs.msg.Point()
+        target_point.z = translation.z
         target_point.x = translation.x
         target_point.y = translation.y
-        for i in range(6):
-            if(i%2==0):
-                target_point.point.x -= math.sin(yaw) * amount
-                target_point.point.y += math.cos(yaw) * amount
-            else:
-                target_point.point.x += amount*(math.sin(yaw) + math.cos(yaw)) # translate straight as well as right
-                target_point.point.y += amount*(-math.cos(yaw)+ math.sin(yaw))
 
-            Points.append(target_point)
+        for i in range(6):   
+            if(i%2==0):
+                target_point.x -= math.sin(yaw) * amount
+                target_point.y += math.cos(yaw) * amount
+            else:
+                target_point.x += amount * (math.sin(yaw) + math.cos(yaw)) # translate straight as well as right
+                target_point.y += amount * (-math.cos(yaw) + math.sin(yaw))
+            print(target_point)
+            Points.append(copy.deepcopy(target_point))
         return Points
 
     def get_np_position(self):

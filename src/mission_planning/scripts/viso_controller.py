@@ -39,7 +39,7 @@ class camera():
         self.width=rospy.get_param('~'+cam_enum.value+'_camera_width')
         self.height=rospy.get_param('~'+cam_enum.value+'_camera_height')
         self.aspect_ratio = self.width/self.height
-        self.Hfov=rospy.get_param('~'+cam_enum.value+'_camera_HFOV')
+        self.Hfov=math.radians(rospy.get_param('~'+cam_enum.value+'_camera_HFOV'))
         self.detection_topic=rospy.get_param('~'+cam_enum.value+'_detection_topic')
 
         if(cam_enum.value=="front"):
@@ -53,7 +53,7 @@ class camera():
         self.Vfov= 2 * math.atan(math.tan(self.Hfov/2)*self.aspect_ratio)
 
         self.is_fetched=False
-
+        self.last_detection_time = 0.0 # Saving last detection time
         self.viso_detect=Detection2DArray()
         self.detection_sub = message_filters.Subscriber(self.detection_topic, Detection2DArray)
 
@@ -147,6 +147,7 @@ class stereo(camera, object):
         # Only set true when something is detected, to save energy
         if len(list(self.viso_detect.detections)) > 0:
             self.is_fetched=True
+            self.last_detection_time = rospy.get_time()
         self.mutex.release()
 
         self.pointcloud_mutex.acquire()
@@ -217,6 +218,7 @@ class mono(camera, object):
         # Only set true when something is detected, to save energy
         if len(list(self.viso_detect.detections)) > 0:
             self.is_fetched=True
+            self.last_detection_time = rospy.get_time()
         self.mutex.release()
 
         self.image_callback(image)

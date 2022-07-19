@@ -371,6 +371,7 @@ def path_callback(path):
     
     # Detect if stopped from successful trip
     if isRunning:
+        isRunning = False
         print("Trajectory completed")
         msg.data = False
         run_publisher.publish(msg)
@@ -565,6 +566,7 @@ def rotation_callback(rotation):
     
     # Detect if stopped from successful rotation
     if isRunning:
+        isRunning = False
         print("Rotation completed")
         msg.data = False
         run_publisher.publish(msg)

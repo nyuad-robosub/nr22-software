@@ -48,11 +48,11 @@
 
     <!-- Launch fake sonar_ping -->
     <include file="$(find sonar_ping)/launch/fake_ping.launch">
-        <arg name="sonar_ping_topic" default="$(arg sonar_ping_topic)" />
-        <arg name="altitude_topic" default="$(arg altitude_topic)" />
-        <arg name="pool_depth" default="$(arg pool_depth)" />
-        <arg name="ema_alpha" default="$(arg ema_alpha)" />
-    <include/>
+        <arg name="sonar_ping_topic" value="$(arg sonar_ping_topic)" />
+        <arg name="altitude_topic" value="$(arg altitude_topic)" />
+        <arg name="pool_depth" value="$(arg pool_depth)" />
+        <arg name="ema_alpha" value="$(arg ema_alpha)" />
+    </include>
 
     <!-- Front Camera -->
     <!-- <arg name="front_camera_topic" default=""/> -->

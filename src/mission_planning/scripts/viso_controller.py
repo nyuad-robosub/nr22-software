@@ -89,17 +89,18 @@ class camera():
                 for det in self.viso_detect.detections:
                     if det.results[0].id in req_ids:
                         detections.append({
-                            'id': det.results[0].id,                            # ID / score
-                            'score': det.results[0].score,                      # Confi
+                            'id': det.results[0].id,                            # ID
+                            'score': det.results[0].score,                      # Confidence / score
                             'center': (det.bbox.center.x, det.bbox.center.y),   # Center, tuple (x, y)
-                            'size': (det.bbox.size_x, det.bbox.size_y),   
-                            'label':  self.get_label_from_id(det.results[0].id)# Size, tuple (x, y)
+                            'size': (det.bbox.size_x, det.bbox.size_y),         # Size, tuple (x, y)
+                            'label': self.get_label_from_id(det.results[0].id), # Label string
+                            'time': self.viso_detect.header.stamp               # Time, rospy.Time
                         })
                 self.is_fetched=False
                 self.mutex.release()
             return detections
     def update_tf(self, timeout=5):
-        """Function to update stored tf of ROV
+        """Function to update stored tf of camera
         :param timeout: How much time in seconds lookup should wait for"""
         delay = 0.1
         counter = 0
@@ -159,7 +160,7 @@ class stereo(camera, object):
         pose_time = self.pointcloud.header.stamp
         points_region = np.mgrid[
             math.ceil(center[0] - size[0] * 0.5):math.floor(center[0] + size[0] * 0.5),
-            math.ceil(center[1] - size[1] * 0.5):math.floor(center[1] + size[1] * 0.5)].reshape(2,-1).T
+            math.ceil(center[1] - size[1] * 0.5):math.floor(center[1] + size[1] * 0.5)].reshape(2,-1).T.astype(int)
         self.pointcloud_mutex.acquire()
         points = np.array(list(pc2.read_points(
             self.pointcloud,

@@ -87,21 +87,22 @@ class movement_controller():
         self.arm_publisher.publish(msg1)
         rospy.sleep(self.arm_wait_time) # Wait for stopping to finish
     
-    def update_tf(self, timeout=5):
+    def update_tf(self, timeout=5, delay=0.1):
         """Function to update stored tf of ROV
         :param timeout: How much time in seconds lookup should wait for"""
-        delay = 0.1
         counter = 0
         # Find current location
         while counter < timeout / delay:
             try:
                 self.trans = self.tfBuffer.lookup_transform(self.world_frame, self.rov_frame, rospy.Time(), rospy.Duration(4))
+                rotation = self.trans.transform.rotation
+                self.euler = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
                 self.target_point = geometry_msgs.msg.PointStamped()
+                break
             except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
                 print("Cannot find transformation of ROV! Retrying...")
                 rospy.sleep(delay)
                 counter += 1
-            break
         # Check if there were any issues
         return (counter < timeout / delay)
 
@@ -160,6 +161,7 @@ class movement_controller():
 
     def running_callback(self, flag):
         self.isRunning = flag.data
+    # DEPRECATED - use get_running_confirmation() instead
     def get_running(self):
         return self.isRunning
     def await_completion(self):

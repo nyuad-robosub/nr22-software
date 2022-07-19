@@ -55,14 +55,14 @@
     </include>
 
     <!-- Front Camera -->
-    <!-- <arg name="front_camera_topic" default=""/> -->
+    <arg name="front_camera_topic" default="/camera/color/image_raw"/>
     <arg name="front_camera_width" default="640"/>
     <arg name="front_camera_height" default="400"/>
     <arg name="front_camera_HFOV" default="50.41"/>
 
     <!-- front camera faux detection args -->
-    <arg name="front_detection_topic" default="/detection" />
-	<arg name="front_image_topic" default="/camera/color/image_raw" />
+    <arg name="front_detection_topic" default="/front_detection" />
+	<arg name="front_image_topic" default="$(arg front_camera_topic)" />
 	<arg name="front_model_file" default="/home/rami/nr22-software/src/faux_detection/trained_models/mobilenet-jul17.pb" />
 	<arg name="front_label_file" default="/home/rami/nr22-software/src/faux_detection/trained_models/mobilenet-jul17.pbtxt" />
 
@@ -74,8 +74,8 @@
     <arg name="bottom_camera_HFOV" default="69"/>
 
     <!-- bottom camera faux detection args -->
-    <arg name="bottom_detection_topic" default="/detection" />
-    <arg name="bottom_image_topic" default="/camera/color/image_raw" />
+    <arg name="bottom_detection_topic" default="/bottom_detection" />
+    <arg name="bottom_image_topic" default="$(arg bottom_camera_topic)" />
     <arg name="bottom_model_file" default="/home/rami/nr22-software/src/faux_detection/trained_models/mobilenet-jul17.pb" />
     <arg name="bottom_label_file" default="/home/rami/nr22-software/src/faux_detection/trained_models/mobilenet-jul17.pbtxt" />
 
@@ -86,17 +86,17 @@
         <arg name="image_topic" value="$(arg front_image_topic)" />
         <arg name="model_file" value="$(arg front_model_file)" />
         <arg name="label_file" value="$(arg front_label_file)" />
-        <arg name="interval" value="10" />
+        <arg name="interval" value="50" />
     </include>
 
     <!-- Run the bottom camera detection simulator -->
-    <!-- <include file="$(find faux_detection)/launch/faux_detector.launch" ns="bottom_cam">
+    <include file="$(find faux_detection)/launch/faux_detector.launch" ns="bottom_cam">
         <arg name="detection_topic" value="$(arg bottom_detection_topic)" />
         <arg name="image_topic" value="$(arg bottom_image_topic)" />
         <arg name="model_file" value="$(arg bottom_model_file)" />
         <arg name="label_file" value="$(arg bottom_label_file)" />
         <arg name="interval" value="100" />
-    </include> -->
+    </include>
 
 
     <!-- Launch SMACH node -->

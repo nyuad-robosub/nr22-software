@@ -187,7 +187,7 @@ class movement_controller():
             for i in range(10):
                 if self.wasRunning != self.isRunning:
                     break
-                rospy.sleep(0.002)
+                rospy.sleep(0.005)
             if self.wasRunning == self.isRunning:
                 # No change
                 return self.wasRunning

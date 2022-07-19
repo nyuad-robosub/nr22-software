@@ -13,6 +13,12 @@
     <arg name="goal_rotation_topic" default ="controller/goalRotation" />
     <arg name="isrunning_topic" default ="controller/isRunning" />
 
+    <!-- Sonar ping args -->
+	<arg name="sonar_ping_topic" default="sonar_ping" />
+	<arg name="altitude_topic" default="altitude" />
+	<arg name="pool_depth" default="3.1" />
+	<arg name="ema_alpha" default="0.3" />
+
     <!-- Launch simulation -->
     <arg name="paused" default="false"/>
     <arg name="gui" default="false"/>
@@ -39,6 +45,14 @@
         <arg name="goal_rotation_topic" value="$(arg goal_rotation_topic)" />
         <arg name="run_topic" value="$(arg isrunning_topic)" />
     </include>
+
+    <!-- Launch fake sonar_ping -->
+    <include file="$(find sonar_ping)/launch/fake_ping.launch">
+        <arg name="sonar_ping_topic" default="$(arg sonar_ping_topic)" />
+        <arg name="altitude_topic" default="$(arg altitude_topic)" />
+        <arg name="pool_depth" default="$(arg pool_depth)" />
+        <arg name="ema_alpha" default="$(arg ema_alpha)" />
+    <include/>
 
     <!-- Front Camera -->
     <!-- <arg name="front_camera_topic" default=""/> -->

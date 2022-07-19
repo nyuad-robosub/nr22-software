@@ -1,0 +1,7 @@
+path: /home/nyuad/Desktop/yolo-testing/datasets/blender_2  # dataset root dir
+train: /home/nyuad/Desktop/yolo-testing/datasets/blender_2/train  # train images (relative to 'path') 128 images
+val: /home/nyuad/Desktop/yolo-testing/datasets/blender_2/valid  # val images (relative to 'path') 128 images
+test: /home/nyuad/Desktop/yolo-testing/datasets/blender_2/test # test images (optional)
+
+nc: 9
+names: ['bin_empty', 'handle', 'image_badge', 'image_bootlegger', 'image_gman', 'image_tommygun', 'lid_empty', 'marker', 'qual_gate']

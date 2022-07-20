@@ -87,7 +87,7 @@ class camera():
     def get_center_coord(self):
         return [self.width/2,self.height/2]
 
-    def get_detection(self, array_of_labels=[]): #np array of labels passed, returns dictionary of detections for those id's
+    def get_detection(self, array_of_labels = [], confidence_threshold = 0.1): #np array of labels passed, returns dictionary of detections for those id's
         # if(self.is_fetched): # Might not need this if want to get again
         detections = []
         self.mutex.acquire()
@@ -95,27 +95,29 @@ class camera():
             req_ids = [self.get_id_from_label(x) for x in array_of_labels]
             for det in self.viso_detect.detections:
                 if det.results[0].id in req_ids:
-                    detections.append({
-                        'id': det.results[0].id,                            # ID
-                        'score': det.results[0].score,                      # Confidence / score
-                        'center': (det.bbox.center.x, det.bbox.center.y),   # Center, tuple (x, y)
-                        'size': (det.bbox.size_x, det.bbox.size_y),         # Size, tuple (x, y)
-                        'label': self.get_label_from_id(det.results[0].id), # Label string
-                        'time': self.viso_detect.header.stamp               # Time, rospy.Time
-                    })
+                    if det.results[0].score > confidence_threshold:
+                        detections.append({
+                            'id': det.results[0].id,                            # ID
+                            'score': det.results[0].score,                      # Confidence / score
+                            'center': (det.bbox.center.x, det.bbox.center.y),   # Center, tuple (x, y)
+                            'size': (det.bbox.size_x, det.bbox.size_y),         # Size, tuple (x, y)
+                            'label': self.get_label_from_id(det.results[0].id), # Label string
+                            'time': self.viso_detect.header.stamp               # Time, rospy.Time
+                        })
             self.is_fetched=False
         else:
             if(len(self.viso_detect.detections)>0):
                 for det in self.viso_detect.detections:
-                    detections.append({
-                        'id': det.results[0].id,                            # ID
-                        'score': det.results[0].score,                      # Confidence / score
-                        'center': (det.bbox.center.x, det.bbox.center.y),   # Center, tuple (x, y)
-                        'size': (det.bbox.size_x, det.bbox.size_y),         # Size, tuple (x, y)
-                        'label': self.get_label_from_id(det.results[0].id), # Label string
-                        'time': self.viso_detect.header.stamp               # Time, rospy.Time
-                    })
-            #self.is_fetched=False
+                    if det.results[0].score > confidence_threshold:
+                        detections.append({
+                            'id': det.results[0].id,                            # ID
+                            'score': det.results[0].score,                      # Confidence / score
+                            'center': (det.bbox.center.x, det.bbox.center.y),   # Center, tuple (x, y)
+                            'size': (det.bbox.size_x, det.bbox.size_y),         # Size, tuple (x, y)
+                            'label': self.get_label_from_id(det.results[0].id), # Label string
+                            'time': self.viso_detect.header.stamp               # Time, rospy.Time
+                        })
+            self.is_fetched=False
         self.mutex.release()
         
         return detections
@@ -204,6 +206,8 @@ class stereo(camera, object):
                 ll_vertex=(int(det['center'][0]-det['size'][0]/2),int(det['center'][1]-det['size'][1]/2))
                 rr_vertex=(int(det['center'][0]+det['size'][0]/2),int(det['center'][1]+det['size'][1]/2))
                 cv2.rectangle(labeled_cv_image, ll_vertex, rr_vertex,(0,255,0), 3)
+                cv2.putText(labeled_cv_image, str(det['score']) , rr_vertex,
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,255,255), 1)
             self.labeled_img_pub.publish(self.bridge.cv2_to_imgmsg(labeled_cv_image))
         except CvBridgeError as e:
             print(e)
@@ -242,7 +246,8 @@ class stereo(camera, object):
             skip_nans=True, uvs=points_region.tolist() # [[u,v], [u,v], [u,v]] a set of xy coords
         ))
         self.pointcloud_mutex.release()
-        if(len(points) < 10):
+        print(points)
+        if(len(points) < 5):
             return None
     
         # [[1,2,3],[,,], ..., dt]

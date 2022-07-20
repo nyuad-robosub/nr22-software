@@ -164,7 +164,9 @@ catkin_install_python(PROGRAMS
   #states
   scripts/states/coin_flip.py
   scripts/states/check_submerged.py
-  
+  scripts/states/marker.py
+
+  scripts/color_normalization.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

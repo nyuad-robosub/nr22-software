@@ -51,8 +51,8 @@ class bouy(smach.State):
                 detection_o=mc.mov_control.await_completion_detection(["image_tommygun"])
 
             #get pose of object of interest
-            pose_obji = vs.front_camera.estimate_pose_svd(detection_i[0]['center'],detection_i[0]['size'])
-            pose_objo = vs.front_camera.estimate_pose_svd(detection_o[0]['center'],detection_o[0]['size'])
+            pose_obji = (vs.front_camera.estimate_pose_svd(detection_i[0]['center'],detection_i[0]['size'])).pose
+            pose_objo = (vs.front_camera.estimate_pose_svd(detection_o[0]['center'],detection_o[0]['size'])).pose
 
             #align camera with detection
             position_i=[pose_obji.position.x,pose_obji.position.y,pose_obji.position.z]

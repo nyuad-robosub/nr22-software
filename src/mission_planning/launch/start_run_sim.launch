@@ -124,6 +124,7 @@
         <param name="bottom_camera_frame" value="$(arg bottom_camera_frame)" />
         
         <param name="front_detection_topic" value="$(arg front_detection_topic)" />
+        <param name="front_camera_topic" value="$(arg front_camera_topic)"/>
         <param name="front_camera_width" value="$(arg front_camera_width)"/>
         <param name="front_camera_height" value="$(arg front_camera_height)"/>
         <param name="front_camera_HFOV" value="$(arg front_camera_HFOV)"/>

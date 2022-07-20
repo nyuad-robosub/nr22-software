@@ -137,8 +137,10 @@ def forward_search(mov_control,                             # Movement controlle
     # Check if can start the mission right now
     mov_control.update_tf()
     translation = mov_control.trans.transform.translation
-    primer_needed = False
-    target_point = Point()
+
+    # Check angle proximity
+    primer_needed = not np.isclose(mov_control.euler[2], direction, atol=0.01)
+    target_point = Point(origin_point.x, origin_point.y, origin_point.z)
 
     # Check if point is near starting point on horizontal plane
     if not np.allclose([translation.x, translation.y], [origin_point.x, origin_point.y], atol=0.15):
@@ -178,6 +180,61 @@ def forward_search(mov_control,                             # Movement controlle
     
     # Start real search
     mov_control.go_straight(100)
+    rospy.sleep(0.1)
+    outcome = search_waiter(mov_control, detection_camera, detection_labels, detection_count,
+                            min_score_thresh, min_area_norm, detections_dict, end_time, wait_function)
+    return outcome, detections_dict
+
+# Circular search
+def circular_search(mov_control,                            # Movement controller                   | mc.movement_controller
+                    origin_point,                           # Center of search circle               | geometry_msgs.msg.Point
+                    radius,                                 # Radius of search circle               | float
+                    segment_count,                          # Circle subdivisions count             | int
+                    direction,                              # Yaw angle of line                     | float
+                    timeout,                                # Timeout duration                      | float
+                    detection_camera,                       # Camera object for detection           | vs.viso_controller
+                    detection_labels,                       # Labels of objects                     | list of strings
+                    detection_count,                        # Number of detections acceptable       | int
+                    min_score_thresh,                       # Minimum confidence                    | float
+                    min_area_norm,                          # Minimum area of bounding box          | float
+                    wait_function = None):                  # Wait function to run                  | boolean function
+
+    # Get dictionary of detections courtesy of: Rami
+    detections_dict = {}
+    for label in detection_labels:
+        detections_dict[label] = []    
+    if len(detection_labels) == 0:
+        return detections_dict
+
+    # Get end time
+    end_time = rospy.get_time() + timeout
+    # Check if can start the mission right now
+    mov_control.update_tf()
+    translation = mov_control.trans.transform.translation
+
+    # Check angle proximity
+    if not np.isclose(mov_control.euler[2], direction, atol=0.01) or not np.isclose(translation.z, origin_point.z, atol=0.1):
+        # Rotate to direction
+        outcome = primer_search(mov_control, Point(translation.x, translation.y, translation.z), direction, detection_camera,
+                                detection_labels, detection_count, min_score_thresh, min_area_norm, detections_dict, end_time, wait_function)
+        if outcome != "notfound": return outcome, detections_dict  
+    
+    # Set focus point
+    mov_control.set_focus_point()
+
+    # Create circular path
+    points = []
+    yaw_base = direction if np.allclose([translation.x, translation.y], [origin_point.x, origin_point.y]) else \
+               math.atan2(translation.y - origin_point.y, translation.x - origin_point.x)
+    for i in range(segment_count):
+        points.append(Point(
+            origin_point.x + radius * math.cos(yaw_base + i * 2 * math.pi / segment_count),
+            origin_point.y + radius * math.sin(yaw_base + i * 2 * math.pi / segment_count),
+            origin_point.z
+        ))
+    
+    # Start real search
+    mov_control.set_goal_points(points)
     rospy.sleep(0.1)
     outcome = search_waiter(mov_control, detection_camera, detection_labels, detection_count,
                             min_score_thresh, min_area_norm, detections_dict, end_time, wait_function)

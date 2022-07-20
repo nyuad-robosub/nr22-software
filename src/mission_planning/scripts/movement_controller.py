@@ -8,7 +8,7 @@ import math
 import numpy as np
 import tf2_ros
 import geometry_msgs.msg
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, Float32
 from transforms3d import euler, quaternions
 from datetime import datetime
 import viso_controller as vs
@@ -40,6 +40,7 @@ class movement_controller():
         self.tfBuffer = tf2_ros.Buffer()
         self.listener = tf2_ros.TransformListener(self.tfBuffer)
 
+        # Controls publisher
         self.goal_publisher = rospy.Publisher(goal_topic, geometry_msgs.msg.PointStamped, queue_size=5)
         self.goal_array_publisher = rospy.Publisher('controller/goalPath', visualization_msgs.msg.Marker, queue_size=1, latch=True)
         self.focus_publisher = rospy.Publisher('controller/focusPoint', geometry_msgs.msg.PointStamped, queue_size=1, latch=True)
@@ -47,7 +48,9 @@ class movement_controller():
         self.running_publisher = rospy.Publisher('controller/isRunning', Bool, queue_size=1, latch=True)
         self.running_subscriber = rospy.Subscriber(isRunning_topic, Bool, self.running_callback)
         self.arm_publisher = rospy.Publisher('controller/isArmed', Bool, queue_size=1, latch=True)
-        
+
+        # Sonar ping subscriber
+        self.sonar_ping_subscriber = rospy.Subscriber('sonar_ping', Float32, self.sonar_ping_callback)
 
         # Have two flags to keep track of the past
         self.wasRunning = False
@@ -394,7 +397,9 @@ class movement_controller():
 
     def set_precision_mode():
         pass
-
+    
+    def sonar_ping_callback(self, ping):
+        self.sonar_ping = ping.data
 
 # Global variable courtesy of:
 # https://stackoverflow.com/a/13034908

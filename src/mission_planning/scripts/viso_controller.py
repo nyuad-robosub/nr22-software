@@ -41,11 +41,11 @@ class camera():
         self.aspect_ratio = self.width/self.height
         self.Hfov=math.radians(rospy.get_param('~'+cam_enum.value+'_camera_HFOV'))
         self.detection_topic=rospy.get_param('~'+cam_enum.value+'_detection_topic')
-
-        if(cam_enum.value=="front"):
-            self.sub_topic=None
-        else:
-            self.sub_topic=rospy.get_param('~'+cam_enum.value+'_camera_topic')
+        self.sub_topic=rospy.get_param('~'+cam_enum.value+'_camera_topic')
+        # if(cam_enum.value=="front"):
+        #     self.sub_topic=rospy.get_param('~'+cam_enum.value+'_camera_topic')
+        # else:
+        #     self.sub_topic=rospy.get_param('~'+cam_enum.value+'_camera_topic')
         
     def __init__(self,cam_enum):
         self.set_params_general(cam_enum)
@@ -64,6 +64,13 @@ class camera():
         self.tfBuffer = tf2_ros.Buffer()
         self.listener = tf2_ros.TransformListener(self.tfBuffer)
 
+        #Opencv manip to get bbox visualizations 
+        self.cv_image=None
+        self.bridge = CvBridge()
+
+        self.image_mutex=threading.Lock()
+        self.image_sub=message_filters.Subscriber(self.sub_topic, Image)
+
     #TESTED
     def get_angles(self,pixel_x,pixel_y):
         #Input: pixel coordinates
@@ -80,25 +87,38 @@ class camera():
     def get_center_coord(self):
         return [self.width/2,self.height/2]
 
-    def get_detection(self, array_of_labels): #np array of labels passed, returns dictionary of detections for those id's
+    def get_detection(self, array_of_labels=[]): #np array of labels passed, returns dictionary of detections for those id's
         # if(self.is_fetched): # Might not need this if want to get again
-            detections = []
-            if len(array_of_labels) > 0:
-                self.mutex.acquire()
-                req_ids = [self.get_id_from_label(x) for x in array_of_labels]
+        detections = []
+        self.mutex.acquire()
+        if len(array_of_labels) > 0: 
+            req_ids = [self.get_id_from_label(x) for x in array_of_labels]
+            for det in self.viso_detect.detections:
+                if det.results[0].id in req_ids:
+                    detections.append({
+                        'id': det.results[0].id,                            # ID
+                        'score': det.results[0].score,                      # Confidence / score
+                        'center': (det.bbox.center.x, det.bbox.center.y),   # Center, tuple (x, y)
+                        'size': (det.bbox.size_x, det.bbox.size_y),         # Size, tuple (x, y)
+                        'label': self.get_label_from_id(det.results[0].id), # Label string
+                        'time': self.viso_detect.header.stamp               # Time, rospy.Time
+                    })
+            self.is_fetched=False
+        else:
+            if(len(self.viso_detect.detections)>0):
                 for det in self.viso_detect.detections:
-                    if det.results[0].id in req_ids:
-                        detections.append({
-                            'id': det.results[0].id,                            # ID
-                            'score': det.results[0].score,                      # Confidence / score
-                            'center': (det.bbox.center.x, det.bbox.center.y),   # Center, tuple (x, y)
-                            'size': (det.bbox.size_x, det.bbox.size_y),         # Size, tuple (x, y)
-                            'label': self.get_label_from_id(det.results[0].id), # Label string
-                            'time': self.viso_detect.header.stamp               # Time, rospy.Time
-                        })
-                self.is_fetched=False
-                self.mutex.release()
-            return detections
+                    detections.append({
+                        'id': det.results[0].id,                            # ID
+                        'score': det.results[0].score,                      # Confidence / score
+                        'center': (det.bbox.center.x, det.bbox.center.y),   # Center, tuple (x, y)
+                        'size': (det.bbox.size_x, det.bbox.size_y),         # Size, tuple (x, y)
+                        'label': self.get_label_from_id(det.results[0].id), # Label string
+                        'time': self.viso_detect.header.stamp               # Time, rospy.Time
+                    })
+            #self.is_fetched=False
+        self.mutex.release()
+        
+        return detections
     def update_tf(self, timeout=5):
         """Function to update stored tf of camera
         :param timeout: How much time in seconds lookup should wait for"""
@@ -122,115 +142,6 @@ class camera():
     def get_label_from_id(self, id):
         return self.label_to_id.keys()[self.label_to_id.values().index(id)]
 
-class stereo(camera, object):
-    def set_params(self):
-
-        self.camera_frame = rospy.get_param('~front_camera_frame')
-
-        self.pcl_topic = rospy.get_param('~pcl_topic')
-
-    def __init__(self):
-        super(stereo,self).__init__(camera_type.FRONT)
-        self.set_params()
-        self.pcl_sub= message_filters.Subscriber(self.pcl_topic, PointCloud2)
-
-        ts = message_filters.ApproximateTimeSynchronizer([self.detection_sub, self.pcl_sub], 3,slop=0.2)
-        ts.registerCallback(self.detection_callback)
-
-        self.pointcloud=PointCloud2()
-        self.pointcloud_mutex=threading.Lock()
-    
-    def detection_callback(self, viso_detect,pointcloud):
-
-        self.mutex.acquire()
-        self.viso_detect = viso_detect
-        # Only set true when something is detected, to save energy
-        if len(list(self.viso_detect.detections)) > 0:
-            self.is_fetched=True
-            self.last_detection_time = rospy.get_time()
-        self.mutex.release()
-
-        self.pointcloud_mutex.acquire()
-        self.pointcloud=pointcloud
-        self.pointcloud_mutex.release()
-
-    def estimate_pose_svd(self, center, size): # Estimate pose of flat thing with SVD
-        # Get points from pcl courtesy of:
-        # http://docs.ros.org/en/jade/api/sensor_msgs/html/point__cloud2_8py_source.html
-        # https://answers.ros.org/question/240491/point_cloud2read_points-and-then/
-        pose_time = self.pointcloud.header.stamp
-        points_region = np.mgrid[
-            math.ceil(center[0] - size[0] * 0.5):math.floor(center[0] + size[0] * 0.5),
-            math.ceil(center[1] - size[1] * 0.5):math.floor(center[1] + size[1] * 0.5)].reshape(2,-1).T.astype(int)
-        self.pointcloud_mutex.acquire()
-        points = np.array(list(pc2.read_points(
-            self.pointcloud,
-            field_names={'x', 'y', 'z'},
-            skip_nans=True, uvs=points_region.tolist() # [u,v u,v u,v] a set of xy coords
-        )))
-        self.pointcloud_mutex.release()
-        # [[1,2,3],[,,], ..., dt]
-
-        # Approx. plane normal courtesy of:
-        # https://math.stackexchange.com/a/99317
-        centroid_cam = np.mean(points, axis=1, keepdims=True)
-        svd = np.linalg.svd(points - centroid_cam) # [:,-1]
-        left = svd[0]
-        normal_cam = left[:, -1] #normal direction vector relative to object plane
-
-        # Transform to world frame
-        self.update_tf()
-        centroid_world = tfgmtfgm.do_transform_point(centroid_cam, self.trans)
-        normal_world = tfgmtfgm.do_transform_vector3(normal_cam, self.trans)
-
-        # Assume uprightness
-        pose_yaw =  math.atan2(normal_world.vector.y, normal_world.vector.x)
-        q = euler.euler2quat(0, 0, pose_yaw, 'sxyz')
-        pose_msg = PoseStamped()
-        pose_msg.header.stamp = pose_time
-        pose_msg.header.frame_id = self.world_frame
-        pose_msg.position = centroid_world
-        pose_msg.orientation = Quaternion(w=q[0], x=q[1], y=q[2], z=q[3])
-        return pose_msg
-
-class mono(camera, object):
-    def set_params(self):
-
-        self.camera_frame = rospy.get_param('~bottom_camera_frame')
-
-        self.pcl_topic = rospy.get_param('~pcl_topic')
-
-    def __init__(self):
-        super(mono,self).__init__(camera_type.BOTTOM)
-        self.set_params()
-
-        self.image_mutex=threading.Lock()
-        self.image_sub=message_filters.Subscriber(self.sub_topic, Image)
-        self.cv_image=None
-        self.bridge = CvBridge()
-        
-        ts = message_filters.ApproximateTimeSynchronizer([self.detection_sub,self.image_sub], 3,slop=0.2)
-        ts.registerCallback(self.detection_callback)
-    
-    def detection_callback(self, viso_detect,image):
-        self.mutex.acquire()
-        self.viso_detect = viso_detect
-        # Only set true when something is detected, to save energy
-        if len(list(self.viso_detect.detections)) > 0:
-            self.is_fetched=True
-            self.last_detection_time = rospy.get_time()
-        self.mutex.release()
-
-        self.image_callback(image)
-    
-    def image_callback(self,data):
-        self.image_mutex.acquire()
-        try:
-            self.cv_image = cv2.resize(self.bridge.imgmsg_to_cv2(data, desired_encoding='bgr8'),(150,150))
-        except CvBridgeError as e:
-            print(e)
-        self.image_mutex.release()
-
     def get_cv_img(self):
         self.image_mutex.acquire()
         print("GETTING CV IMAGE")
@@ -247,6 +158,154 @@ class mono(camera, object):
             print(e)
         self.image_mutex.release()
         return img
+
+class stereo(camera, object):
+    def set_params(self):
+
+        self.camera_frame = rospy.get_param('~front_camera_frame')
+
+        self.pcl_topic = rospy.get_param('~pcl_topic')
+
+    def __init__(self):
+        super(stereo,self).__init__(camera_type.FRONT)
+        self.set_params()
+        self.pcl_sub= message_filters.Subscriber(self.pcl_topic, PointCloud2)
+
+        ts = message_filters.ApproximateTimeSynchronizer([self.detection_sub, self.pcl_sub, self.image_sub], 3,slop=0.2)
+        ts.registerCallback(self.detection_callback)
+
+        self.labeled_img_pub = rospy.Publisher("/LABELED_IMAGE_STREAM", Image, latch=True, queue_size=10)
+
+        self.pointcloud=PointCloud2()
+        self.pointcloud_mutex=threading.Lock()
+    
+    def detection_callback(self, viso_detect,pointcloud,image):
+        self.mutex.acquire()
+        self.viso_detect = viso_detect
+
+        # Only set true when something is detected, to save energy
+        if len(list(self.viso_detect.detections)) > 0:
+            self.is_fetched=True
+            self.last_detection_time = rospy.get_time()
+        self.mutex.release() 
+
+        self.pointcloud_mutex.acquire()
+        self.pointcloud=pointcloud
+        self.pointcloud_mutex.release()
+
+        self.image_callback(image)
+    
+    def image_callback(self,data):
+        self.image_mutex.acquire()
+        try:
+            #get detections 
+            labeled_cv_image=cv2.resize(self.bridge.imgmsg_to_cv2(data, desired_encoding='bgr8'),(640,400))
+            for det in self.get_detection():
+                ll_vertex=(int(det['center'][0]-det['size'][0]/2),int(det['center'][1]-det['size'][1]/2))
+                rr_vertex=(int(det['center'][0]+det['size'][0]/2),int(det['center'][1]+det['size'][1]/2))
+                cv2.rectangle(labeled_cv_image, ll_vertex, rr_vertex,(0,255,0), 3)
+            self.labeled_img_pub.publish(self.bridge.cv2_to_imgmsg(labeled_cv_image))
+        except CvBridgeError as e:
+            print(e)
+        self.image_mutex.release()
+    def __np_to_ps(self,np_arr):
+        ps = PointStamped()
+        ps.point.x=np_arr[0]
+        ps.point.y=np_arr[1]
+        ps.point.z=np_arr[2]
+        return ps
+    def __np_to_vector(self,np_arr):
+        vc= Vector3Stamped()
+        vc.vector.x=np_arr[0]
+        vc.vector.y=np_arr[1]
+        vc.vector.z=np_arr[2]
+        return vc
+
+    def estimate_pose_svd(self, center, size): # Estimate pose of flat thing with SVD
+        # Get points from pcl courtesy of:
+        # http://docs.ros.org/en/jade/api/sensor_msgs/html/point__cloud2_8py_source.html
+        # https://answers.ros.org/question/240491/point_cloud2read_points-and-then/
+        pose_time = self.pointcloud.header.stamp
+        points_region = np.mgrid[
+            math.ceil(center[0] - size[0] * 0.5):math.floor(center[0] + size[0] * 0.5),
+            math.ceil(center[1] - size[1] * 0.5):math.floor(center[1] + size[1] * 0.5)].reshape(2,-1).T.astype(int)
+        self.pointcloud_mutex.acquire()
+
+        # print(center)
+        # print(self.pointcloud.width)
+        # print(self.pointcloud.height)
+        # print(self.pointcloud.row_step)
+        # print(self.pointcloud.point_step)
+        points = list(pc2.read_points(
+            self.pointcloud,
+            field_names={'x', 'y', 'z'},
+            skip_nans=True, uvs=points_region.tolist() # [[u,v], [u,v], [u,v]] a set of xy coords
+        ))
+        self.pointcloud_mutex.release()
+        if(len(points) < 10):
+            return None
+    
+        # [[1,2,3],[,,], ..., dt]
+
+        # Approx. plane normal courtesy of:
+        # https://math.stackexchange.com/a/99317
+        centroid_cam = np.mean(points, axis=1, keepdims=True)
+        centroid_cam_ps=self.__np_to_ps(centroid_cam)
+
+        svd = np.linalg.svd(points - centroid_cam) # [:,-1]
+        left = svd[0]
+        normal_cam = left[:, -1] #normal direction vector relative to object plane
+        normal_cam_vc=self.__np_to_vector(normal_cam)
+
+        # Transform to world frame
+        self.update_tf()
+
+        centroid_world = tfgmtfgm.do_transform_point(centroid_cam_ps, self.trans)
+        normal_world = tfgmtfgm.do_transform_vector3(normal_cam_vc, self.trans)
+
+        # Assume uprightness
+        pose_yaw =  math.atan2(normal_world.vector.y, normal_world.vector.x)
+        q = euler.euler2quat(0, 0, pose_yaw, 'sxyz')
+        pose_msg = PoseStamped()
+        pose_msg.header.stamp = pose_time
+        pose_msg.header.frame_id = self.world_frame
+        pose_msg.pose.position = centroid_world.point
+        pose_msg.pose.orientation = Quaternion(w=q[0], x=q[1], y=q[2], z=q[3])
+        return pose_msg
+
+class mono(camera, object):
+    def set_params(self):
+
+        self.camera_frame = rospy.get_param('~bottom_camera_frame')
+
+        self.pcl_topic = rospy.get_param('~pcl_topic')
+
+    def __init__(self):
+        super(mono,self).__init__(camera_type.BOTTOM)
+        self.set_params()
+        
+        ts = message_filters.ApproximateTimeSynchronizer([self.detection_sub,self.image_sub], 3,slop=0.2)
+        ts.registerCallback(self.detection_callback)
+    
+    def detection_callback(self, viso_detect,image):
+        self.mutex.acquire()
+        self.viso_detect = viso_detect
+        # Only set true when something is detected, to save energy
+        if len(list(self.viso_detect.detections)) > 0:
+            self.is_fetched=True
+            self.last_detection_time = rospy.get_time()
+        self.mutex.release()
+
+        self.image_callback(image)
+
+    def image_callback(self,data):
+        self.image_mutex.acquire()
+        try:
+            self.cv_image = cv2.resize(self.bridge.imgmsg_to_cv2(data, desired_encoding='bgr8'),(150,150))
+        except CvBridgeError as e:
+            print(e)
+        self.image_mutex.release()
+    
 
 # class viso_controller():
     

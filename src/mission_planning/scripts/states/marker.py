@@ -99,7 +99,7 @@ class marker(smach.State):
         #input: detection()
         #if the detection bbox is close to center STOP
 
-        if(np.allclose(detection['center'],vs.bottom_camera.OAK_1.get_center_coord(),0.05)):
+        if(np.allclose(detection[0]['center'],vs.bottom_camera.OAK_1.get_center_coord(),0.05)):
             mc.mov_control.stop()
             return True
         else:

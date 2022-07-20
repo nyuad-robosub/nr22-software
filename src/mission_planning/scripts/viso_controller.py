@@ -196,7 +196,7 @@ class stereo(camera, object):
 class mono(camera, object):
     def set_params(self):
 
-        #self.camera_frame = rospy.get_param('~bottom_camera_frame')
+        self.camera_frame = rospy.get_param('~bottom_camera_frame')
 
         self.pcl_topic = rospy.get_param('~pcl_topic')
 

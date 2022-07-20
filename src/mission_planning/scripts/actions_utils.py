@@ -1,7 +1,7 @@
 """ General actions utils file """
 # import viso_controller as vs
 # import movement_controller as mc
-from geometry_msgs.msg import Point, Vector3
+from geometry_msgs.msg import Point, Vector3, Vector3Stamped
 import tf2_geometry_msgs.tf2_geometry_msgs as tfgmtfgm
 import math
 import numpy as np
@@ -285,7 +285,7 @@ def get_downwards_object_position():
 #       + "failed": failed to move the center                           | process-ending outcome
 #       + "succeeded": succeeded to move the center                     | process-ending outcome
 def bottom_aligning(mov_control,                            # Movement controller                   | mc.movement_controller
-                    goal,                                   # Where to move the 3Dcenter of bbox to | geometry_msgs.msg.Point !! z will be ignored, will use current ROV z !!
+                    # goal,                                   # Where to move the 3Dcenter of bbox to | geometry_msgs.msg.Point !! z will be ignored, will use current ROV z !!
                     tolerance,                              # Center proximity tolerance (norm)     | float
                     timeout,                                # Timeout duration                      | float
                     detection_camera,                       # Camera object for detection           | vs.viso_controller
@@ -305,7 +305,7 @@ def bottom_aligning(mov_control,                            # Movement controlle
     mov_control.stop()
     rospy.sleep(2) # Wait a bit for stabilization
     # Get a detection of the object
-    outcome = search_waiter(mov_control, detection_camera, [detection_label], 1, min_score_thresh, 
+    outcome = search_waiter(mov_control, detection_camera, [detection_label], 2, min_score_thresh, 
                             min_area_norm, detections_dict, end_time, lambda: True, wait_function)
     if outcome != "detected": return outcome, None
     
@@ -314,46 +314,52 @@ def bottom_aligning(mov_control,                            # Movement controlle
     detection_camera.update_tf()
     translation = mov_control.trans.transform.translation
     cam_translation = detection_camera.trans.transform.translation
+    initial_depth = translation.z
 
     # Get vector from camera to bbox center
     center = detections_dict[detection_label][-1]['center']
     angle_x, angle_y = detection_camera.get_angles(center[0], center[1])
-    center_vec_cam = Vector3(math.tan(angle_x), math.tan(angle_y), -1)
+    center_vec_cam = Vector3Stamped(vector=Vector3(math.tan(angle_x), math.tan(angle_y), 1))
     center_vec_world = tfgmtfgm.do_transform_vector3(center_vec_cam, detection_camera.trans)
-    length = np.linalg.norm([center_vec_world.vector.x, center_vec_world.vector.y, center_vec_world.vector.z])
 
     # Presume pool to be flat at small region
     delt_z = translation.z - mov_control.sonar_ping - cam_translation.z
-    delt_x = delt_z * center_vec_world.vector.x / length
-    delt_y = delt_z * center_vec_world.vector.y / length
+    delt_x = delt_z * center_vec_world.vector.x / center_vec_world.vector.z
+    delt_y = delt_z * center_vec_world.vector.y / center_vec_world.vector.z
     position = ema_point(Point(cam_translation.x + delt_x,
                                cam_translation.y + delt_y,
-                               cam_translation.z + delt_z), 0.5)
+                               cam_translation.z + delt_z), 0.95)
+    
+    print(detections_dict)
+    print("Found object %s at (%f, %f, %f)" %
+        (detection_label, position.value().x, position.value().y, position.value().z))
 
     # Move the robot
     mov_control.set_focus_point()
-    mov_control.set_goal_point((position.value().x, position.value().y, translation.z))
+    mov_control.set_goal_point((position.value().x, position.value().y, initial_depth))
 
     # Loop until arrived at the postion
-    while not np.allclose([position.value().x, position.value().y], [goal.x, goal.y], atol=tolerance):
+    while not np.allclose(center, detection_camera.get_center_coord(), rtol=tolerance):
         while mov_control.get_running_confirmation():
             # Run wait_function if exists
             if wait_function is not None:
                 if not wait_function():
                     mov_control.stop()
-                    return "preempted"
+                    return "preempted", position.value()
 
             # Return if time is finished
             if rospy.get_time() > end_time:
                 mov_control.stop()
-                return "timeout"
+                return "timeout", position.value()
 
         # Wait a bit for stabilization
         rospy.sleep(2) 
         # Get a detection of the object
-        outcome = search_waiter(mov_control, detection_camera, [detection_label], 1, min_score_thresh, 
+        detections_dict = {}
+        detections_dict[detection_label] = []
+        outcome = search_waiter(mov_control, detection_camera, [detection_label], 2, min_score_thresh, 
                                 min_area_norm, detections_dict, end_time, lambda: True, wait_function)
-        if outcome != "detected": return outcome, None
+        if outcome != "detected": return outcome, position.value()
         
         # Get relevant tfs
         mov_control.update_tf()
@@ -364,27 +370,37 @@ def bottom_aligning(mov_control,                            # Movement controlle
         # Get vector from camera to bbox center
         center = detections_dict[detection_label][-1]['center']
         angle_x, angle_y = detection_camera.get_angles(center[0], center[1])
-        center_vec_cam = Vector3(math.tan(angle_x), math.tan(angle_y), -1)
+        center_vec_cam = Vector3Stamped(vector=Vector3(math.tan(angle_x), math.tan(angle_y), 1))
         center_vec_world = tfgmtfgm.do_transform_vector3(center_vec_cam, detection_camera.trans)
-        length = np.linalg.norm([center_vec_world.vector.x, center_vec_world.vector.y, center_vec_world.vector.z])
+        print(detections_dict)
+        print(angle_x, angle_y)
+        print(center_vec_world.vector)
+        print(cam_translation)
+        print("Found object %s at (%f, %f, %f)" %
+            (detection_label, position.value().x, position.value().y, position.value().z))
 
         # Presume pool to be flat at small region
         delt_z = translation.z - mov_control.sonar_ping - cam_translation.z
-        delt_x = delt_z * center_vec_world.vector.x / length
-        delt_y = delt_z * center_vec_world.vector.y / length
-        position.update(Point(cam_translation.x, cam_translation.y, cam_translation.z), 0.5)
+        delt_x = delt_z * center_vec_world.vector.x / center_vec_world.vector.z
+        delt_y = delt_z * center_vec_world.vector.y / center_vec_world.vector.z
+        position.update(Point(cam_translation.x + delt_x,
+                              cam_translation.y + delt_y,
+                              cam_translation.z + delt_z))
 
         # Move the robot
         mov_control.set_focus_point()
-        mov_control.set_goal_point((position.value().x, position.value().y, translation.z))
+        mov_control.set_goal_point((position.value().x, position.value().y, initial_depth))
 
         # Run wait_function if exists
         if wait_function is not None:
             if not wait_function():
                 mov_control.stop()
-                return "preempted"
+                return "preempted", position.value()
 
         # Return if time is finished
         if rospy.get_time() > end_time:
             mov_control.stop()
-            return "timeout"
+            return "timeout", position.value()
+    
+    # Successful return
+    return "succeeded", position.value()

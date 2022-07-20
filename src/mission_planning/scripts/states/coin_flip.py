@@ -14,12 +14,7 @@ import geometry_msgs.msg
 import math
 from transforms3d import euler
 import vision_msgs
-
-def is_approx_equal(x, y, margin=0.1):
-    if abs(x - y) / math.sqrt(x ** 2 + y ** 2) < margin:# (x>(y*(1-margin)) and x<(y*(1+margin))):
-        return True
-    else:
-        return False
+from calc_utils import is_approx_equal
 
 class coin_flip(smach.State):
     _outcomes=['outcome1','outcome2']
@@ -50,16 +45,17 @@ class coin_flip(smach.State):
             # Wait a bit for control to start 
             rospy.sleep(0.1)
             while(mc.mov_control.get_running_confirmation()):
-                # print("RUNNING")
+                print("RUNNING")
                 if vs.front_camera.is_fetched:
-                    detections = vs.front_camera.get_detection(["qual_gate"])
+                    detections = vs.front_camera.get_detection(["qual_gate"],0.1)
                     # rospy.sleep(0.1) # delay already present in get_running_confirmation
-                    if len(detections) > 0 and detections[0]['score']>0.3: # or detect != None:
+                    if len(detections) > 0: 
+                        print(detections)
                         # if(temp_detect!=None):
                         #     detect=temp_detect
 
                         # If area of bounding box too small (< 1/10 area of image): maybe not our gate
-                        if detections[0]['size'][0] * detections[0]['size'][1] < vs.front_camera.height * vs.front_camera.width / 5:
+                        if detections[0]['size'][0] * detections[0]['size'][1] < vs.front_camera.height * vs.front_camera.width / 10:
                             print("Gate too small, ignoring...")
                             continue
                             
@@ -68,6 +64,7 @@ class coin_flip(smach.State):
                             print("DETECTED AND EXISTS")
                             mc.mov_control.stop()
                             rospy.sleep(1)
+
                             center = detections[0]['center']
                             size = detections[0]['size']
                             detected = True
@@ -111,7 +108,7 @@ class coin_flip(smach.State):
 
 
             # Rotate and head thru center of the gate
-            angle_x, angle_y = vs.front_camera.get_angles(center[0], 0) #get angle between center of bbox and image frame
+            angle_x, angle_y = vs.front_camera.get_angles(center[0]+size[0]/2, 0) #get angle between center of bbox and image frame
             rospy.sleep(0.05)
             mc.mov_control.set_rotation(0, 0, yaw - angle_x) #does this work for y
             # Wait a bit for control to start 

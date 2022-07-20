@@ -358,10 +358,12 @@ class movement_controller():
         
         #roll, pitch, yaw = euler.quat2euler([pose_msg.orientation.w, pose_msg.orientation.x, pose_msg.orientation.y, pose_msg.orientation.z], 'sxyz')
         #get position data
-
-        xyz=self.__translate_axis(xyz_pos,yaw,xyz_delta[0],axis_enum.x_axis)
-        xyz=self.__translate_axis(xyz,yaw,xyz_delta[1],axis_enum.y_axis)
-        xyz=self.__translate_axis(xyz,yaw,xyz_delta[2],axis_enum.z_axis)
+        if(xyz_delta[0]!=0):
+            xyz=self.__translate_axis(xyz_pos,yaw,xyz_delta[0],axis_enum.x_axis)
+        if(xyz_delta[1]!=0):
+            xyz=self.__translate_axis(xyz,yaw,xyz_delta[1],axis_enum.y_axis)
+        if(xyz_delta[2]!=0):
+            xyz=self.__translate_axis(xyz,yaw,xyz_delta[2],axis_enum.z_axis)
 
         return xyz
 

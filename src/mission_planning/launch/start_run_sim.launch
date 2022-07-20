@@ -7,6 +7,7 @@
     <arg name="base_frame" default="world" />
 	<arg name="rov_frame" default="base_link" />
 	<arg name="front_camera_frame" default="oakd_link" />
+	<arg name="bottom_camera_frame" default="oak1_link" />
 
     <!-- Controller args -->
     <arg name="goal_topic" default ="controller/goalPoint" />
@@ -120,6 +121,7 @@
         <param name="bottom_camera_width" value="$(arg bottom_camera_width)"/>
         <param name="bottom_camera_height" value="$(arg bottom_camera_height)"/>
         <param name="bottom_camera_HFOV" value="$(arg bottom_camera_HFOV)"/>
+        <param name="bottom_camera_frame" value="$(arg bottom_camera_frame)" />
         
         <param name="front_detection_topic" value="$(arg front_detection_topic)" />
         <param name="front_camera_width" value="$(arg front_camera_width)"/>
@@ -131,5 +133,6 @@
     <!-- Static broadcasters for IMU <-> camera transforms courtesy of:
 	 	http://wiki.ros.org/tf2/Tutorials/Writing%20a%20tf2%20static%20broadcaster%20%28C%2B%2B%29
 		https://www.andre-gaschler.com/rotationconverter/ -->
-	<node pkg="tf2_ros" type="static_transform_publisher" name="cam_imu_broadcaster" args="0.2 0 0 0 0 0 1 $(arg rov_frame) $(arg front_camera_frame)" />
+	<node pkg="tf2_ros" type="static_transform_publisher" name="oakd_imu_broadcaster" args="0.2 0 0.03 0.5 -0.5 0.5 -0.5 $(arg rov_frame) $(arg front_camera_frame)" />
+	<node pkg="tf2_ros" type="static_transform_publisher" name="oak1_imu_broadcaster" args="0.01 0 -0.11 0 0.7071068 -0.7071068 0 $(arg rov_frame) $(arg bottom_camera_frame)" />
 </launch>

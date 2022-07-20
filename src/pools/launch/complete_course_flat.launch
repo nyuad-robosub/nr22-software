@@ -14,16 +14,15 @@
 
   <include file="$(find bluerov2_description)/launch/upload.launch">
     <arg name="use_geodetic" value="false"/>
-    <arg name="x" value="0"/>
-    <arg name="y" value="5"/>
+    <arg name="x" value="-15.290308"/>
+    <arg name="y" value="9.260267"/>
     <arg name="z" value="0"/>
-    <arg name="yaw" value="10.0"/>
+    <arg name="yaw" value="-3.053"/>
   </include>
-
+  
   <node type="rviz" pkg="rviz" name="rviz" args="-d $(find avoid_obstacles)/rviz/view_trajectory.rviz"/>
 
   <include file="$(find uuv_assistants)/launch/publish_world_ned_frame.launch"/>
-  
   <!-- <node name="publish_world_models"
         pkg="uuv_assistants"
         type="publish_world_models.py"

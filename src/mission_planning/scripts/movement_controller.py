@@ -324,10 +324,11 @@ class movement_controller():
             position_data[1]+=math.sin(yaw)*amount
         elif(axis_mode==axis_enum.y_axis):
             position_data[1]+=math.cos(yaw)*amount
-            position_data[0]+=math.sin(yaw)*amount
+            position_data[0]-=math.sin(yaw)*amount
         else:
-            position_data[0]+=amount
-            position_data[1]+=amount
+            position_data[2]+=amount
+
+        return position_data
 
     # def translate_axis_xyz(self,pose_msg,xyz):
     #     #input:
@@ -349,7 +350,7 @@ class movement_controller():
 
     #     return pose_msg
 
-    def translate_axis_xyz(self,xyz,xyz_delta,yaw):
+    def translate_axis_xyz(self,xyz_pos,xyz_delta,yaw):
         #input:
         # pose_msg: Pose
         # xyz: [x,y,z] you want to translate along
@@ -358,7 +359,7 @@ class movement_controller():
         #roll, pitch, yaw = euler.quat2euler([pose_msg.orientation.w, pose_msg.orientation.x, pose_msg.orientation.y, pose_msg.orientation.z], 'sxyz')
         #get position data
 
-        xyz=self.__translate_axis(xyz,yaw,xyz_delta[0],axis_enum.x_axis)
+        xyz=self.__translate_axis(xyz_pos,yaw,xyz_delta[0],axis_enum.x_axis)
         xyz=self.__translate_axis(xyz,yaw,xyz_delta[1],axis_enum.y_axis)
         xyz=self.__translate_axis(xyz,yaw,xyz_delta[2],axis_enum.z_axis)
 

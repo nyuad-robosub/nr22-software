@@ -32,27 +32,33 @@ class pass_gate(smach.State):
         self.label_2=label_2 # "image_gman"
     def save(self,detection): #saving data
         pt.pr_track.progress['pass_gate']['done']=True #better to save automatically based off state machine?
-        pt.pr_track.progress['pass_gate']['chosen_detection']=detection[0]['label']
+        pt.pr_track.progress['pass_gate']['chosen_detection']=detection['label']
 
     def execute(self, userdata):  
-        mc.mov_control.go_straight(5)
+        mc.mov_control.go_straight(3)
         while(mc.mov_control.get_running_confirmation()):#should this be by time? what if it stops
             #check if you detect them BOTH, if you do, estimate gate pose, stop, and set map points
             detections = vs.front_camera.get_detection([self.label_1,self.label_2])
             gate_detection = vs.front_camera.get_detection(["qual_gate"])
-            if len(detections)>1 and len(gate_detection)>1:
+            if len(detections)>0 and len(gate_detection)>0:
+                print("DETECTED GATE+OBJECTS!")
                 if detections[0]['score'] > 0.5:
+                    detection=detections[0]
                     mc.mov_control.stop() #stop the machine and now begin alignment
 
                     #get pose of object
-                    pose_obj = vs.front_camera.estimate_pose_svd(detections[0]['center'],detections[0]['size']) #error
+                    pose_obj = vs.front_camera.estimate_pose_svd(detections[0]['center'],detections[0]['size']).pose
+
+                    #select which detectio nclosest to center and make it detection of interest
                     roll, pitch, yaw = euler.quat2euler([pose_obj.orientation.w, pose_obj.orientation.x, pose_obj.orientation.y, pose_obj.orientation.z], 'sxyz')
 
                     #get position data
                     position_data=[pose_obj.position.x,pose_obj.position.y,pose_obj.position.z]
+                    print(position_data)
                     
-                    # position_data[2]-= 0.6 #translate z under
-                    position_data=mc.mov_control.translate_axis_xyz(position_data,[0,0,0.6],yaw)
+                    #translate z under
+                    position_data=mc.mov_control.translate_axis_xyz(position_data,[0,0,-0.8],yaw) 
+
                     mc.mov_control.set_goal_point(position_data) #go under the object
                     print("GOING UNDER OBJECT")
                     #wait for that to finish
@@ -77,7 +83,7 @@ class pass_gate(smach.State):
 
                     mc.mov_control.stop()
 
-                    self.save(pass_gate)
+                    self.save(detection)
                     return "outcome1"
             else:
                 continue

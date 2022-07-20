@@ -29,8 +29,10 @@ class check_sub(smach.State):
         
     def execute(self, userdata):
         print("EXEXUTING")
+
+        rospy.sleep(3)
         mc.mov_control.arm()
-        rospy.sleep(5)
+        rospy.sleep(3)
         while(not rospy.is_shutdown()):
             self.mutex.acquire()
             if(self.is_submerged):

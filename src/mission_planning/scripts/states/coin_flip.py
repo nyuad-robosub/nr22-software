@@ -62,12 +62,22 @@ class coin_flip(smach.State):
                         if detections[0]['size'][0] * detections[0]['size'][1] < vs.front_camera.height * vs.front_camera.width / 5:
                             print("Gate too small, ignoring...")
                             continue
+                            
+                        # If center of bounding box is already at image center: no need for more analysis
+                        if detections[0]['center'][0] == vs.front_camera.get_center_coord()[0]:
+                            print("DETECTED AND EXISTS")
+                            mc.mov_control.stop()
+                            rospy.sleep(1)
+                            center = detections[0]['center']
+                            size = detections[0]['size']
+                            detected = True
+                            break
 
                         # First time seeing the gate: maybe at edge
                         angle_x, angle_y = vs.front_camera.get_angles(detections[0]['center'][0], detections[0]['center'][1])
-                        print(detections[0]['size'][0] * detections[0]['size'][1])
-                        print("ANGLE_X")
-                        print(angle_x)
+                        # print(detections[0]['size'][0] * detections[0]['size'][1])
+                        # print("ANGLE_X")
+                        # print(angle_x)
                         if angle_sign == 0: #only set when first starting
                             print("Center of gate found...")
                             angle_sign = int(angle_x / abs(angle_x))
@@ -78,7 +88,6 @@ class coin_flip(smach.State):
                             print("DETECTED AND EXISTS")
                             mc.mov_control.stop()
                             rospy.sleep(1)
-                            detections = vs.front_camera.get_detection(["qual_gate"])
                             angle_x, angle_y = vs.front_camera.get_angles(detections[0]['center'][0], detections[0]['center'][1])
                             
                             center = detections[0]['center']

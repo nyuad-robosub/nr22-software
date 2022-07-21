@@ -45,12 +45,10 @@ class coin_flip(smach.State):
             # Wait a bit for control to start 
             rospy.sleep(0.1)
             while(mc.mov_control.get_running_confirmation()):
-                print("RUNNING")
                 if vs.front_camera.is_fetched:
                     detections = vs.front_camera.get_detection(["qual_gate"],0.1)
                     # rospy.sleep(0.1) # delay already present in get_running_confirmation
                     if len(detections) > 0: 
-                        print(detections)
                         # if(temp_detect!=None):
                         #     detect=temp_detect
 
@@ -108,15 +106,15 @@ class coin_flip(smach.State):
 
 
             # Rotate and head thru center of the gate
-            angle_x, angle_y = vs.front_camera.get_angles(center[0]+size[0]/2, 0) #get angle between center of bbox and image frame
+            angle_x, angle_y = vs.front_camera.get_angles(center[0], 0) #get angle between center of bbox and image frame
             rospy.sleep(0.05)
-            mc.mov_control.set_rotation(0, 0, yaw - angle_x) #does this work for y
+            mc.mov_control.set_rotation(0, 0, yaw - angle_x)
             # Wait a bit for control to start 
             rospy.sleep(0.1)
             while (mc.mov_control.get_running_confirmation()):
                 rospy.sleep(0.001)
             rospy.sleep(1)
-            mc.mov_control.set_height(altitude)
+            mc.mov_control.set_height(-0.8)
             mc.mov_control.await_completion()
             # # Go straight
             # mc.mov_control.go_straight(15)

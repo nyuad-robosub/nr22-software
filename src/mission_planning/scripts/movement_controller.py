@@ -121,7 +121,30 @@ class movement_controller():
         # Rotate from initial orientation
         rotation = self.trans.transform.rotation
         roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
-        self.set_rotation(0,0,yaw+amount)
+        yaw=math.degrees(yaw)
+        count = int(math.floor((amount+yaw)/179))
+        remainder = (amount+yaw) % 179
+        
+        if(count==0):
+            self.set_rotation(roll,pitch,math.radians(yaw+amount))
+            self.await_completion()
+            return
+
+        for x in range(count):
+            if (x!=count-1):
+                self.set_rotation(roll,pitch,math.radians(yaw+179))
+            else:
+                self.set_rotation(roll,pitch,math.radians(yaw+remainder))  
+            self.await_completion()
+
+            self.update_tf()
+            # Rotate from initial orientation
+            rotation = self.trans.transform.rotation
+            roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
+            yaw=math.degrees(yaw)
+            
+
+        #self.set_rotation(roll,pitch,yaw+amount)
 
     # def rotate_ccw(self):
     #     self.update_tf()
@@ -172,10 +195,12 @@ class movement_controller():
             while self.get_running_confirmation():    
                 #print(self.get_running_confirmation())
                 rospy.sleep(0.01)
-    def await_completion_detection(self,detection_label):
+    def await_completion_detection(self,detection_label, camera = None):
         # Wait until movement finished
+        if(camera==None):
+            camera=vs.front_camera
         while self.get_running_confirmation():    
-            detection = vs.viso_control.get_detection([detection_label])
+            detection = camera.get_detection([detection_label])
             if(len(detection)>0):
                 return detection
             rospy.sleep(0.01)
@@ -199,7 +224,7 @@ class movement_controller():
         self.wasRunning = self.isRunning
         return self.wasRunning
 
-    def set_focus_point(self, xyz=None):
+    def set_focus_point(self, xyz=None): #issue
         self.update_tf()
         rotation = self.trans.transform.rotation
         roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
@@ -226,10 +251,9 @@ class movement_controller():
         self.focus_point.header.stamp = rospy.Time.now()
 
         xyz=[]
-        if xyz is None:
-            xyz[0]= self.trans.transform.translation.x + math.cos(angle) * amount
-            xyz[1]= self.trans.transform.translation.y + math.sin(angle) * amount
-            xyz[2] = self.trans.transform.translation.z
+        xyz.append(self.trans.transform.translation.x + math.cos(angle) * amount)
+        xyz.append(self.trans.transform.translation.y + math.sin(angle) * amount)
+        xyz.append(self.trans.transform.translation.z)
         
         self.set_goal_point(xyz)
 
@@ -358,8 +382,9 @@ class movement_controller():
         
         #roll, pitch, yaw = euler.quat2euler([pose_msg.orientation.w, pose_msg.orientation.x, pose_msg.orientation.y, pose_msg.orientation.z], 'sxyz')
         #get position data
+        xyz=copy.deepcopy(xyz_pos)
         if(xyz_delta[0]!=0):
-            xyz=self.__translate_axis(xyz_pos,yaw,xyz_delta[0],axis_enum.x_axis)
+            xyz=self.__translate_axis(xyz,yaw,xyz_delta[0],axis_enum.x_axis)
         if(xyz_delta[1]!=0):
             xyz=self.__translate_axis(xyz,yaw,xyz_delta[1],axis_enum.y_axis)
         if(xyz_delta[2]!=0):
@@ -394,7 +419,10 @@ class movement_controller():
         self.update_tf()
         translation = self.trans.transform.translation
         return np.array([translation.x,translation.y,translation.z])
-
+    def get_np_orientation(self):
+        rotation = self.trans.transform.rotation
+        roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
+        return np.array([roll,pitch,yaw])
     def get_compass_angle():
         pass
 

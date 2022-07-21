@@ -89,6 +89,8 @@ class camera():
 
     def get_detection(self, array_of_labels = [], confidence_threshold = 0.1): #np array of labels passed, returns dictionary of detections for those id's
         # if(self.is_fetched): # Might not need this if want to get again
+
+        #add distance label
         detections = []
         self.mutex.acquire()
         if len(array_of_labels) > 0: 
@@ -202,11 +204,13 @@ class stereo(camera, object):
         try:
             #get detections 
             labeled_cv_image=cv2.resize(self.bridge.imgmsg_to_cv2(data, desired_encoding='bgr8'),(640,400))
-            for det in self.get_detection():
-                ll_vertex=(int(det['center'][0]-det['size'][0]/2),int(det['center'][1]-det['size'][1]/2))
-                rr_vertex=(int(det['center'][0]+det['size'][0]/2),int(det['center'][1]+det['size'][1]/2))
+            for det in self.viso_detect.detections:
+                ll_vertex=(int(det.bbox.center.x-det.bbox.size_x/2),int(det.bbox.center.y-det.bbox.size_y/2))
+                rr_vertex=(int(det.bbox.center.x+det.bbox.size_x/2),int(det.bbox.center.y+det.bbox.size_y/2))
                 cv2.rectangle(labeled_cv_image, ll_vertex, rr_vertex,(0,255,0), 3)
-                cv2.putText(labeled_cv_image, str(det['score']) , rr_vertex,
+                cv2.putText(labeled_cv_image, str(det.results[0].score) , rr_vertex,
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,255,255), 1)
+                cv2.putText(labeled_cv_image, str(self.get_label_from_id(det.results[0].id)) , ll_vertex,
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,255,255), 1)
             self.labeled_img_pub.publish(self.bridge.cv2_to_imgmsg(labeled_cv_image))
         except CvBridgeError as e:
@@ -224,48 +228,48 @@ class stereo(camera, object):
         vc.vector.y=np_arr[1]
         vc.vector.z=np_arr[2]
         return vc
+    def get_distance_det(self, detection):
+        #given detection return their distances from the camera by averaging their respective points
 
+        pass
     def estimate_pose_svd(self, center, size): # Estimate pose of flat thing with SVD
         # Get points from pcl courtesy of:
         # http://docs.ros.org/en/jade/api/sensor_msgs/html/point__cloud2_8py_source.html
         # https://answers.ros.org/question/240491/point_cloud2read_points-and-then/
-        pose_time = self.pointcloud.header.stamp
         points_region = np.mgrid[
-            math.ceil(center[0] - size[0] * 0.5):math.floor(center[0] + size[0] * 0.5),
-            math.ceil(center[1] - size[1] * 0.5):math.floor(center[1] + size[1] * 0.5)].reshape(2,-1).T.astype(int)
+            math.ceil(center[0] - size[0] * 0.1):math.floor(center[0] + size[0] * 0.1),
+            math.ceil(center[1] - size[1] * 0.1):math.floor(center[1] + size[1] * 0.1)].reshape(2,-1).T.astype(int)
         self.pointcloud_mutex.acquire()
-
-        # print(center)
-        # print(self.pointcloud.width)
-        # print(self.pointcloud.height)
-        # print(self.pointcloud.row_step)
-        # print(self.pointcloud.point_step)
-        points = list(pc2.read_points(
+        pose_time = self.pointcloud.header.stamp
+        points = np.array(list(pc2.read_points(
             self.pointcloud,
             field_names={'x', 'y', 'z'},
             skip_nans=True, uvs=points_region.tolist() # [[u,v], [u,v], [u,v]] a set of xy coords
-        ))
-        self.pointcloud_mutex.release()
-        print(points)
-        if(len(points) < 5):
+        ))).T
+
+        if(not np.any(points)):
+            print(points)
+            self.pointcloud_mutex.release()
             return None
-    
         # [[1,2,3],[,,], ..., dt]
 
         # Approx. plane normal courtesy of:
         # https://math.stackexchange.com/a/99317
         centroid_cam = np.mean(points, axis=1, keepdims=True)
-        centroid_cam_ps=self.__np_to_ps(centroid_cam)
 
         svd = np.linalg.svd(points - centroid_cam) # [:,-1]
         left = svd[0]
         normal_cam = left[:, -1] #normal direction vector relative to object plane
+
+        centroid_cam = np.concatenate(centroid_cam,axis=0)
+        centroid_cam_ps=self.__np_to_ps(centroid_cam)
         normal_cam_vc=self.__np_to_vector(normal_cam)
 
         # Transform to world frame
         self.update_tf()
 
         centroid_world = tfgmtfgm.do_transform_point(centroid_cam_ps, self.trans)
+        print(centroid_world)
         normal_world = tfgmtfgm.do_transform_vector3(normal_cam_vc, self.trans)
 
         # Assume uprightness
@@ -276,6 +280,7 @@ class stereo(camera, object):
         pose_msg.header.frame_id = self.world_frame
         pose_msg.pose.position = centroid_world.point
         pose_msg.pose.orientation = Quaternion(w=q[0], x=q[1], y=q[2], z=q[3])
+        self.pointcloud_mutex.release()
         return pose_msg
 
 class mono(camera, object):

@@ -14,6 +14,7 @@ import geometry_msgs.msg
 import tf2_geometry_msgs
 import math
 import vision_msgs
+from geometry_msgs.msg import Pose
 
 from vision_msgs.msg import Detection2DArray, BoundingBox2D
 from sensor_msgs.msg import PointCloud2
@@ -30,100 +31,147 @@ class pass_gate(smach.State):
     def __init__(self,label_1,label_2):
         self.label_1=label_1 # "image_bootlegger"
         self.label_2=label_2 # "image_gman"
+        self.pose_pub = rospy.Publisher('POSE_DETECTION', Pose, queue_size=1, latch=True)
     def save(self,detection): #saving data
         pt.pr_track.progress['pass_gate']['done']=True #better to save automatically based off state machine?
         pt.pr_track.progress['pass_gate']['chosen_detection']=detection['label']
-
+        print("CHOSE")
+        print(detection['label'])
+    def __pose_to_np(self,pose_obj):
+        position_data=np.array([pose_obj.position.x,pose_obj.position.y,pose_obj.position.z])
+        return position_data
     def __is_top_approx_equal(self,detection1, detection2):
-        return is_approx_equal(detection1['center'][1]+detection1['size'][1]/2,detection2['center'][1]+detection2['size'][1]/2)
-
-    def execute(self, userdata):  
+        return is_approx_equal(detection1['center'][1]+detection1['size'][1]/2,detection2['center'][1]+detection2['size'][1]/2,0.3)
+    def __get_ps(self, detection, timeout = 0.5, delay = 0.1, counter = 0):
+        if(counter >= timeout / delay):
+            return None
+        else:
+            rospy.sleep(delay)
+            counter += 1
+            ps=vs.front_camera.estimate_pose_svd(detection['center'],detection['size'])
+            detection_arr = vs.front_camera.get_detection([detection['label']])
+            if(ps!=None):
+                print("RETURNING PS")
+                return ps
+            elif(len(detection_arr)==0):
+                return self.__get_ps(detection, timeout, delay, counter)
+            else:
+                return self.__get_ps(detection_arr[0], timeout, delay, counter)
+            
+    def execute(self, userdata): 
+        print("GOING STRAIGHT") 
+        rospy.sleep(1)
         mc.mov_control.go_straight(3)
-        while(mc.mov_control.get_running_confirmation()):#should this be by time? what if it stops
+        while(mc.mov_control.get_running_confirmation()):
             #check if you detect them BOTH, if you do, estimate gate pose, stop, and set map points
-            detections = vs.front_camera.get_detection([self.label_1,self.label_2],0.5)
-            gate_detection = vs.front_camera.get_detection(["qual_gate"])
-            lend=len(detections)
+            rospy.sleep(0.05)
+            detections=[]
+            temp_detections = vs.front_camera.get_detection([self.label_1,self.label_2],0.15)
+            gate_detection = vs.front_camera.get_detection(["qual_gate"],0.5)
+            lend=len(temp_detections)
+            if lend>0: 
+                print("Detected something of interest!")
+                detections=temp_detections
+                detection=None
+                mc.mov_control.stop() #stop the machine and now begin alignment
+                rospy.sleep(0.1)
+                mc.mov_control.update_tf()
 
-            # if(lend>0):
-            #     count=0
-            #     while(count<3):
-            #         rospy.sleep(0.1)
-            #         detections = vs.front_camera.get_detection([self.label_1,self.label_2])
-            #         lend=len(detections)
-            #         if(lend==0):
-            #             break
-            #         count+=1     
-
-            if lend>0 and len(gate_detection)>0:
+                rov_position=mc.mov_control.get_np_position()
+                # rov_orientation=mc.mov_control.get_np_orientation()
+                det_arr=[]
+                ps_arr=[]
+                dist_arr=[]
                 for det in detections:
-                    if self.__is_top_approx_equal(det, gate_detection[0]):
-                        print("DETECTED AN OBJECT THATS PLACED CORRECTLY")
-                        detections=[det]
-                        lend=1
-                        break
-                if lend == 1:
-                    print("DETECTED GATE+OBJECTS!")
-                    ps=vs.front_camera.estimate_pose_svd(detections[0]['center'],detections[0]['size'])
-                    # if(lend>1):
-                    #     ps2=vs.front_camera.estimate_pose_svd(detections[1]['center'],detections[1]['size'])
-                    #     while(ps==None and ps2==None):
-                    #         ps=vs.front_camera.estimate_pose_svd(detections[0]['center'],detections[0]['size'])
-                    #         if(lend>1):
-                    #             ps2=vs.front_camera.estimate_pose_svd(detections[1]['center'],detections[1]['size'])
-                    #         rospy.sleep(0.05)
-                    # else:
-                    #     while(ps==None):
-                    #         ps=vs.front_camera.estimate_pose_svd(detections[0]['center'],detections[0]['size'])
-                    #         if(lend>1):
-                    #             ps2=vs.front_camera.estimate_pose_svd(detections[1]['center'],detections[1]['size'])
-                    #         rospy.sleep(0.05)
-                    if detections[0]['score'] > 0.5:
-                        mc.mov_control.stop() #stop the machine and now begin alignment
+                    ps=self.__get_ps(detections[0], 0.25, 0.05)
+                    if(ps!=None):
+                        dist = np.linalg.norm(np.array(self.__pose_to_np(ps.pose))-rov_position)
+                        ps_arr.append(ps)
+                        dist_arr.append(dist)
+                        det_arr.append(det)
+                size = len(ps_arr)
+                max_index=0
+                max_value=0
+                if(size==0):
+                    mc.mov_control.go_straight(3)
+                    continue
+                else:
+                    for index, x in enumerate(ps_arr):
+                        if(dist_arr[index]>=max_value):
+                            max_value=dist_arr[index]
+                            max_index=index
+                ps = ps_arr[max_index]
+                detection=det_arr[max_index]
+                
+                pose_obj = ps.pose
+                self.pose_pub.publish(pose_obj)
+                rospy.sleep(5)
 
-                        detection=detections[0]
+                print("DETECTED AN OBJECT!")
+                print("PS IS DETECTED")
+                
+                #select which detectio nclosest to center and make it detection of interest
+                roll, pitch, yaw = euler.quat2euler([pose_obj.orientation.w, pose_obj.orientation.x, pose_obj.orientation.y, pose_obj.orientation.z], 'sxyz')
 
-                        #get pose of object
-                        # if(ps!=None):
-                        pose_obj = ps.pose #(vs.front_camera.estimate_pose_svd(detections[0]['center'],detections[0]['size'])).pose
-                        # else:
-                        #     pose_obj = ps2.pose
-                        #select which detectio nclosest to center and make it detection of interest
-                        roll, pitch, yaw = euler.quat2euler([pose_obj.orientation.w, pose_obj.orientation.x, pose_obj.orientation.y, pose_obj.orientation.z], 'sxyz')
+                #get position data
+                position_data=self.__pose_to_np(pose_obj)#np.array([pose_obj.position.x,pose_obj.position.y,pose_obj.position.z])#[pose_obj.position.x,pose_obj.position.y,pose_obj.position.z]
+                print(position_data)
+                
+                clearance_d=0.18/math.tan(vs.front_camera.Hfov/2)
+                #align ORIENTATION with DETECTION
+                mc.mov_control.stop()
+                #position_data_x=mc.mov_control.translate_axis_xyz(position_data,[100,0,0],yaw)
+                mc.mov_control.set_focus_point(mc.mov_control.translate_axis_xyz(position_data,[100,0,0],yaw)) #something strange with focus points
+                mc.mov_control.await_completion()
+                print("FOCUS")
 
-                        #get position data
-                        position_data=[pose_obj.position.x,pose_obj.position.y,pose_obj.position.z]
-                        print(position_data)
+                rospy.sleep(5)
+               
+                #LOOK AT BOTH 
+                print("Look at both")
+                mc.mov_control.set_goal_point(mc.mov_control.translate_axis_xyz(position_data,[-clearance_d, 0 ,-0.4],yaw))
+                print("HI")
+                mc.mov_control.await_completion()
 
-                        #translate z under
-                        position_data=mc.mov_control.translate_axis_xyz(position_data,[0,0,-0.8],yaw) 
+                rospy.sleep(7)
 
-                        mc.mov_control.set_goal_point(position_data) #go under the object
-                        print("GOING UNDER OBJECT")
-                        #wait for that to finish
-                        mc.mov_control.await_completion()
+                #GO UNDER
+                mc.mov_control.set_goal_point(mc.mov_control.translate_axis_xyz(position_data,[0,0,-0.4],yaw))
+                mc.mov_control.await_completion()
 
-                        y_delta=0
-                        if(detections[0]['center'][0]<gate_detection[0]['center']): #image on the left of frame y axis is on our left
-                            #translate 0.762 meter opposite objects along y axis 
-                            y_delta=-0.762
-                        else:
-                            #translate 0.762 meter along y axis 
-                            y_delta=0.762
-                        
-                        #translate 1 meter opposite objects +x axis  and 0.76 opposite or along +y axis
-                        position_data=mc.mov_control.translate_axis_xyz(position_data,[1,y_delta,0],yaw)
-                        mc.mov_control.set_goal_point(position_data)
-                        
-                        position_data[0]-=100
-                        mc.mov_control.set_focus_point(position_data)
-                        
-                        mc.mov_control.await_completion()
+                #GO BEHIND
+                mc.mov_control.set_goal_point(mc.mov_control.translate_axis_xyz(position_data,[0.3,0,-0.4],yaw)) #-x takes it back?
+                mc.mov_control.await_completion()
+            
+                # #translate z under
+                # position_data=mc.mov_control.translate_axis_xyz(position_data,[0,0,-0.8],yaw) 
 
-                        mc.mov_control.stop()
+                # mc.mov_control.set_goal_point(position_data) #go under the object
+                # print("GOING UNDER OBJECT")
+                # #wait for that to finish
+                # mc.mov_control.await_completion()
 
-                        self.save(detection)
-                        return "outcome1"
+                # y_delta=0
+                # if(detection['center'][0]<gate_detection[0]['center']): #image on the left of frame y axis is on our left
+                #     #translate 0.762 meter opposite objects along y axis 
+                #     y_delta=-0.762
+                # else:
+                #     #translate 0.762 meter along y axis 
+                #     y_delta=0.762
+                
+                # #translate 1 meter opposite objects +x axis  and 0.76 opposite or along +y axis
+                # position_data=mc.mov_control.translate_axis_xyz(position_data,[-1,y_delta,0],yaw)
+                # mc.mov_control.set_goal_point(position_data)
+                
+                # position_data=mc.mov_control.translate_axis_xyz(position_data,[100,0,0],yaw)
+                # mc.mov_control.set_focus_point(position_data)
+                
+                # mc.mov_control.await_completion()
+
+                # mc.mov_control.stop()
+
+                self.save(detection)
+                return "outcome1"
             else:
                 continue
         return "outcome2"

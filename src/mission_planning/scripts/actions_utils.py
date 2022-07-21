@@ -1,7 +1,8 @@
 """ General actions utils file """
 # import viso_controller as vs
 # import movement_controller as mc
-from geometry_msgs.msg import Point
+from geometry_msgs.msg import Point, Vector3, Vector3Stamped
+import tf2_geometry_msgs.tf2_geometry_msgs as tfgmtfgm
 import math
 import numpy as np
 import rospy
@@ -74,6 +75,7 @@ def search_waiter(mov_control,                              # Movement controlle
         if rospy.get_time() > end_time:
             mov_control.stop()
             return "timeout"
+    mov_control.stop()
     return "notfound"
 
 # Primer search: initializing the start location for other searches while also looking for objects
@@ -93,10 +95,10 @@ def primer_search(mov_control,                              # Movement controlle
     mov_control.arm()
     mov_control.update_tf()
     translation = mov_control.trans.transform.translation
+    print("Moving to initial search pose")
 
     # Rotate to appointed yaw
     if not np.isclose(direction, mov_control.euler[2], atol=0.01):
-        print("Rotating to direction")
         mov_control.set_rotation(0, 0, direction)
         rospy.sleep(0.1)
         outcome = search_waiter(mov_control, detection_camera, detection_labels, detection_count, min_score_thresh, 
@@ -106,7 +108,6 @@ def primer_search(mov_control,                              # Movement controlle
 
     # Move to appointed xyz
     if not np.allclose([translation.x, translation.y, translation.z], [origin_point.x, origin_point.y, origin_point.z], atol=0.1):
-        print("Moving to start point")
         mov_control.set_focus_point()
         mov_control.set_goal_point((origin_point.x, origin_point.y, origin_point.z))
         rospy.sleep(0.1)
@@ -248,18 +249,158 @@ def circular_search(mov_control,                            # Movement controlle
 # ACTIONS
 # --------------------------------------
 
+# Helper functions
+# EMA classes courtesy of:
+# https://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average
+class ema_float:
+    def __init__(self, value, alpha):
+        self.value = value
+        self.alpha = alpha
+    def update(self, value):
+        self.value = value * self.alpha + (1 - self.alpha) * self.value
+class ema_point:
+    def __init__(self, point, alpha):
+        self.x = ema_float(point.x, alpha)
+        self.y = ema_float(point.y, alpha)
+        self.z = ema_float(point.z, alpha)
+    def update(self, point):
+        self.x.update(point.x)
+        self.y.update(point.y)
+        self.z.update(point.z)
+    def value(self):
+        return Point(self.x.value, self.y.value, self.z.value)
+
+# Get location of bottom objects from sonar_ping and downwards camera
+def get_downwards_object_position():
+    pass
+
 # Bottom camera centering search & positioning
 # Presuming the object is already (confidently) visible
 # Will utilize: sonar_ping, bottom camera transform, etc.
-def bottom_centering(mov_control,                           # Movement controller                   | mc.movement_controller
-                     origin_point,                          # Center of search circle               | geometry_msgs.msg.Point
-                     tolerance,                             # Center proximity tolerance (norm)     | float
-                     timeout,                               # Timeout duration                      | float
-                     detection_camera,                      # Camera object for detection           | vs.viso_controller
-                     detection_label,                       # Labels of objects                     | list of strings
-                     min_score_thresh,                      # Minimum confidence                    | float
-                     min_area_norm,                         # Minimum area of bounding box          | float
-                     wait_function = None):                 # Wait function to preempt              | boolean function
+# Return tuple:
+#   - outcome
+#       + "preempted": stopped by external function                     | process-ending outcome
+#       + "timeout": running over the time limit                        | process-ending outcome
+#       + "notfound": finished without detecting anything               | process-ending outcome
+#       + "failed": failed to move the center                           | process-ending outcome
+#       + "succeeded": succeeded to move the center                     | process-ending outcome
+def bottom_aligning(mov_control,                            # Movement controller                   | mc.movement_controller
+                    # goal,                                   # Where to move the 3Dcenter of bbox to | geometry_msgs.msg.Point !! z will be ignored, will use current ROV z !!
+                    tolerance,                              # Center proximity tolerance (norm)     | float
+                    timeout,                                # Timeout duration                      | float
+                    detection_camera,                       # Camera object for detection           | vs.viso_controller
+                    detection_label,                        # Labels of objects                     | list of strings
+                    min_score_thresh,                       # Minimum confidence                    | float
+                    min_area_norm,                          # Minimum area of bounding box          | float
+                    wait_function = None):                  # Wait function to preempt              | boolean function
     
-    # 
-    pass
+    # Get dictionary of detections
+    detections_dict = {}
+    detections_dict[detection_label] = []  
+
+    # Get end time
+    end_time = rospy.get_time() + timeout
+    
+    # Stop all controls
+    mov_control.stop()
+    rospy.sleep(2) # Wait a bit for stabilization
+    # Get a detection of the object
+    outcome = search_waiter(mov_control, detection_camera, [detection_label], 2, min_score_thresh, 
+                            min_area_norm, detections_dict, end_time, lambda: True, wait_function)
+    if outcome != "detected": return outcome, None
+    
+    # Get relevant tfs
+    mov_control.update_tf()
+    detection_camera.update_tf()
+    translation = mov_control.trans.transform.translation
+    cam_translation = detection_camera.trans.transform.translation
+    initial_depth = translation.z
+
+    # Get vector from camera to bbox center
+    center = detections_dict[detection_label][-1]['center']
+    angle_x, angle_y = detection_camera.get_angles(center[0], center[1])
+    center_vec_cam = Vector3Stamped(vector=Vector3(math.tan(angle_x), math.tan(angle_y), 1))
+    center_vec_world = tfgmtfgm.do_transform_vector3(center_vec_cam, detection_camera.trans)
+
+    # Presume pool to be flat at small region
+    delt_z = translation.z - mov_control.sonar_ping - cam_translation.z
+    delt_x = delt_z * center_vec_world.vector.x / center_vec_world.vector.z
+    delt_y = delt_z * center_vec_world.vector.y / center_vec_world.vector.z
+    position = ema_point(Point(cam_translation.x + delt_x,
+                               cam_translation.y + delt_y,
+                               cam_translation.z + delt_z), 0.95)
+    
+    print(detections_dict)
+    print("Found object %s at (%f, %f, %f)" %
+        (detection_label, position.value().x, position.value().y, position.value().z))
+
+    # Move the robot
+    mov_control.set_focus_point()
+    mov_control.set_goal_point((position.value().x, position.value().y, initial_depth))
+
+    # Loop until arrived at the postion
+    while not np.allclose(center, detection_camera.get_center_coord(), rtol=tolerance):
+        while mov_control.get_running_confirmation():
+            # Run wait_function if exists
+            if wait_function is not None:
+                if not wait_function():
+                    mov_control.stop()
+                    return "preempted", position.value()
+
+            # Return if time is finished
+            if rospy.get_time() > end_time:
+                mov_control.stop()
+                return "timeout", position.value()
+
+        # Wait a bit for stabilization
+        rospy.sleep(2) 
+        # Get a detection of the object
+        detections_dict = {}
+        detections_dict[detection_label] = []
+        outcome = search_waiter(mov_control, detection_camera, [detection_label], 2, min_score_thresh, 
+                                min_area_norm, detections_dict, end_time, lambda: True, wait_function)
+        if outcome != "detected": return outcome, position.value()
+        
+        # Get relevant tfs
+        mov_control.update_tf()
+        detection_camera.update_tf()
+        translation = mov_control.trans.transform.translation
+        cam_translation = detection_camera.trans.transform.translation
+
+        # Get vector from camera to bbox center
+        center = detections_dict[detection_label][-1]['center']
+        angle_x, angle_y = detection_camera.get_angles(center[0], center[1])
+        center_vec_cam = Vector3Stamped(vector=Vector3(math.tan(angle_x), math.tan(angle_y), 1))
+        center_vec_world = tfgmtfgm.do_transform_vector3(center_vec_cam, detection_camera.trans)
+        print(detections_dict)
+        print(angle_x, angle_y)
+        print(center_vec_world.vector)
+        print(cam_translation)
+        print("Found object %s at (%f, %f, %f)" %
+            (detection_label, position.value().x, position.value().y, position.value().z))
+
+        # Presume pool to be flat at small region
+        delt_z = translation.z - mov_control.sonar_ping - cam_translation.z
+        delt_x = delt_z * center_vec_world.vector.x / center_vec_world.vector.z
+        delt_y = delt_z * center_vec_world.vector.y / center_vec_world.vector.z
+        position.update(Point(cam_translation.x + delt_x,
+                              cam_translation.y + delt_y,
+                              cam_translation.z + delt_z))
+
+        # Move the robot
+        mov_control.set_focus_point()
+        mov_control.set_goal_point((position.value().x, position.value().y, initial_depth))
+
+        # Run wait_function if exists
+        if wait_function is not None:
+            if not wait_function():
+                mov_control.stop()
+                return "preempted", position.value()
+
+        # Return if time is finished
+        if rospy.get_time() > end_time:
+            mov_control.stop()
+            return "timeout", position.value()
+    
+    # Successful return
+    return "succeeded", position.value()

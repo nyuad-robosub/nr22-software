@@ -69,8 +69,8 @@
 
     <!-- Bottom Camera -->
     <arg name="bottom_camera_topic" default="/bluerov2/camera_down/camera_image"/>
-    <arg name="bottom_camera_width" default="1920"/>
-    <arg name="bottom_camera_height" default="1080"/>
+    <arg name="bottom_camera_width" default="640"/>
+    <arg name="bottom_camera_height" default="400"/>
     <arg name="bottom_camera_HFOV" default="69"/>
 
     <!-- bottom camera faux detection args -->
@@ -135,5 +135,5 @@
 		https://www.andre-gaschler.com/rotationconverter/ -->
 	<node pkg="tf2_ros" type="static_transform_publisher" name="oakd_imu_broadcaster" args="0.2 0 0.03 0.5 -0.5 0.5 -0.5 $(arg rov_frame) $(arg front_camera_frame)" />
     <!-- Align x, y axes of transform to x, y axes of image frame - z is global up -->
-	<node pkg="tf2_ros" type="static_transform_publisher" name="oak1_imu_broadcaster" args="0.01 0 -0.11 0 0 -0.70710678118 0.70710678118 $(arg rov_frame) $(arg bottom_camera_frame)" />
+	<node pkg="tf2_ros" type="static_transform_publisher" name="oak1_imu_broadcaster" args="0.01 0 -0.11 0.70710678118 -0.70710678118 0 0 $(arg rov_frame) $(arg bottom_camera_frame)" />
 </launch>

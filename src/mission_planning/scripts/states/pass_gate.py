@@ -130,7 +130,6 @@ class pass_gate(smach.State):
                 #LOOK AT BOTH 
                 print("Look at both")
                 mc.mov_control.set_goal_point(mc.mov_control.translate_axis_xyz(position_data,[-clearance_d, 0 ,-0.4],yaw))
-                print("HI")
                 mc.mov_control.await_completion()
 
                 rospy.sleep(7)

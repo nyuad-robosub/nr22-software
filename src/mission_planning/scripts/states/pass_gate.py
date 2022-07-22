@@ -132,7 +132,7 @@ class pass_gate(smach.State):
             clearance_d=vs.front_camera.get_min_approach_dist(1.5)
             print("Clearance distance is")
             print(clearance_d)
-            mc.mov_control.set_goal_point(mc.mov_control.translate_axis_xyz(position_data,[-clearance_d, 0 ,-0.4],yaw))
+            mc.mov_control.set_goal_point(mc.mov_control.translate_axis_xyz(position_data,[-clearance_d*1.2, 0 ,-0.4],yaw))
             mc.mov_control.await_completion()
 
             #rospy.sleep(7)

@@ -16,6 +16,7 @@ from states.check_submerged import check_sub
 from states.coin_flip import coin_flip
 from states.pass_gate import pass_gate
 from states.marker import marker
+from states.buoy import buoy
 
 # just a class to run ros launch files FIX LANCH FILE NO LOGGING NEEDED
 class launch_stuff:
@@ -90,8 +91,11 @@ if __name__ == '__main__':
                                 transitions={'outcome1':'marker',
                                             'outcome2':'pass_gate'})
         smach.StateMachine.add('marker', marker("marker"),
-                                transitions={'outcome1':'outcome4',
+                                transitions={'outcome1':'buoy',
                                             'outcome2':'marker'})
+        smach.StateMachine.add('buoy', buoy(),
+                                transitions={'outcome1':'outcome4',
+                                            'outcome2':'buoy'})
                                             
     print("EXECUTING SM")
     

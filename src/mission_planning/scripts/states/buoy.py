@@ -21,38 +21,62 @@ import sensor_msgs.point_cloud2 as pc2
 import tf2_ros
 
 import numpy as np
+import actions_utils as au
 import cv2
         
 from transforms3d import euler
-class bouy(smach.State):
+class buoy(smach.State):
     _outcomes=['outcome1','outcome2']
     _input_keys=[],
     _output_keys=[]
-    def __init__(self):
+    def __init__(self):#, label_1, label_2):
         pass
-    def execute(self):  
-        mc.mov_control.go_straight(5)
+        # self.label_1=label_1 #image_tommygun
+        # self.label_2=label_2 #"image_badge"
+    def execute(self,userdata):  
+        
+        trans=(mc.mov_control.get_tf()).transform.translation
+        outcome, detection_dict = au.forward_search(
+                    mc.mov_control,
+                    geometry_msgs.msg.Point(trans.x, trans.y, trans.z - mc.mov_control.sonar_ping + 1.3),
+                    100,
+                    mc.mov_control.euler[2],
+                    120,
+                    vs.front_camera,
+                    ["image_tommygun", "image_badge"],
+                    2,
+                    0.4,
+                    0.005
+                )
+
+        if(outcome!="succeeded"):
+            return "outcome2"
 
         #fetch side chosen in pass_gate state
         side = pt.pr_track.progress['pass_gate']['chosen_detection']
         
         #move till you detect any one of them
-        detections=mc.mov_control.await_completion_detection(["image_tommygun","image_badge"])
+        detections=vs.front_camera.get_detection(["image_tommygun","image_badge"])
+        
         mc.mov_control.stop()
         if(len(detections>1)):
             mc.mov_control.update_tf()
 
             #detected the object
             if(side=="image_bootlegger"):    
-                detection_i=mc.mov_control.await_completion_detection(["image_tommygun"])
-                detection_o=mc.mov_control.await_completion_detection(["image_badge"])
+                detection_i=vs.front_camera.get_detection(["image_tommygun"])
+                detection_o=vs.front_camera.get_detection(["image_badge"])
             else: # image_gman
-                detection_i=mc.mov_control.await_completion_detection(["image_badge"])
-                detection_o=mc.mov_control.await_completion_detection(["image_tommygun"])
-
+                detection_i=vs.front_camera.get_detection(["image_badge"])
+                detection_o=vs.front_camera.get_detection(["image_tommygun"])
+            if(len(detection_i)==0 or len(detection_o)==0):
+                return "outcome2"
+            
             #get pose of object of interest
-            pose_obji = (vs.front_camera.estimate_pose_svd(detection_i[0]['center'],detection_i[0]['size'])).pose
-            pose_objo = (vs.front_camera.estimate_pose_svd(detection_o[0]['center'],detection_o[0]['size'])).pose
+            pose_obji = vs.front_camera.get_ps(detection_i)#(vs.front_camera.estimate_pose_svd(detection_i[0]['center'],detection_i[0]['size'])).pose
+            pose_objo = vs.front_camera.get_ps(detection_o) #(vs.front_camera.estimate_pose_svd(detection_o[0]['center'],detection_o[0]['size'])).pose
+            if(pose_obji==None or pose_objo==None):
+                return "outcome2"
 
             #align camera with detection
             position_i=[pose_obji.position.x,pose_obji.position.y,pose_obji.position.z]
@@ -62,20 +86,25 @@ class bouy(smach.State):
             #align with bouys center
             center=(position_i+position_o)/2
 
-            # L=d/(2*math.tan(oakd.fov))
             L=vs.front_camera.height/(4*math.tan(vs.front_camera.Vfov))*1.1
 
-            rotation = mc.mov_control.trans.transform.rotation
-            roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
+            #select which detectio nclosest to center and make it detection of interest
+            roll, pitch, yaw = euler.quat2euler([pose_obji.orientation.w, pose_obji.orientation.x, pose_obji.orientation.y, pose_obji.orientation.z], 'sxyz')
 
-            mc.mov_control.set_goal_point(mc.mov_control.translate_axis_xyz(center,[L,0,0],yaw))
+            #put center of gate in view
+            mc.mov_control.set_focus_point(mc.mov_control.translate_axis_xyz(center,[1000,0,0],yaw))
+            rospy.sleep(1)
+            mc.mov_control.set_goal_point(mc.mov_control.translate_axis_xyz(center,[-L,0,0],yaw))
             mc.mov_control.await_completion()
 
-            position_i[2]+=1.1 #better way to define the top?
-            position_i[0]-=2
-
-            mc.mov_control.set_goal_point(position_i)
+            #images are 1.2 meters in height, so to hit top go around 0.4-5 meters
+            mc.mov_control.set_goal_point(mc.mov_control.translate_axis_xyz(pose_obji,[-L,0,0.4],yaw))
             mc.mov_control.await_completion()
+
+            #go a bit forward after hitting
+            mc.mov_control.set_goal_point(mc.mov_control.translate_axis_xyz(pose_obji,[0.3,0,0.4],yaw))
+            mc.mov_control.await_completion()
+            
             return "outcome1"
 
         return "outcome2"

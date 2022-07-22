@@ -1,5 +1,6 @@
 from curses.panel import bottom_panel
 import math
+from turtle import pos
 
 import numpy
 import rospy
@@ -26,6 +27,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from math import atan2, cos, sin, sqrt, pi
 from cv_bridge import CvBridge, CvBridgeError
+from calc_utils import getDegsDiff
 
 import color_normalization
 from enum import Enum
@@ -163,6 +165,9 @@ class camera():
         self.image_mutex.release()
         return img
 
+    def get_min_approach_dist(self,width):
+        clearance_d=(width/2)/math.tan(self.Hfov/2)
+        return clearance_d
 class stereo(camera, object):
     def set_params(self):
 
@@ -228,6 +233,25 @@ class stereo(camera, object):
         vc.vector.y=np_arr[1]
         vc.vector.z=np_arr[2]
         return vc
+    def get_ps(self, detection, timeout = 0.5, delay = 0.1, counter = 0):
+        #Input: detection object from get detection
+        #Returns: Pose of best fit plane of planar object
+
+        if(counter >= timeout / delay):
+            return None
+        else:
+            rospy.sleep(delay)
+            counter += 1
+            ps=self.estimate_pose_svd(detection['center'],detection['size'])
+            detection_arr = self.get_detection([detection['label']])
+            if(ps!=None):
+                print("RETURNING PS")
+                return ps
+            elif(len(detection_arr)==0):
+                return self.get_ps(detection, timeout, delay, counter)
+            else:
+                return self.get_ps(detection_arr[0], timeout, delay, counter)
+    
     def get_distance_det(self, detection):
         #given detection return their distances from the camera by averaging their respective points
 
@@ -237,8 +261,8 @@ class stereo(camera, object):
         # http://docs.ros.org/en/jade/api/sensor_msgs/html/point__cloud2_8py_source.html
         # https://answers.ros.org/question/240491/point_cloud2read_points-and-then/
         points_region = np.mgrid[
-            math.ceil(center[0] - size[0] * 0.1):math.floor(center[0] + size[0] * 0.1),
-            math.ceil(center[1] - size[1] * 0.1):math.floor(center[1] + size[1] * 0.1)].reshape(2,-1).T.astype(int)
+            math.ceil(center[0] - size[0] * 0.4):math.floor(center[0] + size[0] * 0.4),
+            math.ceil(center[1] - size[1] * 0.4):math.floor(center[1] + size[1] * 0.4)].reshape(2,-1).T.astype(int)
         self.pointcloud_mutex.acquire()
         pose_time = self.pointcloud.header.stamp
         points = np.array(list(pc2.read_points(
@@ -267,6 +291,8 @@ class stereo(camera, object):
 
         # Transform to world frame
         self.update_tf()
+        rotation = self.trans.transform.rotation
+        roll_rov, pitch_rov, yaw_rov = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
 
         centroid_world = tfgmtfgm.do_transform_point(centroid_cam_ps, self.trans)
         print(centroid_world)
@@ -274,6 +300,14 @@ class stereo(camera, object):
 
         # Assume uprightness
         pose_yaw =  math.atan2(normal_world.vector.y, normal_world.vector.x)
+        if(abs(getDegsDiff(pose_yaw,yaw_rov))>math.pi/2):
+            #make sure x axis is into the page of the detection
+            yaw_rov += math.pi
+            if(yaw_rov>math.pi):
+                yaw_rov=2*math.pi-yaw_rov
+            # elif(yaw_rov<-math.pi):
+            #     yaw_rov+=2*math.py
+
         q = euler.euler2quat(0, 0, pose_yaw, 'sxyz')
         pose_msg = PoseStamped()
         pose_msg.header.stamp = pose_time

@@ -116,23 +116,37 @@ class movement_controller():
     def get_tf(self):
         self.update_tf()
         return self.trans
-    def rotate_ccw(self,amount):
-        self.update_tf()
-        # Rotate from initial orientation
-        rotation = self.trans.transform.rotation
-        roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
-        yaw=math.degrees(yaw)
-        count = int(math.floor((amount+yaw)/179))
-        remainder = (amount+yaw) % 179
+    def rotate_ccw(self,amount, pitch=None , roll=None ,yaw = None): 
+        #input: ccw rotation amount in degrees DO NOT USE FOR CLOCKWISE ROTATION
+        if(yaw==None):
+            self.update_tf()
+            # Rotate from initial orientation
+            rotation = self.trans.transform.rotation
+            roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
+            yaw=math.degrees(yaw)
+        if(amount>0):
+            sign=1
+        else:
+            sign=-1
+        
+        if(sign*yaw<0): 
+            return self.rotate_ccw(amount,pitch,roll,(sign*360)+yaw)
+        
+        count = int(math.floor(sign*(amount+yaw)/179))
+        remainder = (amount+yaw) % (sign*179)
         
         if(count==0):
             self.set_rotation(roll,pitch,math.radians(yaw+amount))
+            print("SET ROTATION TO:")
+            print(yaw+amount)
+            print(yaw)
+            print(amount)
             self.await_completion()
             return
 
         for x in range(count):
             if (x!=count-1):
-                self.set_rotation(roll,pitch,math.radians(yaw+179))
+                self.set_rotation(roll,pitch,math.radians(yaw+sign*179))
             else:
                 self.set_rotation(roll,pitch,math.radians(yaw+remainder))  
             self.await_completion()
@@ -142,6 +156,40 @@ class movement_controller():
             rotation = self.trans.transform.rotation
             roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
             yaw=math.degrees(yaw)
+        
+
+    # def rotate_ccw(self,amount, pitch=None , roll=None ,yaw = None): 
+    #     #input: ccw rotation amount in degrees DO NOT USE FOR CLOCKWISE ROTATION
+    #     if(yaw==None):
+    #         self.update_tf()
+    #         # Rotate from initial orientation
+    #         rotation = self.trans.transform.rotation
+    #         roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
+    #         yaw=math.degrees(yaw)
+        
+    #     if((amount+yaw)<0):
+    #         return self.rotate_ccw(amount,pitch,roll,360+yaw)
+        
+    #     count = int(math.floor((amount+yaw)/179))
+    #     remainder = (amount+yaw) % 179
+        
+    #     if(count==0):
+    #         self.set_rotation(roll,pitch,math.radians(yaw+amount))
+    #         self.await_completion()
+    #         return
+
+    #     for x in range(count):
+    #         if (x!=count-1):
+    #             self.set_rotation(roll,pitch,math.radians(yaw+179))
+    #         else:
+    #             self.set_rotation(roll,pitch,math.radians(yaw+remainder))  
+    #         self.await_completion()
+
+    #         self.update_tf()
+    #         # Rotate from initial orientation
+    #         rotation = self.trans.transform.rotation
+    #         roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
+    #         yaw=math.degrees(yaw)
             
 
         #self.set_rotation(roll,pitch,yaw+amount)
@@ -203,7 +251,7 @@ class movement_controller():
             detection = camera.get_detection([detection_label])
             if(len(detection)>0):
                 return detection
-            rospy.sleep(0.01)
+            rospy.sleep(0.05)
         return None
     def get_running_confirmation(self):
         # If current flag is the same as new flag:
@@ -314,7 +362,7 @@ class movement_controller():
         # self.target_point.point.z = mag*math.cos(yaw)
 
 
-        self.set_focus_point()
+        #self.set_focus_point()
         rotation = self.trans.transform.rotation
         roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
         translation = self.trans.transform.translation

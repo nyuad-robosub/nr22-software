@@ -14,13 +14,16 @@
 
   <include file="$(find bluerov2_description)/launch/upload.launch">
     <arg name="use_geodetic" value="false"/>
-    <arg name="x" value="-15.290308"/>
+    <!-- <arg name="x" value="-15.290308"/>
     <arg name="y" value="9.260267"/>
     <arg name="z" value="0"/>
-    <arg name="yaw" value="-3.053"/>
+    <arg name="yaw" value="-3.053"/> -->
+
+    <arg name="x" value="-5.142117"/>
+    <arg name="y" value="-10.749215"/>
+    <arg name="z" value="0"/>
+    <arg name="yaw" value="0.057168"/>
   </include>
-  
-  <node type="rviz" pkg="rviz" name="rviz" args="-d $(find avoid_obstacles)/rviz/view_trajectory.rviz"/>
 
   <include file="$(find uuv_assistants)/launch/publish_world_ned_frame.launch"/>
   <!-- <node name="publish_world_models"

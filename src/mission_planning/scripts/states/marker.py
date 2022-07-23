@@ -43,7 +43,7 @@ class marker(smach.State):
         outcome,value = au.bottom_aligning(
             mc.mov_control,
             # geometry_msgs.msg.Point(trans.x + 0.6, trans.y, trans.z),
-            0.1,
+            0.3,
             60,
             vs.bottom_camera,
             "marker",
@@ -63,12 +63,14 @@ class marker(smach.State):
         
 
         #next begin rotation to align pose with object
-        if(rotation_angle<=90):
-            #if marker is pointing top right
-            mc.mov_control.rotate_ccw(rotation_angle-90)
-        else:
-            #if marker is pointing top left
-            mc.mov_control.rotate_ccw(rotation_angle-90)
+        if(rotation_angle>0):       
+            if(rotation_angle<=90):
+                #if marker is pointing top right
+                mc.mov_control.rotate_ccw(rotation_angle-90)
+            else:
+                #if marker is pointing top left
+                mc.mov_control.rotate_ccw(rotation_angle-90)
+
         mc.mov_control.set_focus_point()
 
         mc.mov_control.await_completion()

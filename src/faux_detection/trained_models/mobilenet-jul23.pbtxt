@@ -1,0 +1,79 @@
+item {
+    id: 1
+    name: 'bin_empty'
+}
+
+item {
+    id: 2
+    name: 'bottle'
+}
+
+item {
+    id: 3
+    name: 'gman_image'
+}
+
+item {
+    id: 4
+    name: 'handle'
+}
+
+item {
+    id: 5
+    name: 'image_badge'
+}
+
+item {
+    id: 6
+    name: 'image_bootlegger'
+}
+
+item {
+    id: 7
+    name: 'image_tommygun'
+}
+
+item {
+    id: 8
+    name: 'lid_empty'
+}
+
+item {
+    id: 9
+    name: 'marker'
+}
+
+item {
+    id: 10
+    name: 'qual_gate'
+}
+
+item {
+    id: 11
+    name: 'table_bootlegger'
+}
+
+item {
+    id: 12
+    name: 'table_bottles'
+}
+
+item {
+    id: 13
+    name: 'table_gman'
+}
+
+item {
+    id: 14
+    name: 'target_cup'
+}
+
+item {
+    id: 15
+    name: 'target_large'
+}
+
+item {
+    id: 16
+    name: 'target_star'
+}

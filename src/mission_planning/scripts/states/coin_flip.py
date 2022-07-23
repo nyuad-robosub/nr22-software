@@ -20,9 +20,8 @@ class coin_flip(smach.State):
     _outcomes=['outcome1','outcome2']
     _input_keys=[],
     _output_keys=[]
-    def __init__(self):   
-        pass
-        #vs.viso_control.add_detection_of_interest("gate")
+    def __init__(self,gate_label):   
+        self.gate_label=gate_label
     def execute(self, userdata):     
         rospy.sleep(3)
 
@@ -46,14 +45,14 @@ class coin_flip(smach.State):
             rospy.sleep(0.1)
             while(mc.mov_control.get_running_confirmation()):
                 if vs.front_camera.is_fetched:
-                    detections = vs.front_camera.get_detection(["qual_gate"],0.1)
+                    detections = vs.front_camera.get_detection([self.gate_label],0.1)
                     # rospy.sleep(0.1) # delay already present in get_running_confirmation
                     if len(detections) > 0: 
                         # if(temp_detect!=None):
                         #     detect=temp_detect
 
                         # If area of bounding box too small (< 1/10 area of image): maybe not our gate
-                        if detections[0]['size'][0] * detections[0]['size'][1] < vs.front_camera.height * vs.front_camera.width / 10:
+                        if detections[0]['size'][0] * detections[0]['size'][1] < vs.front_camera.height * vs.front_camera.width / 12:
                             print("Gate too small, ignoring...")
                             continue
                             

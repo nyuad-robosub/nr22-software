@@ -29,10 +29,9 @@ class buoy(smach.State):
     _outcomes=['outcome1','outcome2']
     _input_keys=[],
     _output_keys=[]
-    def __init__(self):#, label_1, label_2):
-        pass
-        # self.label_1=label_1 #image_tommygun
-        # self.label_2=label_2 #"image_badge"
+    def __init__(self,bootlegger_label,gman_label):#, label_1, label_2):
+        self.bootlegger_label=bootlegger_label #"image_tommygun"
+        self.gman_label=gman_label #"image_badge"
     def execute(self,userdata):  
         
         trans=(mc.mov_control.get_tf()).transform.translation
@@ -43,35 +42,38 @@ class buoy(smach.State):
                     mc.mov_control.euler[2],
                     120,
                     vs.front_camera,
-                    ["image_tommygun", "image_badge"],
+                    [self.bootlegger_label, self.gman_label],
                     2,
-                    0.4,
+                    0.05,
                     0.005
                 )
 
-        if(outcome!="succeeded"):
+        if(outcome!="detected"):
             return "outcome2"
 
         #fetch side chosen in pass_gate state
         side = pt.pr_track.progress['pass_gate']['chosen_detection']
         
         #move till you detect any one of them
-        detections=vs.front_camera.get_detection(["image_tommygun","image_badge"])
+        detections=vs.front_camera.get_detection([self.bootlegger_label,self.gman_label])
         
         mc.mov_control.stop()
-        if(len(detections>1)):
+        if(len(detections)>1):
             mc.mov_control.update_tf()
 
             #detected the object
             if(side=="image_bootlegger"):    
-                detection_i=vs.front_camera.get_detection(["image_tommygun"])
-                detection_o=vs.front_camera.get_detection(["image_badge"])
+                detection_i=vs.front_camera.get_detection([self.bootlegger_label])
+                detection_o=vs.front_camera.get_detection([self.gman_label])
             else: # image_gman
-                detection_i=vs.front_camera.get_detection(["image_badge"])
-                detection_o=vs.front_camera.get_detection(["image_tommygun"])
+                detection_i=vs.front_camera.get_detection([self.gman_label])
+                detection_o=vs.front_camera.get_detection([self.bootlegger_label])
             if(len(detection_i)==0 or len(detection_o)==0):
                 return "outcome2"
             
+            detection_i = detection_i[0]
+            detection_o = detection_o[0]
+
             #get pose of object of interest
             pose_obji = vs.front_camera.get_ps(detection_i)#(vs.front_camera.estimate_pose_svd(detection_i[0]['center'],detection_i[0]['size'])).pose
             pose_objo = vs.front_camera.get_ps(detection_o) #(vs.front_camera.estimate_pose_svd(detection_o[0]['center'],detection_o[0]['size'])).pose
@@ -86,13 +88,12 @@ class buoy(smach.State):
             #align with bouys center
             center=(position_i+position_o)/2
 
-            L=vs.front_camera.height/(4*math.tan(vs.front_camera.Vfov))*1.1
-
+            L=vs.front_camera.get_min_approach_dist(0.7)
             #select which detectio nclosest to center and make it detection of interest
             roll, pitch, yaw = euler.quat2euler([pose_obji.orientation.w, pose_obji.orientation.x, pose_obji.orientation.y, pose_obji.orientation.z], 'sxyz')
 
             #put center of gate in view
-            mc.mov_control.set_focus_point(mc.mov_control.translate_axis_xyz(center,[1000,0,0],yaw))
+            mc.mov_control.set_focus_point(mc.mov_control.translate_axis_xyz(center,[100,0,0],yaw))
             rospy.sleep(1)
             mc.mov_control.set_goal_point(mc.mov_control.translate_axis_xyz(center,[-L,0,0],yaw))
             mc.mov_control.await_completion()

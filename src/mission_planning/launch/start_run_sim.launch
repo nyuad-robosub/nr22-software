@@ -64,8 +64,8 @@
     <!-- front camera faux detection args -->
     <arg name="front_detection_topic" default="/front_detection" />
 	<arg name="front_image_topic" default="$(arg front_camera_topic)" />
-	<arg name="front_model_file" default="$(find faux_detection)/trained_models/mobilenet-jul18.pb" />
-	<arg name="front_label_file" default="$(find faux_detection)/trained_models/mobilenet-jul18.pbtxt" />
+	<arg name="front_model_file" default="$(find faux_detection)/trained_models/mobilenet-jul23.pb" />
+	<arg name="front_label_file" default="$(find faux_detection)/trained_models/mobilenet-jul23.pbtxt" />
 
     <!-- Bottom Camera -->
     <arg name="bottom_camera_topic" default="/bluerov2/camera_down/camera_image"/>
@@ -76,8 +76,8 @@
     <!-- bottom camera faux detection args -->
     <arg name="bottom_detection_topic" default="/bottom_detection" />
     <arg name="bottom_image_topic" default="$(arg bottom_camera_topic)" />
-    <arg name="bottom_model_file" default="$(find faux_detection)/trained_models/mobilenet-jul18.pb" />
-    <arg name="bottom_label_file" default="$(find faux_detection)/trained_models/mobilenet-jul18.pbtxt" />
+    <arg name="bottom_model_file" default="$(find faux_detection)/trained_models/mobilenet-jul23.pb" />
+    <arg name="bottom_label_file" default="$(find faux_detection)/trained_models/mobilenet-jul23.pbtxt" />
 
 
     <!-- Run the front camera detection simulator -->
@@ -88,6 +88,8 @@
         <arg name="label_file" value="$(arg front_label_file)" />
         <arg name="interval" value="50" />
     </include>
+
+    <node type="rviz" pkg="rviz" name="rviz" args="-d $(find avoid_obstacles)/rviz/view_label.rviz"/>
 
     <!-- Run the bottom camera detection simulator -->
     <include file="$(find faux_detection)/launch/faux_detector.launch" ns="bottom_cam">

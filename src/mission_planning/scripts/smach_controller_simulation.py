@@ -84,16 +84,16 @@ if __name__ == '__main__':
     with sm:
         smach.StateMachine.add('check_submerged',check_sub(),
                                 transitions={'outcome1':'coin_flip'})
-        smach.StateMachine.add('coin_flip', coin_flip(),
+        smach.StateMachine.add('coin_flip', coin_flip("qual_gate"),
                                 transitions={'outcome1':'pass_gate',
                                             'outcome2':'coin_flip'})
-        smach.StateMachine.add('pass_gate', pass_gate("image_bootlegger","image_gman"),
+        smach.StateMachine.add('pass_gate', pass_gate("image_bootlegger","gman_image"),
                                 transitions={'outcome1':'marker',
                                             'outcome2':'pass_gate'})
         smach.StateMachine.add('marker', marker("marker"),
                                 transitions={'outcome1':'buoy',
                                             'outcome2':'marker'})
-        smach.StateMachine.add('buoy', buoy(),
+        smach.StateMachine.add('buoy', buoy("image_tommygun","image_badge"),
                                 transitions={'outcome1':'outcome4',
                                             'outcome2':'buoy'})
                                             

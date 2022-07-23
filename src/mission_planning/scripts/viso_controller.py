@@ -270,16 +270,17 @@ class stereo(camera, object):
         else:
             rospy.sleep(delay)
             counter += 1
-            ps=self.estimate_pose_svd(detection['center'],detection['size'])
             detection_arr = self.get_detection([detection['label']])
-            if(ps!=None):
-                print("RETURNING PS")
-                return ps
-            elif(len(detection_arr)==0):
-                return self.get_ps(detection, timeout, delay, counter)
+            if(len(detection_arr)!=0):
+                ps=self.estimate_pose_svd(detection['center'],detection['size'])
+                if(ps!=None):
+                    print("RETURNING PS")
+                    return ps
+                else:
+                    return self.get_ps(detection_arr[0], timeout, delay, counter)
             else:
-                return self.get_ps(detection_arr[0], timeout, delay, counter)
-    
+               return self.get_ps(detection, timeout, delay, counter) 
+            
     def get_distance_det(self, detection):
         #given detection return their distances from the camera by averaging their respective points
 
@@ -298,10 +299,8 @@ class stereo(camera, object):
             field_names={'x', 'y', 'z'},
             skip_nans=True, uvs=points_region.tolist() # [[u,v], [u,v], [u,v]] a set of xy coords
         ))).T
-
+        self.pointcloud_mutex.release()
         if(not np.any(points)):
-            print(points)
-            self.pointcloud_mutex.release()
             return None
         # [[1,2,3],[,,], ..., dt]
 
@@ -342,7 +341,6 @@ class stereo(camera, object):
         pose_msg.header.frame_id = self.world_frame
         pose_msg.pose.position = centroid_world.point
         pose_msg.pose.orientation = Quaternion(w=q[0], x=q[1], y=q[2], z=q[3])
-        self.pointcloud_mutex.release()
         return pose_msg
 
 class mono(camera, object):

@@ -14,7 +14,7 @@ import geometry_msgs.msg
 import tf2_geometry_msgs
 import math
 import vision_msgs
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Pose, PoseStamped
 import actions_utils as au
 
 from vision_msgs.msg import Detection2DArray, BoundingBox2D
@@ -31,8 +31,8 @@ class pass_gate(smach.State):
     _output_keys=[]
     def __init__(self,label_1,label_2):
         self.label_1=label_1 # "image_bootlegger"
-        self.label_2=label_2 # "image_gman"
-        self.pose_pub = rospy.Publisher('/POSE_DETECTION', Pose, queue_size=5, latch=True)
+        self.label_2=label_2 # "gman_image"
+        self.pose_pub = rospy.Publisher('/POSE_DETECTION', PoseStamped, queue_size=5, latch=True)
     def save(self,detection): #saving data
         pt.pr_track.progress['pass_gate']['done']=True #better to save automatically based off state machine?
         pt.pr_track.progress['pass_gate']['chosen_detection']=detection['label']
@@ -104,7 +104,7 @@ class pass_gate(smach.State):
             detection=det_arr[max_index]
             
             pose_obj = ps.pose
-            self.pose_pub.publish(pose_obj)
+            self.pose_pub.publish(ps)
             rospy.sleep(5)
 
             print("DETECTED AN OBJECT!")
@@ -132,10 +132,14 @@ class pass_gate(smach.State):
             clearance_d=vs.front_camera.get_min_approach_dist(1.5)
             print("Clearance distance is")
             print(clearance_d)
-            mc.mov_control.set_goal_point(mc.mov_control.translate_axis_xyz(position_data,[-clearance_d*1.2, 0 ,-0.4],yaw))
+            mc.mov_control.set_goal_point(mc.mov_control.translate_axis_xyz(position_data,[-clearance_d*1.5, 0 ,-0.4],yaw))
             mc.mov_control.await_completion()
 
-            #rospy.sleep(7)
+            # ps=vs.front_camera.get_ps(detection, 5, 0.2)
+            # if(ps==None):
+            #     return "outcome2"
+            # pose_obj = ps.pose #to get more accurate pose
+            # position_data=self.__pose_to_np(pose_obj)
 
             #GO UNDER
             mc.mov_control.set_focus_point()

@@ -8,7 +8,7 @@ import threading
 from vision_msgs.msg import Detection2DArray, BoundingBox2D
 import sensor_msgs.point_cloud2 as pc2
 from sensor_msgs.msg import PointCloud2, Image
-from geometry_msgs.msg import PoseArray, Pose, Transform, Vector3Stamped, TransformStamped, Quaternion
+from geometry_msgs.msg import Point, PoseArray, Pose, Transform, Vector3, Vector3Stamped, TransformStamped, Quaternion
 import tf2_ros
 import numpy as np
 from numpy.linalg import norm
@@ -164,6 +164,34 @@ class camera():
             print(e)
         self.image_mutex.release()
         return img
+    
+    # Get location of objects from intersection between ray and plane
+    def pixel_ray_plane_intersect(self,
+                                  pixel_xy,                     # Pixel on image                        | Tuple (x, y)
+                                  plane_xyz,                    # Plane origin point                    | Tuple (x, y, z)
+                                  plane_normal):                # Plane normal vector                   | Tuple (x, y, z)
+
+        # Get camera pose
+        self.update_tf()
+        translation = self.trans.transform.translation
+        angle_x, angle_y = self.get_angles(pixel_xy[0], pixel_xy[1])
+        center_vec_cam = Vector3Stamped(vector=Vector3(math.tan(angle_x), math.tan(angle_y), 1))
+        center_vec_world = tfgmtfgm.do_transform_vector3(center_vec_cam, self.trans)
+
+        # Get translations from camera pose
+        dot_product = plane_normal[0] * center_vec_world.vector.x + \
+                      plane_normal[1] * center_vec_world.vector.y + \
+                      plane_normal[2] * center_vec_world.vector.z
+        if dot_product == 0:
+            return None
+        t = (
+            plane_normal[0] * (plane_xyz[0] - translation.x) +
+            plane_normal[1] * (plane_xyz[1] - translation.y) +
+            plane_normal[2] * (plane_xyz[2] - translation.z)
+        ) / dot_product
+        return Point(center_vec_world.vector.x * t + translation.x,
+                     center_vec_world.vector.y * t + translation.y,
+                     center_vec_world.vector.z * t + translation.z)
 
     def get_min_approach_dist(self,width):
         clearance_d=(width/2)/math.tan(self.Hfov/2)

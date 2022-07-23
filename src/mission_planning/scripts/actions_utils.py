@@ -311,27 +311,18 @@ def bottom_aligning(mov_control,                            # Movement controlle
     
     # Get relevant tfs
     mov_control.update_tf()
-    detection_camera.update_tf()
     translation = mov_control.trans.transform.translation
-    cam_translation = detection_camera.trans.transform.translation
     initial_depth = translation.z
 
     # Get vector from camera to bbox center
     center = detections_dict[detection_label][-1]['center']
-    angle_x, angle_y = detection_camera.get_angles(center[0], center[1])
-    center_vec_cam = Vector3Stamped(vector=Vector3(math.tan(angle_x), math.tan(angle_y), 1))
-    center_vec_world = tfgmtfgm.do_transform_vector3(center_vec_cam, detection_camera.trans)
-
     # Presume pool to be flat at small region
-    delt_z = translation.z - mov_control.sonar_ping - cam_translation.z
-    delt_x = delt_z * center_vec_world.vector.x / center_vec_world.vector.z
-    delt_y = delt_z * center_vec_world.vector.y / center_vec_world.vector.z
-    position = ema_point(Point(cam_translation.x + delt_x,
-                               cam_translation.y + delt_y,
-                               cam_translation.z + delt_z), 0.95)
-    
-    print(detections_dict)
-    print("Found object %s at (%f, %f, %f)" %
+    position = ema_point(detection_camera.pixel_ray_plane_intersect(
+        center,
+        (0, 0, initial_depth - mov_control.sonar_ping),
+        (0, 0, 1)
+    ) , 0.75)
+    print("Found \"%s\" at (%f, %f, %f)" %
         (detection_label, position.value().x, position.value().y, position.value().z))
 
     # Move the robot
@@ -353,7 +344,7 @@ def bottom_aligning(mov_control,                            # Movement controlle
                 return "timeout", position.value()
 
         # Wait a bit for stabilization
-        rospy.sleep(2) 
+        rospy.sleep(2)
         # Get a detection of the object
         detections_dict = {}
         detections_dict[detection_label] = []
@@ -363,32 +354,34 @@ def bottom_aligning(mov_control,                            # Movement controlle
         
         # Get relevant tfs
         mov_control.update_tf()
-        detection_camera.update_tf()
         translation = mov_control.trans.transform.translation
-        cam_translation = detection_camera.trans.transform.translation
+        current_ping = mov_control.sonar_ping
+        min_distance, min_dist_index = 1e9, -1
+        tmp_position = Point()
 
         # Get vector from camera to bbox center
-        center = detections_dict[detection_label][-1]['center']
-        angle_x, angle_y = detection_camera.get_angles(center[0], center[1])
-        center_vec_cam = Vector3Stamped(vector=Vector3(math.tan(angle_x), math.tan(angle_y), 1))
-        center_vec_world = tfgmtfgm.do_transform_vector3(center_vec_cam, detection_camera.trans)
-        print(detections_dict)
-        print(angle_x, angle_y)
-        print(center_vec_world.vector)
-        print(cam_translation)
-        print("Found object %s at (%f, %f, %f)" %
+        # Find closest object from list of detections
+        # Presume pool to be flat at small region
+        for i in range(len(detections_dict[detection_label])):
+            center = detections_dict[detection_label][i]['center']
+            tmp_position = detection_camera.pixel_ray_plane_intersect(
+                center,
+                (0, 0, translation.z - current_ping),
+                (0, 0, 1)
+            )
+            tmp_distance = np.linalg.norm([tmp_position.x - position.value().x,
+                                           tmp_position.y - position.value().y,
+                                           tmp_position.z - position.value().z])
+            if tmp_distance < min_distance:
+                min_distance = tmp_distance
+                min_dist_index = i
+        
+        # Position update
+        position.update(tmp_position)
+        print("Found \"%s\" at (%f, %f, %f)" %
             (detection_label, position.value().x, position.value().y, position.value().z))
 
-        # Presume pool to be flat at small region
-        delt_z = translation.z - mov_control.sonar_ping - cam_translation.z
-        delt_x = delt_z * center_vec_world.vector.x / center_vec_world.vector.z
-        delt_y = delt_z * center_vec_world.vector.y / center_vec_world.vector.z
-        position.update(Point(cam_translation.x + delt_x,
-                              cam_translation.y + delt_y,
-                              cam_translation.z + delt_z))
-
         # Move the robot
-        mov_control.set_focus_point()
         mov_control.set_goal_point((position.value().x, position.value().y, initial_depth))
 
         # Run wait_function if exists

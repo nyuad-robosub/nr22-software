@@ -54,22 +54,19 @@ class marker(smach.State):
             return "outcome2"
 
         #get rotation
-        rotation_angle=self.getMarkerOrientation()
+        rotation_angle=-self.getMarkerOrientation()
         rospy.sleep(10)
 
         print("Rotating angle:")
         print(rotation_angle)
         mc.mov_control.stop()
         
-
-        #next begin rotation to align pose with object
-        if(rotation_angle>0):       
-            if(rotation_angle<=90):
-                #if marker is pointing top right
-                mc.mov_control.rotate_ccw(rotation_angle-90)
-            else:
-                #if marker is pointing top left
-                mc.mov_control.rotate_ccw(rotation_angle-90)
+        if(rotation_angle!=0):
+            if(rotation_angle>90):
+                rotation_angle-=180
+            elif(rotation_angle<-90):
+                rotation_angle+=180
+             mc.mov_control.rotate_ccw(rotation_angle)
 
         mc.mov_control.set_focus_point()
 

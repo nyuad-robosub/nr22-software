@@ -328,17 +328,14 @@ def path_callback(path):
                 mag = np.linalg.norm(delt)
 
                 # ROTATION
-                # set a rotation target while moving
-                if focusPoint.x == trans_arr[0] and focusPoint.y == trans_arr[1]:
-                    yaw = 0
-                else:
+                if focusPoint.x != trans_arr[0] or focusPoint.y != trans_arr[1]:
                     yaw = math.atan2(focusPoint.y - trans_arr[1], focusPoint.x - trans_arr[0])
                     if yaw < 0:
                         yaw += 2 * math.pi
                     yaw = yaw * RAD_TO_DEG
-                    
-                # print("setting rotation")
-                set_target_yaw(master, yaw)
+                     # print("setting rotation")
+                    set_target_yaw(master, yaw)
+               
                 rospy.sleep(0.2)
 
             # Find current location

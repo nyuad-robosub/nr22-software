@@ -35,6 +35,8 @@ class buoy(smach.State):
     def execute(self,userdata):  
         
         trans=(mc.mov_control.get_tf()).transform.translation
+        mc.mov_control.update_tf()
+        rospy.sleep(1)
         outcome, detection_dict = au.forward_search(
                     mc.mov_control,
                     geometry_msgs.msg.Point(trans.x, trans.y, trans.z - mc.mov_control.sonar_ping + 1.3),
@@ -47,7 +49,7 @@ class buoy(smach.State):
                     0.05,
                     0.005
                 )
-
+        print(outcome)
         if(outcome!="detected"):
             return "outcome2"
 
@@ -75,18 +77,20 @@ class buoy(smach.State):
             detection_o = detection_o[0]
 
             #get pose of object of interest
-            pose_obji = vs.front_camera.get_ps(detection_i)#(vs.front_camera.estimate_pose_svd(detection_i[0]['center'],detection_i[0]['size'])).pose
-            pose_objo = vs.front_camera.get_ps(detection_o) #(vs.front_camera.estimate_pose_svd(detection_o[0]['center'],detection_o[0]['size'])).pose
-            if(pose_obji==None or pose_objo==None):
+            ps_obji = vs.front_camera.get_ps(detection_i)#(vs.front_camera.estimate_pose_svd(detection_i[0]['center'],detection_i[0]['size'])).pose
+            ps_objo = vs.front_camera.get_ps(detection_o) #(vs.front_camera.estimate_pose_svd(detection_o[0]['center'],detection_o[0]['size'])).pose
+            if(ps_obji==None or ps_objo==None):
                 return "outcome2"
-
+            pose_obji=ps_obji.pose
+            pose_objo=ps_objo.pose
+            
             #align camera with detection
-            position_i=[pose_obji.position.x,pose_obji.position.y,pose_obji.position.z]
-            position_o=[pose_objo.position.x,pose_objo.position.y,pose_objo.position.z]
+            position_i=np.array([pose_obji.position.x,pose_obji.position.y,pose_obji.position.z])
+            position_o=np.array([pose_objo.position.x,pose_objo.position.y,pose_objo.position.z])
 
-            focus_point=list(position_i)
             #align with bouys center
             center=(position_i+position_o)/2
+            #focus_point=list(position_i)
 
             L=vs.front_camera.get_min_approach_dist(0.7)
             #select which detectio nclosest to center and make it detection of interest
@@ -99,11 +103,11 @@ class buoy(smach.State):
             mc.mov_control.await_completion()
 
             #images are 1.2 meters in height, so to hit top go around 0.4-5 meters
-            mc.mov_control.set_goal_point(mc.mov_control.translate_axis_xyz(pose_obji,[-L,0,0.4],yaw))
+            mc.mov_control.set_goal_point(mc.mov_control.translate_axis_xyz(position_i,[-L,0,0.4],yaw))
             mc.mov_control.await_completion()
 
             #go a bit forward after hitting
-            mc.mov_control.set_goal_point(mc.mov_control.translate_axis_xyz(pose_obji,[0.3,0,0.4],yaw))
+            mc.mov_control.set_goal_point(mc.mov_control.translate_axis_xyz(position_i,[0.3,0,0.4],yaw))
             mc.mov_control.await_completion()
             
             return "outcome1"

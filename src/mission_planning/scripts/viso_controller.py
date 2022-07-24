@@ -7,13 +7,14 @@ import rospy
 import threading
 from vision_msgs.msg import Detection2DArray, BoundingBox2D
 import sensor_msgs.point_cloud2 as pc2
-from sensor_msgs.msg import PointCloud2, Image
+from sensor_msgs.msg import PointCloud2, PointCloud, Image
 from geometry_msgs.msg import Point, PoseArray, Pose, Transform, Vector3, Vector3Stamped, TransformStamped, Quaternion
 import tf2_ros
 import numpy as np
 from numpy.linalg import norm
 import tf2_geometry_msgs.tf2_geometry_msgs as tfgmtfgm
 import tf
+from geometry_msgs.msg import Point32
 from object_detection.utils import label_map_util
 
 from transforms3d import euler
@@ -21,7 +22,8 @@ from geometry_msgs.msg import PoseArray, Pose, Transform, PointStamped, PoseStam
 import numpy as np
 import message_filters
 from copy import deepcopy
-
+import std_msgs.msg
+import std_msgs
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
@@ -44,6 +46,7 @@ class camera():
         self.Hfov=math.radians(rospy.get_param('~'+cam_enum.value+'_camera_HFOV'))
         self.detection_topic=rospy.get_param('~'+cam_enum.value+'_detection_topic')
         self.sub_topic=rospy.get_param('~'+cam_enum.value+'_camera_topic')
+        self.is_sim=rospy.get_param('~is_sim')
         # if(cam_enum.value=="front"):
         #     self.sub_topic=rospy.get_param('~'+cam_enum.value+'_camera_topic')
         # else:
@@ -215,6 +218,8 @@ class stereo(camera, object):
 
         self.pointcloud=PointCloud2()
         self.pointcloud_mutex=threading.Lock()
+
+        self.pcl_pub =rospy.Publisher("POINTS_SVD", PointCloud, latch=True)
     
     def detection_callback(self, viso_detect,pointcloud,image):
         self.mutex.acquire()
@@ -230,7 +235,8 @@ class stereo(camera, object):
         self.pointcloud=pointcloud
         self.pointcloud_mutex.release()
 
-        self.image_callback(image)
+        if(self.is_sim):
+            self.image_callback(image)
     
     def image_callback(self,data):
         self.image_mutex.acquire()
@@ -285,13 +291,31 @@ class stereo(camera, object):
         #given detection return their distances from the camera by averaging their respective points
 
         pass
-    def estimate_pose_svd(self, center, size): # Estimate pose of flat thing with SVD
+    def estimate_pose_svd(self, center, size, max_points = 250, ratio = 0.4): # Estimate pose of flat thing with SVD
+        """ 
+            Input:
+                max_points: Max number of points allowed for sample
+                ratio: Ratio of bounding box width and height to select
+                center: Numpy array of bounding box center in [x,y]
+                size: Numpy array of bounding box size in [width,height]
+        """
+
         # Get points from pcl courtesy of:
         # http://docs.ros.org/en/jade/api/sensor_msgs/html/point__cloud2_8py_source.html
         # https://answers.ros.org/question/240491/point_cloud2read_points-and-then/
+        if(size[0] * ratio > max_points/2):
+            r_x = max_points/4
+        else:
+            r_x = size[0]/2 * ratio
+        
+        if(size[1] * ratio > max_points/2):
+            r_y = max_points/4
+        else:
+            r_y = size[1]/2 * ratio
+
         points_region = np.mgrid[
-            math.ceil(center[0] - size[0] * 0.4):math.floor(center[0] + size[0] * 0.4),
-            math.ceil(center[1] - size[1] * 0.4):math.floor(center[1] + size[1] * 0.4)].reshape(2,-1).T.astype(int)
+            math.ceil(center[0] - r_x):math.floor(center[0] + r_x),
+            math.ceil(center[1] - r_y):math.floor(center[1] + r_y)].reshape(2,-1).T.astype(int)
         self.pointcloud_mutex.acquire()
         pose_time = self.pointcloud.header.stamp
         points = np.array(list(pc2.read_points(
@@ -300,6 +324,8 @@ class stereo(camera, object):
             skip_nans=True, uvs=points_region.tolist() # [[u,v], [u,v], [u,v]] a set of xy coords
         ))).T
         self.pointcloud_mutex.release()
+
+
         if(not np.any(points)):
             return None
         # [[1,2,3],[,,], ..., dt]
@@ -324,16 +350,26 @@ class stereo(camera, object):
         centroid_world = tfgmtfgm.do_transform_point(centroid_cam_ps, self.trans)
         print(centroid_world)
         normal_world = tfgmtfgm.do_transform_vector3(normal_cam_vc, self.trans)
+        
+        if(self.is_sim):
+            #Publish points in space for testing
+            pcld = PointCloud()
+            pcld.header = std_msgs.msg.Header()
+            pcld.header.stamp = rospy.Time.now()
+            pcld.header.frame_id = self.camera_frame
+            pts = points.T
+            for i,j in np.ndindex(pts.shape):
+                if(j==0):
+                    pcld.points.append(Point32(pts[i][0],pts[i][1],pts[i][2]))
+            self.pcl_pub.publish(pcld)
 
         # Assume uprightness
         pose_yaw =  math.atan2(normal_world.vector.y, normal_world.vector.x)
         if(abs(getDegsDiff(pose_yaw,yaw_rov))>math.pi/2):
             #make sure x axis is into the page of the detection
-            yaw_rov += math.pi
-            if(yaw_rov>math.pi):
-                yaw_rov=2*math.pi-yaw_rov
-            # elif(yaw_rov<-math.pi):
-            #     yaw_rov+=2*math.py
+            pose_yaw += math.pi
+            if(pose_yaw>math.pi):
+                pose_yaw=pose_yaw-2*math.pi
 
         q = euler.euler2quat(0, 0, pose_yaw, 'sxyz')
         pose_msg = PoseStamped()

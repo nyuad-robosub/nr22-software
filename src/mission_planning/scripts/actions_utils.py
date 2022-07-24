@@ -396,4 +396,5 @@ def bottom_aligning(mov_control,                            # Movement controlle
             return "timeout", position.value()
     
     # Successful return
+    mov_control.await_completion()
     return "succeeded", position.value()

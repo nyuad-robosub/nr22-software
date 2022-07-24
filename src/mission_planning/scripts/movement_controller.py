@@ -362,7 +362,7 @@ class movement_controller():
         # self.target_point.point.z = mag*math.cos(yaw)
 
 
-        #self.set_focus_point()
+        self.set_focus_point()
         rotation = self.trans.transform.rotation
         roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
         translation = self.trans.transform.translation

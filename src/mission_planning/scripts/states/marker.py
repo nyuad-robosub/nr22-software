@@ -136,23 +136,52 @@ class marker(smach.State):
         box = cv2.boxPoints(rect)
         box = np.int0(box)
 
-        center = (int(rect[0][0]),int(rect[0][1]))     
-        width = int(rect[1][0])
-        height = int(rect[1][1])
-        angle = int(rect[2])
-        
-        if width < height:
-            angle = 90 - angle
-        else:
-            angle = -angle
-         
-        label = "  Rotation Angle: " + str(angle) + " degrees"
-        textbox = cv2.rectangle(canvas, (center[0]-35, center[1]-25), (center[0] + 295, center[1] + 10), (255,255,255), -1)
-
         #draw minAreaRect
         cv2.drawContours(canvas,[box],0,(255, 0,0),2)
-        cv2.putText(canvas, label, (center[0]-50, center[1]), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,0,0), 1, cv2.LINE_AA)
-        cv2.imwrite("/home/rami/nr22-software/src/MARKER_ORIENT.png",canvas)
+        
+        #center coordinates of min_rectangle also p1
+        x = int(rect[0][0])
+        y = int(rect[0][1])
+
+        #draw at center point
+        canvas = cv2.circle(canvas, (x,y), 10, (0,255,0), -5)
+
+        ## [pca]
+        # Construct a buffer used by the pca analysis
+        sz = len(cnt)
+        data_pts = np.empty((sz, 2), dtype=np.float64)
+        for i in range(data_pts.shape[0]):
+            data_pts[i,0] = cnt[i,0,0]
+            data_pts[i,1] = cnt[i,0,1]
+
+        # perform PCA analysis
+        mean = np.empty((0))
+        mean, eigenvectors, eigenvalues = cv2.PCACompute2(data_pts, mean)
+
+        # store the center of the object
+        cntr = (int(mean[0,0]), int(mean[0,1]))
+          ## [pca]
+
+          ## [visualization]
+          # draw the principal components
+        cv2.circle(canvas, cntr, 3, (255, 0, 255), 2)
+        p1 = (cntr[0] + 0.02 * eigenvectors[0,0] * eigenvalues[0,0], cntr[1] + 0.02 * eigenvectors[0,1] * eigenvalues[0,0])
+        p2 = (cntr[0] - 0.02 * eigenvectors[1,0] * eigenvalues[1,0], cntr[1] - 0.02 * eigenvectors[1,1] * eigenvalues[1,0])
+
+
+        angle = atan2(eigenvectors[0,1], eigenvectors[0,0]) # orientation in radians
+          ## [visualization]
+
+          # label with the rotation angle
+        label = "  Rotation Angle: " + str(int(np.rad2deg(angle)) + 90) + " degrees"
+        textbox = cv2.rectangle(canvas, (cntr[0], cntr[1]-25), (cntr[0] + 250, cntr[1] + 10), (255,255,255), -1)
+        cv2.putText(canvas, label, (cntr[0], cntr[1]), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0), 1, cv2.LINE_AA)
+
+
+          # get angle
+        rotation = int(np.rad2deg(angle)) + 90
+        if rotation >= 180:
+            rotation=rotation-180
 
         return angle
 

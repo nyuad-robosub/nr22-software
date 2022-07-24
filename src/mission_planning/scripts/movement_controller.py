@@ -116,114 +116,87 @@ class movement_controller():
     def get_tf(self):
         self.update_tf()
         return self.trans
-    def rotate_ccw(self,amount, pitch=None , roll=None ,yaw = None): 
-        #input: ccw rotation amount in degrees DO NOT USE FOR CLOCKWISE ROTATION
-        if(yaw==None):
-            self.update_tf()
-            # Rotate from initial orientation
-            rotation = self.trans.transform.rotation
-            roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
-            yaw=math.degrees(yaw)
-        if(amount>0):
-            sign=1
-        else:
-            sign=-1
-        
-        if(sign*yaw<0): 
-            return self.rotate_ccw(amount,pitch,roll,(sign*360)+yaw)
-        
-        count = int(math.floor(sign*(amount+yaw)/179))
-        remainder = (amount+yaw) % (sign*179)
-        
-        if(count==0):
-            self.set_rotation(roll,pitch,math.radians(yaw+amount))
-            print("SET ROTATION TO:")
-            print(yaw+amount)
-            print(yaw)
-            print(amount)
-            self.await_completion()
-            return
-
-        for x in range(count):
-            if (x!=count-1):
-                self.set_rotation(roll,pitch,math.radians(yaw+sign*179))
-            else:
-                self.set_rotation(roll,pitch,math.radians(yaw+remainder))  
-            self.await_completion()
-
-            self.update_tf()
-            # Rotate from initial orientation
-            rotation = self.trans.transform.rotation
-            roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
-            yaw=math.degrees(yaw)
-        
-
     # def rotate_ccw(self,amount, pitch=None , roll=None ,yaw = None): 
-    #     #input: ccw rotation amount in degrees DO NOT USE FOR CLOCKWISE ROTATION
+    #     #input: ccw rotation amount in degrees (input negative to rotate clockwise)
+    #     #Rotates relative to base_link by the user specified amount
     #     if(yaw==None):
     #         self.update_tf()
     #         # Rotate from initial orientation
     #         rotation = self.trans.transform.rotation
     #         roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
     #         yaw=math.degrees(yaw)
+    #     if(amount>0):
+    #         sign=1
+    #     else:
+    #         sign=-1
         
-    #     if((amount+yaw)<0):
-    #         return self.rotate_ccw(amount,pitch,roll,360+yaw)
+    #     if(sign*yaw<0): 
+    #         return self.rotate_ccw(amount,pitch,roll,(sign*360)+yaw)
         
-    #     count = int(math.floor((amount+yaw)/179))
-    #     remainder = (amount+yaw) % 179
+    #     count = int(math.floor(sign*(amount+yaw)/179))
+    #     remainder = (amount+yaw) % (sign*179)
         
     #     if(count==0):
     #         self.set_rotation(roll,pitch,math.radians(yaw+amount))
+    #         print("SET ROTATION TO:")
+    #         print(yaw+amount)
+    #         print(yaw)
+    #         print(amount)
     #         self.await_completion()
     #         return
 
     #     for x in range(count):
     #         if (x!=count-1):
-    #             self.set_rotation(roll,pitch,math.radians(yaw+179))
+    #             self.set_rotation(roll,pitch,math.radians(yaw+sign*179))
     #         else:
     #             self.set_rotation(roll,pitch,math.radians(yaw+remainder))  
     #         self.await_completion()
+    #         self.set_focus_point()
 
     #         self.update_tf()
     #         # Rotate from initial orientation
     #         rotation = self.trans.transform.rotation
     #         roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
     #         yaw=math.degrees(yaw)
-            
+    def to_euler(self,angle):
+        ai, aj, ak = euler.axangle2euler([1, 0, 0], math.radians(angle))
+        return ai
+    def rotate_ccw(self,amount):
+        self.update_tf()
+        # Rotate from initial orientation
+        rotation = self.trans.transform.rotation
+        roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
+        yaw=math.degrees(yaw)
 
-        #self.set_rotation(roll,pitch,yaw+amount)
+        rot_total=yaw
+        remainder = amount % (179)
+        count=int(math.floor(abs(amount)/179))
 
-    # def rotate_ccw(self):
-    #     self.update_tf()
-    #     self.arm()
+        if(count==0 and amount!=0):
+            print("ROTATING BY::")
+            print(math.degrees(self.to_euler(rot_total+amount)))
+            self.set_rotation(roll,pitch,self.to_euler(rot_total+amount))
+            self.await_completion()
+            return
 
-    #     # Rotate from initial orientation
-    #     rotation = self.trans.transform.rotation
-    #     roll, pitch, yaw = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
-    #     #print(roll, pitch, yaw)
+        if(amount>0):
+            #rotate ccw
+            for x in range(count):
+                rot_total+=179
+                self.set_rotation(roll,pitch,self.to_euler(rot_total))
+                self.await_completion()  
+                
+        elif(amount<0):
+            #rotate cw
+            for x in range(count):
+                rot_total-=179
+                self.set_rotation(roll,pitch,self.to_euler(rot_total))
+                self.await_completion()
 
-    #     # Do a spin
-    #     detected = False
-
-    #     #SEPERATE THREAD NEEDED
-    #     i = 0
-    #     msg9 = geometry_msgs.msg.Quaternion()
-    #     while not detected and i < 4: 
-    #         angle = math.degrees(yaw) + i * 90 #is euler i ndegrees?
-    #         print(angle)
-    #         if angle < 0:
-    #             angle += 360
-    #         if angle >= 360:
-    #             angle -= 360
-    #         q = euler.euler2quat(0, 0, math.radians(angle), 'sxyz')
-    #         msg9.w = q[0]
-    #         msg9.x = q[1]
-    #         msg9.y = q[2]
-    #         msg9.z = q[3]
-    #         self.goal_rotation_publisher.publish(msg9)
-    #         self.await_completion()
-    #         i+=1
+        rot_total+=remainder
+        self.set_rotation(roll,pitch,self.to_euler(rot_total))
+        self.await_completion()
+        
     def set_rotation(self,roll,pitch,yaw):
         msg9 = geometry_msgs.msg.Quaternion()
         q = euler.euler2quat(roll, pitch, yaw, 'sxyz')

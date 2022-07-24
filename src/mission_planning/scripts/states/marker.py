@@ -33,13 +33,14 @@ class marker(smach.State):
     def execute(self, userdata):  
         #mc.mov_control.set_focus_point()
         rospy.sleep(0.5)
-        #call search which returns once any bbox is detected
+        #call search which returns once any bbox of marker is detected
         detection=self.search(self.zigzag_threshold,0.7,self.marker_label)
 
-        #next begin the adjustment function
         mc.mov_control.update_tf()
 
         trans = mc.mov_control.trans.transform.translation
+
+        #begin alignment of bottom with marker
         outcome,value = au.bottom_aligning(
             mc.mov_control,
             # geometry_msgs.msg.Point(trans.x + 0.6, trans.y, trans.z),
@@ -53,22 +54,24 @@ class marker(smach.State):
         if(outcome!="succeeded"):
             return "outcome2"
 
-        #get rotation
+        #get rotation of marker 
         rotation_angle=-self.getMarkerOrientation()
+
+        #sleep here for a bit to avoid trajectory completing after we get orientation(because they run in separate threads)
         rospy.sleep(10)
 
         print("Rotating angle:")
         print(rotation_angle)
-        mc.mov_control.stop()
         
         if(rotation_angle!=0):
+            #cases where rotation angle might get flipped
             if(rotation_angle>90):
-                rotation_angle-=180
+                rotation_angle-=90
             elif(rotation_angle<-90):
-                rotation_angle+=180
-             mc.mov_control.rotate_ccw(rotation_angle)
+                rotation_angle+=90
+            mc.mov_control.rotate_ccw(rotation_angle)
 
-        mc.mov_control.set_focus_point()
+        mc.mov_control.set_focus_point() #this should be done in rotate_ccw
 
         mc.mov_control.await_completion()
 
@@ -133,15 +136,15 @@ class marker(smach.State):
         box = cv2.boxPoints(rect)
         box = np.int0(box)
 
-        enter = (int(rect[0][0]),int(rect[0][1]))      
+        center = (int(rect[0][0]),int(rect[0][1]))     
         width = int(rect[1][0])
         height = int(rect[1][1])
         angle = int(rect[2])
         
         if width < height:
-        angle = 90 - angle
+            angle = 90 - angle
         else:
-        angle = -angle
+            angle = -angle
          
         label = "  Rotation Angle: " + str(angle) + " degrees"
         textbox = cv2.rectangle(canvas, (center[0]-35, center[1]-25), (center[0] + 295, center[1] + 10), (255,255,255), -1)
@@ -149,6 +152,7 @@ class marker(smach.State):
         #draw minAreaRect
         cv2.drawContours(canvas,[box],0,(255, 0,0),2)
         cv2.putText(canvas, label, (center[0]-50, center[1]), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,0,0), 1, cv2.LINE_AA)
+        cv2.imwrite("/home/rami/nr22-software/src/MARKER_ORIENT.png",canvas)
 
         return angle
 

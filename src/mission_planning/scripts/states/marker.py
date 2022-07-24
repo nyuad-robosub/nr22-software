@@ -139,9 +139,9 @@ class marker(smach.State):
         angle = int(rect[2])
         
         if width < height:
-        angle = 90 - angle
+            angle = 90 - angle
         else:
-        angle = -angle
+            angle = -angle
          
         label = "  Rotation Angle: " + str(angle) + " degrees"
         textbox = cv2.rectangle(canvas, (center[0]-35, center[1]-25), (center[0] + 295, center[1] + 10), (255,255,255), -1)

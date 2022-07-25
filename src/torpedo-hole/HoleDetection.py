@@ -72,8 +72,8 @@ canvas = np.zeros(img.shape)
 canvas.fill(255)
 
 contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-clust_cnt = agglomerative_cluster(list(contours), 100)
-cv2.drawContours(canvas, clust_cnt, -1, (0, 255, 0), 3)
+cnt_ = agglomerative_cluster(list(contours), 100)
+cv2.drawContours(canvas, cnt_, -1, (0, 255, 0), 3)
 
 sorted_cont = sorted(contours, key=cv2.contourArea)
 
@@ -97,6 +97,9 @@ cv2.circle(canvas, (X2,Y2), 20, (0,0,255), -5)
 cv2.drawContours(canvas,[Box1],0,(255, 0,0),5)
 cv2.drawContours(canvas,[Box2],0,(255, 0,0),5)
 
-print('Larger Hole: ' + str(X1), str(Y1))
-print('Smaller Hole: ' + str(X2), str(Y2))
-cv2.imwrite("output.jpg", canvas)
+print('Larger Hole Center: ' + str(X1), str(Y1))
+print('Larger Hole Region: ', Box1)
+
+
+print('Smaller Hole Center: ' + str(X2), str(Y2))
+print('Smaller Hole Region: ', Box2)

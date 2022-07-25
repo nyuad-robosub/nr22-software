@@ -75,7 +75,7 @@ contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX
 cnt_ = agglomerative_cluster(list(contours), 100)
 cv2.drawContours(canvas, cnt_, -1, (0, 255, 0), 3)
 
-sorted_cont = sorted(contours, key=cv2.contourArea)
+sorted_cont = sorted(cnt_, key=cv2.contourArea)
 
 Rect1 = cv2.minAreaRect(sorted_cont[-1])
 Box1 = cv2.boxPoints(Rect1)

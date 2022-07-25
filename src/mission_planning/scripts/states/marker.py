@@ -167,7 +167,7 @@ class marker(smach.State):
         cv2.drawContours(frame,[box],0,(255, 0,0),2)
         cv2.circle(frame, (x,y), 10, (0,255,0), -5)
 
-        rotation = -int(np.rad2deg(a)) - 90
+        rotation = 180 -int(np.rad2deg(a))
 
         if rotation >= 180:
             rotation=rotation-180

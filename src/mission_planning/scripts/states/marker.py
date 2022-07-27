@@ -31,15 +31,16 @@ class marker(smach.State):
         self.marker_label=marker_label
         self.zigzag_threshold=0.7
     def execute(self, userdata):  
-        #mc.mov_control.set_focus_point()
-        rospy.sleep(0.5)
+        mc.mov_control.arm()
         #call search which returns once any bbox of marker is detected
-        detection=self.search(self.zigzag_threshold,0.7,self.marker_label)
+        if(len(self.search(self.zigzag_threshold, self.marker_label))==0):
+            return "outcome2"
 
         mc.mov_control.update_tf()
 
         trans = mc.mov_control.trans.transform.translation
 
+        print("Beginning alignment")
         #begin alignment of bottom with marker
         outcome,value = au.bottom_aligning(
             mc.mov_control,
@@ -55,27 +56,21 @@ class marker(smach.State):
             return "outcome2"
 
         #get rotation of marker 
-        rotation_angle=-self.getMarkerOrientation()
+        rotation_angle=self.getMarkerOrientation()
+        if(rotation_angle==None):
+            return "oucome2"
 
         #sleep here for a bit to avoid trajectory completing after we get orientation(because they run in separate threads)
         rospy.sleep(10)
 
         print("Rotating angle:")
         print(rotation_angle)
-        
-        if(rotation_angle!=0):
-            #cases where rotation angle might get flipped
-            if(rotation_angle>90):
-                rotation_angle-=90
-            elif(rotation_angle<-90):
-                rotation_angle+=90
+
+        if(rotation_angle!=90):
+            rotation_angle-=90
             mc.mov_control.rotate_ccw(rotation_angle)
-
-        mc.mov_control.set_focus_point() #this should be done in rotate_ccw
-
+        
         mc.mov_control.await_completion()
-
-        mc.mov_control.stop()
 
         return "outcome1"
            #else get bbox angle and use trigonometry to determine translation amount return adjustment(self,detection)
@@ -122,7 +117,7 @@ class marker(smach.State):
 
         if len(cnt) == 0:
             print("No Marker Detected")
-            exit()
+            return None
 
         areas = [cv2.contourArea(c) for c in cluster]
 
@@ -175,18 +170,17 @@ class marker(smach.State):
         return rotation
 
 
-    def search(self,threshold, straight_amount,detection_label): #recursive function to go in zig zags till gate detected
+    def search(self,threshold, detection_label): #recursive function to go in zig zags till gate detected
         #TODO MAKE STRAIGHT AMOUNT DETERMINED FROM OUR DEPTH TO SWEEP BOTTOM CAMERA FRAME
-        detection = vs.bottom_camera.get_detection([detection_label])
+        detection = vs.bottom_camera.get_detection_t(detection_label,0.5)
         if(len(detection)==0):
             Points=mc.mov_control.generate_zig_zag(threshold)
-            print(Points)
             mc.mov_control.set_goal_points(Points)
-            rospy.sleep(0.5)
+            print("Trajectory set")
             detection=mc.mov_control.await_completion_detection(detection_label, vs.bottom_camera)
             mc.mov_control.stop()
+        return detection
 
-        return detection[0]
         # if(len(detection)>0):
         #     #if marker detected return 
         #     #marker detected

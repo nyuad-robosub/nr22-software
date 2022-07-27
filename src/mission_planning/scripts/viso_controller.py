@@ -46,7 +46,7 @@ class camera():
         self.Hfov=math.radians(rospy.get_param('~'+cam_enum.value+'_camera_HFOV'))
         self.detection_topic=rospy.get_param('~'+cam_enum.value+'_detection_topic')
         self.sub_topic=rospy.get_param('~'+cam_enum.value+'_camera_topic')
-        self.is_sim=rospy.get_param('~is_sim')
+        self.is_sim=bool(rospy.get_param('~is_sim'))
         # if(cam_enum.value=="front"):
         #     self.sub_topic=rospy.get_param('~'+cam_enum.value+'_camera_topic')
         # else:
@@ -92,6 +92,20 @@ class camera():
     def get_center_coord(self):
         return [self.width/2,self.height/2]
 
+    def get_detection_t(self, label, timeout = 0.1):
+        #try and get detections over a specified period of time instead of just the last fetched instant
+        detection = []
+        current_time=rospy.get_time()
+        goal_time = current_time + timeout
+
+        while(current_time <= goal_time):
+            current_time=rospy.get_time()
+            if(self.is_fetched):
+                detection = self.get_detection([label])
+                if(len(detection)!=0):
+                    return detection
+                    
+        return detection
     def get_detection(self, array_of_labels = [], confidence_threshold = 0.1): #np array of labels passed, returns dictionary of detections for those id's
         # if(self.is_fetched): # Might not need this if want to get again
 
@@ -350,7 +364,7 @@ class stereo(camera, object):
         centroid_world = tfgmtfgm.do_transform_point(centroid_cam_ps, self.trans)
         print(centroid_world)
         normal_world = tfgmtfgm.do_transform_vector3(normal_cam_vc, self.trans)
-        
+
         if(self.is_sim):
             #Publish points in space for testing
             pcld = PointCloud()

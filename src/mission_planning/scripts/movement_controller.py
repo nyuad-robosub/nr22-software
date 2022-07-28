@@ -3,6 +3,8 @@
 from concurrent.futures import thread
 from fnmatch import translate
 from shutil import move
+
+from click import confirm
 import rospy 
 import math
 import numpy as np
@@ -177,6 +179,7 @@ class movement_controller():
             print(math.degrees(self.to_euler(rot_total+amount)))
             self.set_rotation(roll,pitch,self.to_euler(rot_total+amount))
             self.await_completion()
+            self.set_focus_point()
             return
 
         if(amount>0):
@@ -196,6 +199,8 @@ class movement_controller():
         rot_total+=remainder
         self.set_rotation(roll,pitch,self.to_euler(rot_total))
         self.await_completion()
+
+        self.set_focus_point()
         
     def set_rotation(self,roll,pitch,yaw):
         msg9 = geometry_msgs.msg.Quaternion()
@@ -216,16 +221,21 @@ class movement_controller():
             while self.get_running_confirmation():    
                 #print(self.get_running_confirmation())
                 rospy.sleep(0.01)
-    def await_completion_detection(self,detection_label, camera = None):
+    def await_completion_detection(self,detection_label, camera = None, min_area_norm=0.1):
         # Wait until movement finished
+        detection=[]
         if(camera==None):
             camera=vs.front_camera
-        while self.get_running_confirmation():    
-            detection = camera.get_detection([detection_label])
-            if(len(detection)>0):
-                return detection
-            rospy.sleep(0.05)
-        return None
+
+        while self.get_running_confirmation():  
+            if camera.is_fetched:  
+                detection = camera.get_detection([detection_label],0.01)
+                print("FETCHING DETECTION")
+                if(len(detection)>0):
+                    if(detection[0]['size'][0] * detection[0]['size'][1] > camera.width * camera.height * min_area_norm):
+                        return detection
+
+        return detection
     def get_running_confirmation(self):
         # If current flag is the same as new flag:
         # - Either the controller has not registered the movement, or

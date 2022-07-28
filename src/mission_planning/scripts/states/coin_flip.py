@@ -45,7 +45,7 @@ class coin_flip(smach.State):
             rospy.sleep(0.1)
             while(mc.mov_control.get_running_confirmation()):
                 if vs.front_camera.is_fetched:
-                    detections = vs.front_camera.get_detection([self.gate_label],0.1)
+                    detections = vs.front_camera.get_detection([self.gate_label],0.05)
                     # rospy.sleep(0.1) # delay already present in get_running_confirmation
                     if len(detections) > 0: 
                         # if(temp_detect!=None):

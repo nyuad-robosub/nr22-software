@@ -55,19 +55,19 @@ class marker(smach.State):
         if(outcome!="succeeded"):
             return "outcome2"
 
+        rospy.sleep(5)
         #get rotation of marker 
         rotation_angle=self.getMarkerOrientation()
         if(rotation_angle==None):
-            return "oucome2"
+            return "outcome2"
 
         #sleep here for a bit to avoid trajectory completing after we get orientation(because they run in separate threads)
-        rospy.sleep(10)
-
-        print("Rotating angle:")
-        print(rotation_angle)
+        rospy.sleep(5)   
 
         if(rotation_angle!=90):
             rotation_angle-=90
+            print("Rotation angle:")
+            print(rotation_angle)
             mc.mov_control.rotate_ccw(rotation_angle)
         
         mc.mov_control.await_completion()

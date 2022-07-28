@@ -256,7 +256,8 @@ class stereo(camera, object):
         self.image_mutex.acquire()
         try:
             #get detections 
-            labeled_cv_image=cv2.resize(self.bridge.imgmsg_to_cv2(data, desired_encoding='bgr8'),(640,400))
+            self.cv_image=cv2.resize(self.bridge.imgmsg_to_cv2(data, desired_encoding='bgr8'),(640,400))
+            labeled_cv_image=self.cv_image.copy()
             for det in self.viso_detect.detections:
                 ll_vertex=(int(det.bbox.center.x-det.bbox.size_x/2),int(det.bbox.center.y-det.bbox.size_y/2))
                 rr_vertex=(int(det.bbox.center.x+det.bbox.size_x/2),int(det.bbox.center.y+det.bbox.size_y/2))
@@ -305,6 +306,73 @@ class stereo(camera, object):
         #given detection return their distances from the camera by averaging their respective points
 
         pass
+
+    def estimate_gate_pose(self, points_region, max_points = 300):
+        self.pointcloud_mutex.acquire()
+        pose_time = self.pointcloud.header.stamp
+        #points_region: [[x,y] [x,y] ...]
+        M,_=points_region.shape
+        points_region=points_region[::int(math.floor(M/max_points))]
+        points = np.array(list(pc2.read_points(
+            self.pointcloud,
+            field_names={'x', 'y', 'z'},
+            skip_nans=True, uvs=points_region.tolist() # [[u,v], [u,v], [u,v]] a set of xy coords
+        ))).T
+        self.pointcloud_mutex.release()
+
+
+        if(not np.any(points)):
+            return None
+        # [[1,2,3],[,,], ..., dt]
+
+        # Approx. plane normal courtesy of:
+        # https://math.stackexchange.com/a/99317
+        centroid_cam = np.mean(points, axis=1, keepdims=True)
+        svd = np.linalg.svd(points - centroid_cam) # [:,-1]
+        left = svd[0]
+        normal_cam = left[:, -1] #normal direction vector relative to object plane
+
+        centroid_cam = np.concatenate(centroid_cam,axis=0)
+        centroid_cam_ps=self.__np_to_ps(centroid_cam)
+        normal_cam_vc=self.__np_to_vector(normal_cam)
+
+        # Transform to world frame
+        self.update_tf()
+        rotation = self.trans.transform.rotation
+        roll_rov, pitch_rov, yaw_rov = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
+
+        centroid_world = tfgmtfgm.do_transform_point(centroid_cam_ps, self.trans)
+        print(centroid_world)
+        normal_world = tfgmtfgm.do_transform_vector3(normal_cam_vc, self.trans)
+
+        if(self.is_sim):
+            #Publish points in space for testing
+            pcld = PointCloud()
+            pcld.header = std_msgs.msg.Header()
+            pcld.header.stamp = rospy.Time.now()
+            pcld.header.frame_id = self.camera_frame
+            pts = points.T
+            for i,j in np.ndindex(pts.shape):
+                if(j==0):
+                    pcld.points.append(Point32(pts[i][0],pts[i][1],pts[i][2]))
+            self.pcl_pub.publish(pcld)
+
+        # Assume uprightness
+        pose_yaw =  math.atan2(normal_world.vector.y, normal_world.vector.x)
+        if(abs(getDegsDiff(pose_yaw,yaw_rov))>math.pi/2):
+            #make sure x axis is into the page of the detection
+            pose_yaw += math.pi
+            if(pose_yaw>math.pi):
+                pose_yaw=pose_yaw-2*math.pi
+
+        q = euler.euler2quat(0, 0, pose_yaw, 'sxyz')
+        pose_msg = PoseStamped()
+        pose_msg.header.stamp = pose_time
+        pose_msg.header.frame_id = self.world_frame
+        pose_msg.pose.position = centroid_world.point
+        pose_msg.pose.orientation = Quaternion(w=q[0], x=q[1], y=q[2], z=q[3])
+        return pose_msg
+
     def estimate_pose_svd(self, center, size, max_points = 250, ratio = 0.4): # Estimate pose of flat thing with SVD
         """ 
             Input:
@@ -327,6 +395,7 @@ class stereo(camera, object):
         else:
             r_y = size[1]/2 * ratio
 
+        self.update_tf()
         points_region = np.mgrid[
             math.ceil(center[0] - r_x):math.floor(center[0] + r_x),
             math.ceil(center[1] - r_y):math.floor(center[1] + r_y)].reshape(2,-1).T.astype(int)
@@ -357,7 +426,6 @@ class stereo(camera, object):
         normal_cam_vc=self.__np_to_vector(normal_cam)
 
         # Transform to world frame
-        self.update_tf()
         rotation = self.trans.transform.rotation
         roll_rov, pitch_rov, yaw_rov = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
 

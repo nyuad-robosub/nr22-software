@@ -94,8 +94,9 @@ if __name__ == '__main__':
                                 transitions={'outcome1':'buoy',
                                             'outcome2':'marker'})
         smach.StateMachine.add('buoy', buoy("image_tommygun","image_badge"),
-                                transitions={'outcome1':'outcome4',
+                                transitions={'outcome1':'marker',
                                             'outcome2':'buoy'})
+        
                                             
     print("EXECUTING SM")
     

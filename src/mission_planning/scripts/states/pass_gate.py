@@ -24,7 +24,7 @@ import tf2_ros
 
 import numpy as np
 from transforms3d import euler
-from calc_utils import is_approx_equal
+from calc_utils import is_approx_equal, pose_to_np
 class pass_gate(smach.State):
     _outcomes=['outcome1','outcome2']
     _input_keys=[],
@@ -38,9 +38,6 @@ class pass_gate(smach.State):
         pt.pr_track.progress['pass_gate']['chosen_detection']=detection['label']
         print("CHOSE")
         print(detection['label'])
-    def __pose_to_np(self,pose_obj):
-        position_data=np.array([pose_obj.position.x,pose_obj.position.y,pose_obj.position.z])
-        return position_data
     def __is_top_approx_equal(self,detection1, detection2):
         return is_approx_equal(detection1['center'][1]+detection1['size'][1]/2,detection2['center'][1]+detection2['size'][1]/2,0.3)
             
@@ -83,9 +80,12 @@ class pass_gate(smach.State):
             ps_arr=[]
             dist_arr=[]
             for det in detections:
-                ps=vs.front_camera.get_ps(detections[0], 0.25, 0.05)
+                ps=vs.front_camera.get_ps(det, 0.25, 0.05)
                 if(ps!=None):
-                    dist = np.linalg.norm(np.array(self.__pose_to_np(ps.pose))-rov_position)
+                    print(np.array(pose_to_np(ps.pose)))
+                    print(rov_position)
+                    print(np.linalg.norm(np.array(pose_to_np(ps.pose))-rov_position))
+                    dist = np.linalg.norm(np.array(pose_to_np(ps.pose))-rov_position)
                     if(dist<=5):
                         ps_arr.append(ps)
                         dist_arr.append(dist)
@@ -114,7 +114,7 @@ class pass_gate(smach.State):
             roll, pitch, yaw = euler.quat2euler([pose_obj.orientation.w, pose_obj.orientation.x, pose_obj.orientation.y, pose_obj.orientation.z], 'sxyz')
 
             #get position data
-            position_data=self.__pose_to_np(pose_obj)#np.array([pose_obj.position.x,pose_obj.position.y,pose_obj.position.z])#[pose_obj.position.x,pose_obj.position.y,pose_obj.position.z]
+            position_data=pose_to_np(pose_obj)#np.array([pose_obj.position.x,pose_obj.position.y,pose_obj.position.z])#[pose_obj.position.x,pose_obj.position.y,pose_obj.position.z]
             print(position_data)
             
            
@@ -132,14 +132,16 @@ class pass_gate(smach.State):
             clearance_d=vs.front_camera.get_min_approach_dist(1.5)
             print("Clearance distance is")
             print(clearance_d)
+            print(position_data)
             mc.mov_control.set_goal_point(mc.mov_control.translate_axis_xyz(position_data,[-clearance_d*1.5, 0 ,-0.4],yaw))
+            print(position_data)
             mc.mov_control.await_completion()
 
             # ps=vs.front_camera.get_ps(detection, 5, 0.2)
             # if(ps==None):
             #     return "outcome2"
             # pose_obj = ps.pose #to get more accurate pose
-            # position_data=self.__pose_to_np(pose_obj)
+            # position_data=pose_to_np(pose_obj)
 
             #GO UNDER
             mc.mov_control.set_focus_point()

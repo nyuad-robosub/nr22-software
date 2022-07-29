@@ -1,0 +1,37 @@
+<launch>
+  <arg name="paused" default="false"/>
+  <arg name="gui" default="true"/>
+
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="worlds/pool_v2_no_middle.world"/>
+    <arg name="paused" value="false"/>
+    <arg name="use_sim_time" value="true"/>
+    <arg name="gui" value="$(arg gui)"/>
+    <arg name="headless" value="false"/>
+    <arg name="debug" value="false"/>
+    <arg name="verbose" value="true" />
+  </include>
+
+  <include file="$(find bluerov2_description)/launch/upload.launch">
+    <arg name="use_geodetic" value="false"/>
+    <arg name="x" value="4.54278"/>
+    <arg name="y" value="-7.250741"/>
+    <arg name="z" value="0"/>
+    <arg name="yaw" value="0.390784"/>
+  </include>
+
+  <include file="$(find uuv_assistants)/launch/publish_world_ned_frame.launch"/>
+  <!-- <node name="publish_world_models"
+        pkg="uuv_assistants"
+        type="publish_world_models.py"
+        output="screen">
+        <rosparam subst_value="true">
+            meshes:
+                pool_v2:
+                    mesh: package://pools/meshes/pool_v2.dae
+                    pose:
+                      position: [0, 0, 0]
+                    scale: [1, 1, 1]
+        </rosparam>
+  </node> -->
+</launch>

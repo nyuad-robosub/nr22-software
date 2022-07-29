@@ -28,7 +28,7 @@
     <!--PCL TOPIC -->
     <arg name="pcl_topic" default="/camera/depth/color/points"/>
 
-    <include file="$(find pools)/launch/complete_course_flat.launch">
+    <include file="$(find pools)/launch/pool_v2_no_middle.launch">
         <arg name="paused" value="false"/>
         <arg name="gui" value="$(arg gui)"/>
     </include>
@@ -106,7 +106,7 @@
     <!-- Launch SMACH node -->
     <arg name="respawn_smach" default="false" />
     <arg name="log_output" default="screen" />
-	<node pkg="mission_planning" type="smach_controller_simulation.py" name="mission_planning" required="$(eval not respawn_smach)"
+	<node pkg="mission_planning" type="smach_controller_simulation_qual.py" name="mission_planning" required="$(eval not respawn_smach)"
     clear_params="true" output="$(arg log_output)" respawn="$(arg respawn_smach)"> 
         <param name="is_sim" value="$(arg is_sim)"/>
         <param name="base_frame" value="$(arg base_frame)" />

@@ -5,8 +5,6 @@ import smach
 import os
 from std_msgs.msg import Bool
 # from movement_controller import movement_controller
-import sys
-import os
 import movement_controller as mc
 import viso_controller as vs
 import progress_tracker as pt
@@ -16,10 +14,7 @@ sys.path.insert(0, './states')
 
 from states.check_submerged import check_sub
 from states.coin_flip import coin_flip
-from states.pass_gate_color import pass_gate_color
-from states.pass_gate_label import pass_gate_label
-from states.marker import marker
-from states.buoy import buoy
+from states.pass_gate_qual import pass_gate_qual
 
 # just a class to run ros launch files FIX LANCH FILE NO LOGGING NEEDED
 class launch_stuff:
@@ -27,13 +22,7 @@ class launch_stuff:
         self.launch_dir = os.getcwd() + "/../launch/"
 
     def launch(self, filename):
-        # uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
-        # launch = roslaunch.parent.ROSLaunchParent(
-        #     uuid, [self.launch_dir+filename])
-        # launch.start()
         os.system("roslaunch mission_planning"+filename+"&> /dev/null &")
-
-
 
 #mov_control, rov_frame,world_frame,goal_topic,goal_rotation_topic,isRunning_topic,ls = None
 rov_frame=""
@@ -88,24 +77,11 @@ if __name__ == '__main__':
         smach.StateMachine.add('check_submerged',check_sub(),
                                 transitions={'outcome1':'coin_flip'})
         smach.StateMachine.add('coin_flip', coin_flip("qual_gate"),
-                                transitions={'outcome1':'pass_gate_color',
+                                transitions={'outcome1':'pass_gate_qual',
                                             'outcome2':'coin_flip'})
-        smach.StateMachine.add('pass_gate_color', pass_gate_color("image_bootlegger","gman_image"),
-                                transitions={'outcome1':'marker',
-                                            'outcome2':'pass_gate_color',
-                                            'outcome3':'pass_gate_label'
-                                            })
-        smach.StateMachine.add('pass_gate_label', pass_gate_label("image_bootlegger","gman_image"),
-                                transitions={'outcome1':'marker',
-                                            'outcome2':'pass_gate_label'})
-        smach.StateMachine.add('marker', marker("marker"),
-                                transitions={'outcome1':'buoy',
-                                            'outcome2':'marker'})
-        smach.StateMachine.add('buoy', buoy("image_tommygun","image_badge"),
-                                transitions={'outcome1':'marker',
-                                            'outcome2':'buoy'})
-        
-                                            
+        smach.StateMachine.add('pass_gate_qual', pass_gate_qual("image_bootlegger","gman_image"),
+                                transitions={'outcome1':'outcome4',
+                                            'outcome2':'pass_gate_qual'})
     print("EXECUTING SM")
     
     outcome = sm.execute()

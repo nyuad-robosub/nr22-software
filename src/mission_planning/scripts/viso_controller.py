@@ -312,14 +312,17 @@ class stereo(camera, object):
         pose_time = self.pointcloud.header.stamp
         #points_region: [[x,y] [x,y] ...]
         M,_=points_region.shape
-        points_region=points_region[::int(math.floor(M/max_points))]
+        temp = int(math.floor(M/max_points))
+        if(temp!=0):
+            points_region=points_region[::temp]
+
         points = np.array(list(pc2.read_points(
             self.pointcloud,
             field_names={'x', 'y', 'z'},
             skip_nans=True, uvs=points_region.tolist() # [[u,v], [u,v], [u,v]] a set of xy coords
         ))).T
         self.pointcloud_mutex.release()
-
+        print(points)
 
         if(not np.any(points)):
             return None
@@ -337,33 +340,34 @@ class stereo(camera, object):
         normal_cam_vc=self.__np_to_vector(normal_cam)
 
         # Transform to world frame
+        import movement_controller as mc
         self.update_tf()
-        rotation = self.trans.transform.rotation
+        mc.mov_control.update_tf()
+        rotation = mc.mov_control.trans.transform.rotation
         roll_rov, pitch_rov, yaw_rov = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
 
         centroid_world = tfgmtfgm.do_transform_point(centroid_cam_ps, self.trans)
-        print(centroid_world)
         normal_world = tfgmtfgm.do_transform_vector3(normal_cam_vc, self.trans)
 
-        if(self.is_sim):
+        # if(self.is_sim):
             #Publish points in space for testing
-            pcld = PointCloud()
-            pcld.header = std_msgs.msg.Header()
-            pcld.header.stamp = rospy.Time.now()
-            pcld.header.frame_id = self.camera_frame
-            pts = points.T
-            for i,j in np.ndindex(pts.shape):
-                if(j==0):
-                    pcld.points.append(Point32(pts[i][0],pts[i][1],pts[i][2]))
-            self.pcl_pub.publish(pcld)
+        pcld = PointCloud()
+        pcld.header = std_msgs.msg.Header()
+        pcld.header.stamp = rospy.Time.now()
+        pcld.header.frame_id = self.camera_frame
+        pts = points.T
+        for i,j in np.ndindex(pts.shape):
+            if(j==0):
+                pcld.points.append(Point32(pts[i][0],pts[i][1],pts[i][2]))
+        self.pcl_pub.publish(pcld)
 
         # Assume uprightness
         pose_yaw =  math.atan2(normal_world.vector.y, normal_world.vector.x)
-        if(abs(getDegsDiff(pose_yaw,yaw_rov))>math.pi/2):
+        if(abs(getDegsDiff(pose_yaw,yaw_rov)) > math.pi / 2):
             #make sure x axis is into the page of the detection
             pose_yaw += math.pi
-            if(pose_yaw>math.pi):
-                pose_yaw=pose_yaw-2*math.pi
+            pose_yaw, aj, ak = euler.axangle2euler([1, 0, 0], pose_yaw)
+            print(pose_yaw)
 
         q = euler.euler2quat(0, 0, pose_yaw, 'sxyz')
         pose_msg = PoseStamped()
@@ -426,11 +430,12 @@ class stereo(camera, object):
         normal_cam_vc=self.__np_to_vector(normal_cam)
 
         # Transform to world frame
-        rotation = self.trans.transform.rotation
+        import movement_controller as mc
+        mc.mov_control.update_tf()
+        rotation = mc.mov_control.trans.transform.rotation
         roll_rov, pitch_rov, yaw_rov = euler.quat2euler([rotation.w, rotation.x, rotation.y, rotation.z], 'sxyz')
 
         centroid_world = tfgmtfgm.do_transform_point(centroid_cam_ps, self.trans)
-        print(centroid_world)
         normal_world = tfgmtfgm.do_transform_vector3(normal_cam_vc, self.trans)
 
         if(self.is_sim):

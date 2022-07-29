@@ -25,7 +25,7 @@ import tf2_ros
 import numpy as np
 from transforms3d import euler
 from calc_utils import is_approx_equal, pose_to_np
-class pass_gate(smach.State):
+class pass_gate_label(smach.State):
     _outcomes=['outcome1','outcome2']
     _input_keys=[],
     _output_keys=[]
@@ -45,11 +45,12 @@ class pass_gate(smach.State):
         print("GOING STRAIGHT") 
         rospy.sleep(1)
         trans=(mc.mov_control.get_tf()).transform.translation
+        
         outcome, detection_dict = au.forward_search(
                     mc.mov_control,
                     geometry_msgs.msg.Point(trans.x, trans.y, trans.z),
                     10,
-                    mc.mov_control.euler[2],
+                    mc.mov_control.euler[2], # this euler angle is incorrect!
                     120,
                     vs.front_camera,
                     [self.label_1, self.label_2],

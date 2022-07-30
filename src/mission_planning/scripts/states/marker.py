@@ -31,7 +31,8 @@ class marker(smach.State):
         self.marker_label=marker_label
         self.zigzag_threshold=0.7
     def execute(self, userdata):  
-        mc.mov_control.arm()
+        mc.mov_control.set_focus_point()
+
         #call search which returns once any bbox of marker is detected
         if(len(self.search(self.zigzag_threshold, self.marker_label))==0):
             return "outcome2"

@@ -121,8 +121,8 @@ class pass_gate_label(smach.State):
            
             #align ORIENTATION with DETECTION
             mc.mov_control.stop()
-            mc.mov_control.set_focus_point(mc.mov_control.translate_axis_xyz(position_data,[0,0,0],yaw)) #something strange with focus points
-            mc.mov_control.await_completion()
+            mc.mov_control.set_focus_point(mc.mov_control.translate_axis_xyz(position_data,[1000,0,0],yaw)) #something strange with focus points
+            
 
             print("FOCUS")
 

@@ -75,6 +75,7 @@ class pass_gate_color(smach.State):
         print("GOING STRAIGHT") 
         rospy.sleep(1)
         trans=(mc.mov_control.get_tf()).transform.translation
+        print("yaw is " + str(mc.mov_control.euler[2]))
         outcome, detection_dict = au.forward_search(
                     mc.mov_control,
                     geometry_msgs.msg.Point(trans.x, trans.y, trans.z),
@@ -93,25 +94,31 @@ class pass_gate_color(smach.State):
         print("GATE DETECTED")
         gate_detection = detection_dict['qual_gate'][0]
         pose_gate = self.getGateOrientation(gate_detection)
+
         if(pose_gate==None):
             return "outcome3" #map outcome 3 to old tactic using marker poses solely
+
+        # mc.mov_control.go_straight(2)
+        # mc.mov_control.await_completion()
+        # vs.front_camera.get_detection_t('qual_gate')
+        # pose_gate = self.getGateOrientation(gate_detection)
 
         position_gate=pose_to_np(pose_gate)
         yaw_gate = pose_get_yaw(pose_gate)
 
         #align pose with gate, used to get better view on image labels
-        clearance_d=vs.front_camera.get_min_approach_dist(0.6)
+        clearance_d=vs.front_camera.get_min_approach_dist(3)
 
         print(position_gate)
-        mc.mov_control.set_goal_point(mc.mov_control.translate_axis_xyz(position_gate,[-clearance_d,0,0],yaw_gate))
-        mc.mov_control.set_focus_point(mc.mov_control.translate_axis_xyz(position_gate,[1000,0,0],yaw_gate))
+        #mc.mov_control.set_goal_point(mc.mov_control.translate_axis_xyz(position_gate,[-clearance_d,0,0],yaw_gate))
+        mc.mov_control.set_focus_point(mc.mov_control.translate_axis_xyz(position_gate,[100,0,0],yaw_gate))
         mc.mov_control.await_completion()
         rospy.sleep(5)
 
         trans=(mc.mov_control.get_tf()).transform.translation
         outcome, detection_dict = au.forward_search(
                     mc.mov_control,
-                    geometry_msgs.msg.Point(trans.x, trans.y, -0.8),
+                    geometry_msgs.msg.Point(trans.x, trans.y, -0.4),
                     clearance_d*0.8,
                     mc.mov_control.euler[2],
                     60,
@@ -119,13 +126,14 @@ class pass_gate_color(smach.State):
                     [self.label_1, self.label_2],
                     5,
                     0.1,
-                    0.005
+                    0
                 ) 
+
         if(outcome!="detected"):
             #not working for some odd reason
-            return "outcome1"
-            # #go through gate side no matter what
-            # mc.mov_control.set_goal_point(mc.mov_control.translate_axis_xyz(position_gate,[-clearance_d,0,0],yaw_gate))
+            #return "outcome1"
+            #go through gate side no matter what
+            # mc.mov_control.set_goal_point(mc.mov_control.translate_axis_xyz(position_gate,[-clearance_d*1.2,0,0],yaw_gate))
             # mc.mov_control.await_completion()
 
             # #now just pick the right of the gate
@@ -136,7 +144,7 @@ class pass_gate_color(smach.State):
             # mc.mov_control.set_goal_point(mc.mov_control.translate_axis_xyz(position_gate,[0,0.6,0],yaw_gate))
             # mc.mov_control.await_completion()
             # mc.mov_control.set_goal_point(mc.mov_control.translate_axis_xyz(position_gate,[0.3,0.6,0],yaw_gate))
-            # return "outcome2"
+            return "outcome2"
 
         #get pose of labelled images
         rov_position=mc.mov_control.get_np_position()
@@ -170,12 +178,13 @@ class pass_gate_color(smach.State):
         # mc.mov_control.set_focus_point()
 
         #get to the object using the accurate rigid pose of the best fit plane of the gate
-        mc.mov_control.set_goal_point(mc.mov_control.translate_axis_xyz(position_chosen,[0,0,-0.4],yaw_gate)) #use yaw gate!
+        mc.mov_control.set_focus_point(mc.mov_control.translate_axis_xyz(position_chosen,[1000,0,0],yaw_gate))
+        mc.mov_control.set_goal_point(mc.mov_control.translate_axis_xyz(position_chosen,[0,0,-0.7],yaw_gate)) #use yaw gate!
+        mc.mov_control.await_completion()
+
+        mc.mov_control.set_goal_point(mc.mov_control.translate_axis_xyz(position_chosen,[0.3,0,-0.7],yaw_gate))
         mc.mov_control.await_completion()
         mc.mov_control.set_focus_point()
-
-        mc.mov_control.set_goal_point(mc.mov_control.translate_axis_xyz(position_chosen,[0.3,0,-0.4],yaw_gate))
-        mc.mov_control.await_completion()
 
         self.save(chosen_detection)
         return "outcome1"

@@ -13,8 +13,7 @@ import sys
 sys.path.insert(0, './states')
 
 from states.check_submerged import check_sub
-from states.coin_flip import coin_flip
-from states.pass_gate_qual_simple import pass_gate_qual
+from states.pass_gate_qual_simple import pass_gate_qual_simple
 
 # just a class to run ros launch files FIX LANCH FILE NO LOGGING NEEDED
 class launch_stuff:
@@ -41,7 +40,6 @@ if __name__ == '__main__':
     #os.system('sim_vehicle.py -f gazebo-bluerov2 -v ArduSub -L Home --out=udp:0.0.0.0:14550 --out=udp:0.0.0.0:14551 --out=udp:0.0.0.0:14552 --out=udp:0.0.0.0:14553 --out=udp:0.0.0.0:14554 --out=udp:0.0.0.0:14555 --console &> /dev/null &')
     # list launch parameters
     #global orb_slam_3_frame
-    #orb_slam_3_frame = rospy.get_param('~orb_slam_3_frame')
     rov_frame = rospy.get_param('~rov_frame')
 
     world_frame = rospy.get_param('~world_frame')
@@ -67,19 +65,14 @@ if __name__ == '__main__':
 
     # intialize movement controller
     mc.init(goal_topic, world_frame, rov_frame, isRunning_topic)
-    vs.init()
-    pt.init()
 
     rospy.sleep(5)
     # start state machine
     sm = smach.StateMachine(outcomes=['outcome4'])
     with sm:
         smach.StateMachine.add('check_submerged',check_sub(),
-                                transitions={'outcome1':'coin_flip'})
-        smach.StateMachine.add('coin_flip', coin_flip("qual_gate"),
-                                transitions={'outcome1':'pass_gate_qual',
-                                            'outcome2':'coin_flip'})
-        smach.StateMachine.add('pass_gate_qual', pass_gate_qual("image_bootlegger","gman_image"),
+                                transitions={'outcome1':'pass_gate_qual'})
+        smach.StateMachine.add('pass_gate_qual', pass_gate_qual_simple(),
                                 transitions={'outcome1':'outcome4',
                                             'outcome2':'pass_gate_qual'})
     print("EXECUTING SM")

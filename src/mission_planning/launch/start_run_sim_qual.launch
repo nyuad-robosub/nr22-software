@@ -23,10 +23,10 @@
     <!-- Launch simulation -->
     <arg name="paused" default="false"/>
     <arg name="gui" default="false"/>
-    <arg name="is_sim" default="true"/> <!-- Enable/disable simulation features -->
+    <arg name="is_sim" default="false"/> <!-- Enable/disable simulation features -->
 
     <!--PCL TOPIC -->
-    <arg name="pcl_topic" default="/camera/depth/color/points"/>
+    <arg name="pcl_topic" default=""/>
 
     <include file="$(find pools)/launch/pool_v2_no_middle.launch">
         <arg name="paused" value="false"/>
@@ -126,7 +126,7 @@
         <param name="bottom_camera_height" value="$(arg bottom_camera_height)"/>
         <param name="bottom_camera_HFOV" value="$(arg bottom_camera_HFOV)"/>
         <param name="bottom_camera_frame" value="$(arg bottom_camera_frame)" />
-        
+
         <param name="front_detection_topic" value="$(arg front_detection_topic)" />
         <param name="front_camera_topic" value="$(arg front_camera_topic)"/>
         <param name="front_camera_width" value="$(arg front_camera_width)"/>

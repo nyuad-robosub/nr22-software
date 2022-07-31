@@ -71,7 +71,7 @@ def main_controller():
     with sm:
         smach.StateMachine.add('check_submerged', check_submerged.check_sub(),
                                 transitions={'outcome1':'coin_flip'})
-        smach.StateMachine.add('coin_flip', coin_flip.coin_flip(),
+        smach.StateMachine.add('coin_flip', coin_flip(),
                                 transitions={'outcome1':'outcome4',
                                             'outcome2':'coin_flip'})
     # create concurrent sm

@@ -22,7 +22,7 @@ class check_sub(smach.State):
 
     def callback(self, alt):
         
-        if(alt.data < -0.2):
+        if(alt.data <= -0.1):
             self.mutex.acquire()
             self.is_submerged=True
             self.mutex.release()
@@ -30,7 +30,7 @@ class check_sub(smach.State):
     def execute(self, userdata):
         print("EXEXUTING")
 
-        rospy.sleep(3)
+        rospy.sleep(20)
         mc.mov_control.arm()
         rospy.sleep(3)
         while(not rospy.is_shutdown()):
@@ -38,6 +38,7 @@ class check_sub(smach.State):
             if(self.is_submerged):
                 #initialize viso.launch
                 #smach_controller.ls.launch("viso.launch")
+                
                 print("submerged")
                 #submerge the vehicle
                 mc.mov_control.update_tf()

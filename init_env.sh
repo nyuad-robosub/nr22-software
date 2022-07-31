@@ -156,7 +156,7 @@ cmake ..
 sudo make install
 
 #install opencv 4
-echo "Configuring and building Thirdpart/opencv"
+echo "Configuring and building openCV for ORBSLAM3 and depthai-ros"
 cd $p/include
 wget -O opencv.zip https://github.com/opencv/opencv/archive/refs/tags/4.4.0.zip
 unzip opencv

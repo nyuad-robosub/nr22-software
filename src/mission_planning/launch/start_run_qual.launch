@@ -1,17 +1,13 @@
 <launch>
     <!-- SLAM visual args -->
 	<arg name="world_frame" default="world" />
-    <arg name="orb_slam_3_frame" default="bluerov2/base_link" />
+    <arg name="orb_slam_3_frame" default="orb_slam3_camera" />
 
     <!-- LOCAL_POSITION_NED args -->
     <arg name="base_frame" default="world" />
 	<arg name="rov_frame" default="base_link" />
 	<arg name="front_camera_frame" default="oakd_link" />
 	<arg name="bottom_camera_frame" default="oak1_link" />
-    <!-- Controller args -->
-    <arg name="goal_topic" default ="controller/goalPoint" />
-    <arg name="goal_rotation_topic" default ="controller/goalRotation" />
-    <arg name="isrunning_topic" default ="controller/isRunning" />
 
     <!-- Controller args -->
     <arg name="goal_topic" default ="controller/goalPoint" />
@@ -37,24 +33,18 @@
         <arg name="world_frame" value="$(arg world_frame)" />
         <arg name="rov_frame" default="$(arg orb_slam_3_frame)" />
     </include>
-
-    <include file="$(find ORB_SLAM3)/launch/oakd_node.launch"></include>
-
-    <include file="$(find controls)/launch/send_viso_tf2.launch">
-        <arg name="mav_addr" value="udpin:0.0.0.0:14550" />
-        <!-- <arg name="rov_frame" value="viso_imu" /> -->
-		<arg name="rov_frame" value="orb_slam3_camera" />
-    </include>
-
     <include file="$(find controls)/launch/mavlink_publisher.launch"> 
         <arg name="base_frame" value="$(arg base_frame)" />
         <arg name="publish_frame" value="$(arg rov_frame)" />
     </include>
-    
     <include file="$(find controls)/launch/controller.launch"> 
         <arg name="goal_topic" value="$(arg goal_topic)" />
         <arg name="goal_rotation_topic" value="$(arg goal_rotation_topic)" />
         <arg name="run_topic" value="$(arg isrunning_topic)" />
+    </include>
+
+    <!-- Run camera node -->
+    <include file="$(find ORB_SLAM3)/launch/oakd_node.launch">
     </include>
 
     <!-- Front Camera -->

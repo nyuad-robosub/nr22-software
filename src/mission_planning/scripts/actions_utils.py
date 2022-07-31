@@ -282,7 +282,6 @@ def get_downwards_object_position():
 #       + "preempted": stopped by external function                     | process-ending outcome
 #       + "timeout": running over the time limit                        | process-ending outcome
 #       + "notfound": finished without detecting anything               | process-ending outcome
-#       + "failed": failed to move the center                           | process-ending outcome
 #       + "succeeded": succeeded to move the center                     | process-ending outcome
 def bottom_aligning(mov_control,                            # Movement controller                   | mc.movement_controller
                     # goal,                                   # Where to move the 3Dcenter of bbox to | geometry_msgs.msg.Point !! z will be ignored, will use current ROV z !!
@@ -362,6 +361,7 @@ def bottom_aligning(mov_control,                            # Movement controlle
         # Get vector from camera to bbox center
         # Find closest object from list of detections
         # Presume pool to be flat at small region
+        print(detections_dict[detection_label])
         for i in range(len(detections_dict[detection_label])):
             center = detections_dict[detection_label][i]['center']
             tmp_position = detection_camera.pixel_ray_plane_intersect(
@@ -377,7 +377,11 @@ def bottom_aligning(mov_control,                            # Movement controlle
                 min_dist_index = i
         
         # Position update
-        position.update(tmp_position)
+        position.update(detection_camera.pixel_ray_plane_intersect(
+                detections_dict[detection_label][min_dist_index]['center'],
+                (0, 0, translation.z - current_ping),
+                (0, 0, 1)
+            ))
         print("Found \"%s\" at (%f, %f, %f)" %
             (detection_label, position.value().x, position.value().y, position.value().z))
 

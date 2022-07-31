@@ -72,6 +72,14 @@
     <arg name="bottom_label_file" default="$(find faux_detection)/trained_models/mobilenet-jul23.pbtxt" />
 
 
+    <!-- #frozen_inference_graph_openvino_2021.4_6shave.blob -->
+    <include file="$(find depthai_examples)/launch/oak1_publisher.launch"> 
+    </include>
+    <include file="$(find depthai_examples)/launch/stereo_nodelet.launch"> 
+    </include>
+
+
+
     <!-- Launch SMACH node -->
     <arg name="respawn_smach" default="false" />
     <arg name="log_output" default="screen" />

@@ -28,6 +28,7 @@
         <arg name="run_topic" value="$(arg isrunning_topic)" />
     </include>
 
+
     <!-- Launch SMACH node -->
     <arg name="respawn_smach" default="false" />
     <arg name="log_output" default="screen" />

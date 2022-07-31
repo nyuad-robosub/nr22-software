@@ -21,6 +21,15 @@ class progress_tracker():
             'pass_gate': {
                 'done': False,
                 'chosen_detection': "" #g_man or bootlegger
+            },
+            'bin_analyze': {
+                'done': False,
+                'num_lid_detected': 0, # number of lids detected, 6 including 2 lids and 4 images
+                'lid_positions': [Point(), Point()], #initial lid detected
+                'lid_types': ['unknown', 'unknown'], # 'gman', 'bootlegger'
+                'num_img_detected': 0,
+                'img_positions': [Point(), Point(), Point(), Point()], #initial lid detected
+                'img_labels': ['unknown', 'unknown', 'unknown', 'unknown']
             }
         }
         self.last_known_position = Point(0, 0, 0)

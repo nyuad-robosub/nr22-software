@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 """
 Try to send external position to MAVlink
 Relevant links:
@@ -33,7 +33,6 @@ https://github.com/mavlink/mavros/issues/1641
 #   Mavlink area
 # ---------------------------------------------
 from operator import pos
-import tf2_py
 import time
 # Import mavutil
 #import pymavlink.quaternion

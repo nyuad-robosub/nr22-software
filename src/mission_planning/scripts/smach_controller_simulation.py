@@ -20,6 +20,7 @@ from states.pass_gate_color import pass_gate_color
 from states.pass_gate_label import pass_gate_label
 from states.marker import marker
 from states.buoy import buoy
+from states.bin_analyze import bin_analyze
 
 # just a class to run ros launch files FIX LANCH FILE NO LOGGING NEEDED
 class launch_stuff:
@@ -102,10 +103,15 @@ if __name__ == '__main__':
                                 transitions={'outcome1':'buoy',
                                             'outcome2':'marker'})
         smach.StateMachine.add('buoy', buoy("image_tommygun","image_badge"),
-                                transitions={'outcome1':'marker',
+                                transitions={'outcome1':'marker_2',
                                             'outcome2':'buoy'})
-        
-                                            
+        smach.StateMachine.add('marker_2', marker("marker"),
+                                transitions={'outcome1':'bin_analyze',
+                                            'outcome2':'marker_2'})
+        smach.StateMachine.add('bin_analyze', bin_analyze("image_tommygun","image_badge"),
+                                transitions={'found_bins':'outcome4',
+                                            'notfound_bins':'bin_analyze'})
+              
     print("EXECUTING SM")
     
     outcome = sm.execute()

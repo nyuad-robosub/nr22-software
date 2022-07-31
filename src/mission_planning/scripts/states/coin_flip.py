@@ -80,24 +80,33 @@ class coin_flip(smach.State):
             print("Gate couldnt be detected for the first time")
             return False
 
-        center = gate_detection[0]['center']
-
-        # Rotate to center of the gate
-        angle_x, angle_y = vs.front_camera.get_angles(center[0], 0) #get angle between center of bbox and image frame
+        angle_x = self.get_closest_side(gate_detection)
         mc.mov_control.rotate_ccw(-angle_x)
 
         gate_detection = vs.front_camera.get_detection_t(self.gate_label,2)
         if(len(gate_detection)==0):
             print("Gate couldnt be detected a second time")
             return False
-        center = gate_detection[0]['center']
 
         # Rotate to center of the gate
-        angle_x_2, angle_y = vs.front_camera.get_angles(center[0], 0) #get angle between center of bbox and image frame
+        angle_x_2 = self.get_closest_side(gate_detection)
+        mc.mov_control.rotate_ccw(-angle_x)
+        #get angle between center of bbox and image frame
+
         if(is_approx_equal(angle_x,angle_x_2,0.15)):
             return True
         else:
             return self.recursive()
+
+    def get_closest_side (self, gate_detection):
+        center = gate_detection[0]['center']
+        size = gate_detection[0]['size']
+        # Rotate to center of the gate
+        if(center[0]<=vs.front_camera.get_center_coord()[0]):
+            angle_x, angle_y = vs.front_camera.get_angles(center[0]+size[0]/4, 0) #get angle between center of bbox and image frame
+        else:
+            angle_x, angle_y = vs.front_camera.get_angles(center[0]-size[0]/4, 0) #get angle between center of bbox and image frame
+        return angle_x
             
 
         

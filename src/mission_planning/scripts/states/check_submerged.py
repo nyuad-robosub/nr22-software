@@ -22,15 +22,13 @@ class check_sub(smach.State):
 
     def callback(self, alt):
         
-        if(alt.data <= -0.1):
+        if(alt.data <= -0.5):
             self.mutex.acquire()
             self.is_submerged=True
             self.mutex.release()
         
     def execute(self, userdata):
         print("EXEXUTING")
-
-        rospy.sleep(20)
         mc.mov_control.arm()
         rospy.sleep(3)
         while(not rospy.is_shutdown()):

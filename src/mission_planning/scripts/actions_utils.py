@@ -269,6 +269,21 @@ class ema_point:
         self.z.update(point.z)
     def value(self):
         return Point(self.x.value, self.y.value, self.z.value)
+# CA classes courtesy of:
+# Cumulative_average
+class ca_point:
+    def __init__(self, point):
+        self.x = point.x
+        self.y = point.y
+        self.z = point.z
+        self.counter = 1
+    def update(self, point):
+        self.x = (self.x * self.counter + point.x) /  (self.counter + 1)
+        self.y = (self.y * self.counter + point.y) /  (self.counter + 1)
+        self.z = (self.z * self.counter + point.z) /  (self.counter + 1)
+        self.counter += 1
+    def value(self):
+        return Point(self.x, self.y, self.z)
 
 # Get location of bottom objects from sonar_ping and downwards camera
 def get_downwards_object_position():

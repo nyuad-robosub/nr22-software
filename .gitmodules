@@ -39,3 +39,6 @@
 [submodule "src/deps/planar_pose"]
 	path = src/deps/planar_pose
 	url = https://github.com/paul-shuvo/planar_pose
+[submodule "src/deps/svo/rpg_svo_pro_open"]
+	path = src/deps/svo/rpg_svo_pro_open
+	url = https://github.com/uzh-rpg/rpg_svo_pro_open

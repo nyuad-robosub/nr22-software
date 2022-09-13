@@ -108,7 +108,7 @@ if __name__ == '__main__':
         smach.StateMachine.add('marker_2', marker("marker"),
                                 transitions={'outcome1':'bin_analyze',
                                             'outcome2':'marker_2'})
-        smach.StateMachine.add('bin_analyze', bin_analyze("image_tommygun","image_badge"),
+        smach.StateMachine.add('bin_analyze', bin_analyze('bin_analyze'),
                                 transitions={'found_bins':'outcome4',
                                             'notfound_bins':'bin_analyze'})
               

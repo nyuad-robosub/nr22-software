@@ -95,7 +95,13 @@ boot_time = datetime.now()
 last_time = datetime.now()
 mutex = threading.Lock()
 isLost = False
-isSim = False
+
+# Flag for publisher for velocities
+PUBLISH_VELOCITES = True
+# Flag for non-MAVLink testing
+USE_MAVLINK = False
+# Flag for simulation
+IS_SIM = False
 
 # Message conversion courtesy of:
 # https://answers.ros.org/question/332407/transformstamped-to-transformation-matrix-python/
@@ -162,6 +168,7 @@ def processTransform(master, p_trans):
     """
     global last_time, last_rot, last_pos, last_trans, initCount, isSim
     global last_delt_pos, last_delt_rot
+    global WORLD_FRAME, vel_publisher
 
     if initCount > 0:
         last_trans = msg_to_se3(p_trans)
@@ -200,7 +207,18 @@ def processTransform(master, p_trans):
         last_delt_rot = delt_rot
         # Check for large jumps
         if np.linalg.norm(delt_pos) < 4:
-            send_vision(master, sys_time, delt_time, delt_pos, delt_rot, 90)
+            # Check if using MAVLink
+            if USE_MAVLINK:
+                send_vision(master, sys_time, delt_time, delt_pos, delt_rot, 90)
+
+            # Check if publish calculated velocities
+            if PUBLISH_VELOCITES:
+                msg = geometry_msgs.msg.TwistStamped()
+                msg.header.stamp = rospy.Time.now()
+                msg.header.frame_id = WORLD_FRAME
+                msg.twist.linear = geometry_msgs.msg.Vector3(delt_pos[0], delt_pos[1], delt_pos[2])
+                msg.twist.angular = geometry_msgs.msg.Vector3(delt_rot[0], delt_rot[1], delt_rot[2])
+                vel_publisher.publish(msg)
 
 def lost_callback(isl):
     global isLost
@@ -209,66 +227,76 @@ def lost_callback(isl):
     mutex.release()
 
 def receiver():
-    global isLost, isSim
+    global isLost, IS_SIM, USE_MAVLINK, PUBLISH_VELOCITES
+    global WORLD_FRAME, vel_publisher
     # Check if is in simulation
-    isSim = rospy.get_param('~is_sim')
+    IS_SIM = rospy.get_param('~is_sim')
 
-    # Create the connection
-    master = mavutil.mavlink_connection(rospy.get_param('~mav_addr'), dialect='ardupilotmega')
+    # Check if using MAVLink
+    master = None
+    if USE_MAVLINK:
+        # Create the connection
+        master = mavutil.mavlink_connection(rospy.get_param('~mav_addr'), dialect='ardupilotmega')
 
-    # Make sure the connection is valid
-    master.wait_heartbeat()
+        # Make sure the connection is valid
+        master.wait_heartbeat()
 
-    # Check if need to set home
-    if (rospy.get_param('~set_home')):
-        cmd_set_home(master, rospy.get_param('~home_lat') * 1e7, rospy.get_param('~home_long') * 1e7, rospy.get_param('~home_alt'))
+        # Check if need to set home
+        if (rospy.get_param('~set_home')):
+            cmd_set_home(master, rospy.get_param('~home_lat') * 1e7, rospy.get_param('~home_long') * 1e7, rospy.get_param('~home_alt'))
 
     WORLD_FRAME = rospy.get_param("~world_frame")
     ROV_FRAME = rospy.get_param("~rov_frame")
 
     tfBuffer = tf2_ros.Buffer()
     listener = tf2_ros.TransformListener(tfBuffer)
-    lost_listener = rospy.Subscriber('/orb_slam_3_lost', Bool, lost_callback)
+    # lost_listener = rospy.Subscriber('/orb_slam_3_lost', Bool, lost_callback)
+
+    # Check if publish calculated velocities
+    if PUBLISH_VELOCITES:
+        vel_publisher = rospy.Publisher('viso_velocities', geometry_msgs.msg.TwistStamped, queue_size=5)
 
     rate = rospy.Rate(15.0)
     max_timeout = 10
     timeout_count = 0
     while not rospy.is_shutdown():
         # If in simulation: simple send
-        if isSim:
+        if IS_SIM:
             try:
                 trans = tfBuffer.lookup_transform(WORLD_FRAME, ROV_FRAME, rospy.Time(), rospy.Duration(4))
                 processTransform(master, trans)
             except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
                 continue
             except AttributeError:
-                # Make sure the connection is valid
-                print("Fail to connect to MAVLink") # master.wait_heartbeat()
-                print("Retrying...")
-                # Create the connection
-                master = mavutil.mavlink_connection(rospy.get_param('~mav_addr'), dialect='ardupilotmega')
-                # Make sure the connection is valid
-                master.wait_heartbeat()
+                if USE_MAVLINK:
+                    # Make sure the connection is valid
+                    print("Fail to connect to MAVLink") # master.wait_heartbeat()
+                    print("Retrying...")
+                    # Create the connection
+                    master = mavutil.mavlink_connection(rospy.get_param('~mav_addr'), dialect='ardupilotmega')
+                    # Make sure the connection is valid
+                    master.wait_heartbeat()
 
         # If not is in simulation: add checks
         else:
             try:
                 trans = tfBuffer.lookup_transform(WORLD_FRAME, ROV_FRAME, rospy.Time(), rospy.Duration(4))
-                mutex.acquire()
-                if (not isLost):
-                    processTransform(master, trans)
-                mutex.release()
+                processTransform(master, trans)
+                # mutex.acquire()
+                # if (not isLost):
+                # mutex.release()
             except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
                 continue
             except AttributeError:
-                # Make sure the connection is valid
-                print("Fail to connect to MAVLink") # master.wait_heartbeat()
-                print("Retrying...")
-                # rospy.sleep(5)
-                # Create the connection
-                master = mavutil.mavlink_connection(rospy.get_param('~mav_addr'), dialect='ardupilotmega')
-                # Make sure the connection is valid
-                master.wait_heartbeat()
+                if USE_MAVLINK:
+                    # Make sure the connection is valid
+                    print("Fail to connect to MAVLink") # master.wait_heartbeat()
+                    print("Retrying...")
+                    # rospy.sleep(5)
+                    # Create the connection
+                    master = mavutil.mavlink_connection(rospy.get_param('~mav_addr'), dialect='ardupilotmega')
+                    # Make sure the connection is valid
+                    master.wait_heartbeat()
 
         if rospy.is_shutdown():
             return

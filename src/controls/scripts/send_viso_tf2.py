@@ -99,9 +99,9 @@ isLost = False
 # Flag for publisher for velocities
 PUBLISH_VELOCITES = True
 # Flag for non-MAVLink testing
-USE_MAVLINK = False
+USE_MAVLINK = True
 # Flag for simulation
-IS_SIM = False
+IS_SIM = True
 
 # Message conversion courtesy of:
 # https://answers.ros.org/question/332407/transformstamped-to-transformation-matrix-python/

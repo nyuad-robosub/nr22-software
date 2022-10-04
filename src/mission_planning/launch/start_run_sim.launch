@@ -36,7 +36,7 @@
     <!-- Launch SEND_VISO_TF2 and MAVLink publisher node -->
     <include file="$(find controls)/launch/send_viso_tf2.launch">
         <arg name="world_frame" value="$(arg world_frame)" />
-        <arg name="rov_frame" default="$(arg orb_slam_3_frame)" />
+        <arg name="odom_rov_frame" default="$(arg orb_slam_3_frame)" />
     </include>
     <include file="$(find controls)/launch/mavlink_publisher.launch"> 
         <arg name="base_frame" value="$(arg base_frame)" />

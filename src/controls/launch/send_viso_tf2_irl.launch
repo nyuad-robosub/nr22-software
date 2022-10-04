@@ -33,7 +33,7 @@
 		<param name="mav_addr" value="$(arg mav_addr)" />
 		<param name="world_frame" value="$(arg world_frame)" />
 		<!-- <param name="rov_frame" value="$(arg odom_rov_frame)" /> -->
-		<param name="rov_frame" value="$(arg odom_camera_frame_rectified)" />
+		<param name="rov_frame" value="$(arg odom_rov_frame)" />
 		<param name="set_home" value="$(arg set_home)" />
 		<param name="home_lat" value="$(arg home_lat)" />
 		<param name="home_long" value="$(arg home_long)" />

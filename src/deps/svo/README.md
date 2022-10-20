@@ -6,7 +6,16 @@ SVO can possibly be used on both the front and bottom camera, giving us two stre
 # Installation
 https://github.com/uzh-rpg/rpg_svo_pro_open
 
-SVO will not be able to be installed directly after nr22-software cloning. See clone & compile section in the above repo to see how to install it.
+SVO will not be able to be installed directly after nr22-software cloning. See clone & compile section in the above repo to see how to install it, or run the following commands in this parent folder (`svo`).
+
+```
+vcs-import < ./rpg_svo_pro_open/dependencies.yaml
+touch minkindr/minkindr_python/CATKIN_IGNORE
+# vocabulary for place recognition
+cd rpg_svo_pro_open/svo_online_loopclosing/vocabularies && ./download_voc.sh
+cd ../../..
+catkin build
+```
 
 After installing, see [here](https://github.com/uzh-rpg/rpg_svo_pro_open/blob/master/doc/frontend/visual_frontend.md) and [here](https://github.com/uzh-rpg/rpg_svo_pro_open/blob/master/doc/frontend/frontend_fla.md) to how to get it running from .bag files.
 
@@ -22,7 +31,7 @@ The depthai calibration json provides a 14-element array for distortion coeffs. 
 
 
 
-Other considered solutions
+## Other considered solutions
 Benchmarkings:
 https://rpg.ifi.uzh.ch/docs/ICRA18_Delmerico.pdf
 https://arxiv.org/pdf/2007.11898.pdf

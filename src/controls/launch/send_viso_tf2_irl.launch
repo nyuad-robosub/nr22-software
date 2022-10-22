@@ -2,10 +2,13 @@
 	<!-- base params -->
 	<arg name="mav_addr" default="udpin:0.0.0.0:14551" />
 	<arg name="world_frame" default="world" />
-	<arg name="rov_frame" default="imu_link" />
-	<arg name="camera_frame" default="oakd_link" />
-	<!-- <arg name="rov_frame" default="orb_slam3_camera" /> -->
-	<!-- <arg name="rov_frame" default="bluerov2/base_link" /> -->
+	<arg name="odom_rov_frame" default="imu_link" />
+	<!-- <arg name="odom_camera_frame" default="orb_slam3_camera" /> -->
+	<arg name="odom_camera_frame" default="cam_pos" />
+	<arg name="odom_camera_frame_rectified" default="rectified_orb_slam3" />
+	<arg name="real_rov_frame" default="base_link" />
+	<arg name="real_camera_frame" default="oakd_link" />
+	<!-- <arg name="odom_rov_frame" default="bluerov2/base_link" /> -->
 	<arg name="is_sim" default="False" />
 
 	<!-- optional set home -->
@@ -17,18 +20,20 @@
 	<arg name="log_output" default="screen" />
 	<arg name="respawn_viso" default="false" />
 
+	<!-- Rectify camera from OpenCV orientation standard to robot frame -->
 	<node pkg="controls" type="slam_frame_rectifier.py" name="slam_frame_rectifier" required="$(eval not respawn_viso)"
 	    clear_params="true" output="$(arg log_output)" respawn="$(arg respawn_viso)">
 		<param name="world_frame" value="$(arg world_frame)" />
-		<param name="slam_frame" value="orb_slam3_camera" />
-		<param name="publish_frame" value="rectified_orb_slam3" />
+		<param name="slam_frame" value="$(arg odom_camera_frame)" />
+		<param name="publish_frame" value="$(arg odom_camera_frame_rectified)" />
 	</node>
 
 	<node pkg="controls" type="send_viso_tf2.py" name="send_viso_tf2" required="$(eval not respawn_viso)"
 	    clear_params="true" output="$(arg log_output)" respawn="$(arg respawn_viso)">
 		<param name="mav_addr" value="$(arg mav_addr)" />
 		<param name="world_frame" value="$(arg world_frame)" />
-		<param name="rov_frame" value="$(arg rov_frame)" />
+		<!-- <param name="rov_frame" value="$(arg odom_rov_frame)" /> -->
+		<param name="rov_frame" value="$(arg odom_rov_frame)" />
 		<param name="set_home" value="$(arg set_home)" />
 		<param name="home_lat" value="$(arg home_lat)" />
 		<param name="home_long" value="$(arg home_long)" />
@@ -39,6 +44,6 @@
 	<!-- Static broadcasters for IMU <-> camera transforms courtesy of:
 	 	http://wiki.ros.org/tf2/Tutorials/Writing%20a%20tf2%20static%20broadcaster%20%28C%2B%2B%29
 		https://www.andre-gaschler.com/rotationconverter/ -->
-	<node pkg="tf2_ros" type="static_transform_publisher" name="cam_imu_broadcaster" args="-0.08 0 -0.03 0 0 0 1 rectified_orb_slam3 imu_link" />
-	<node pkg="tf2_ros" type="static_transform_publisher" name="cam_imu_broadcasterr" args="0.08 0 0.03 0 0 0 1 $(arg rov_frame) $(arg camera_frame)" />
+	<node pkg="tf2_ros" type="static_transform_publisher" name="cam_imu_broadcaster" args="-0.19 0 -0.055 0 0 0 1 $(arg odom_camera_frame_rectified) $(arg odom_rov_frame)" />
+	<node pkg="tf2_ros" type="static_transform_publisher" name="cam_imu_broadcasterr" args="0.19 0 0.055 0 0 0 1 $(arg real_rov_frame) $(arg real_camera_frame)" />
 </launch>

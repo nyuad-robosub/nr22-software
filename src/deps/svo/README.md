@@ -17,6 +17,8 @@ cd ../../..
 catkin build
 ```
 
+When `catkin build`ing, multiple packages might fail and following packages are abandoned. You can rerun `catkin build` multiple times or inspect why some packages would fail.
+
 After installing, see [here](https://github.com/uzh-rpg/rpg_svo_pro_open/blob/master/doc/frontend/visual_frontend.md) and [here](https://github.com/uzh-rpg/rpg_svo_pro_open/blob/master/doc/frontend/frontend_fla.md) to how to get it running from .bag files.
 
 # Using

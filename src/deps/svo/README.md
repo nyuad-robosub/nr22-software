@@ -8,6 +8,8 @@ https://github.com/uzh-rpg/rpg_svo_pro_open
 
 SVO will not be able to be installed directly after nr22-software cloning. See clone & compile section in the above repo to see how to install it, or run the following commands in this parent folder (`svo`).
 
+aFor [building on ARM](https://github.com/uzh-rpg/rpg_svo/wiki/Installation:-General-for-ARM-processors), set `export ARM_ARCHITECTURE=True` beforehand. See [here](https://github.com/uzh-rpg/rpg_svo_pro_open/issues/9#issuecomment-954076175) on how to fix `fast-neon` flag issues - checkout the `test/aarch64-compilation` branch instead.
+
 ```
 vcs-import < ./rpg_svo_pro_open/dependencies.yaml
 touch minkindr/minkindr_python/CATKIN_IGNORE

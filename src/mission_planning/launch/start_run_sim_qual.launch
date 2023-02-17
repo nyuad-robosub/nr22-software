@@ -1,0 +1,144 @@
+<launch>
+    <!-- SLAM visual args -->
+	<arg name="world_frame" default="world" />
+    <arg name="orb_slam_3_frame" default="bluerov2/base_link" />
+
+    <!-- LOCAL_POSITION_NED args -->
+    <arg name="base_frame" default="world" />
+	<arg name="rov_frame" default="base_link" />
+	<arg name="front_camera_frame" default="oakd_link" />
+	<arg name="bottom_camera_frame" default="oak1_link" />
+
+    <!-- Controller args -->
+    <arg name="goal_topic" default ="controller/goalPoint" />
+    <arg name="goal_rotation_topic" default ="controller/goalRotation" />
+    <arg name="isrunning_topic" default ="controller/isRunning" />
+
+    <!-- Sonar ping args -->
+	<arg name="sonar_ping_topic" default="sonar_ping" />
+	<arg name="altitude_topic" default="altitude" />
+	<arg name="pool_depth" default="3.1" />
+	<arg name="ema_alpha" default="0.3" />
+
+    <!-- Launch simulation -->
+    <arg name="paused" default="false"/>
+    <arg name="gui" default="false"/>
+    <arg name="is_sim" default="false"/> <!-- Enable/disable simulation features -->
+
+    <!--PCL TOPIC -->
+    <arg name="pcl_topic" default=""/>
+
+    <include file="$(find pools)/launch/pool_v2_no_middle.launch">
+        <arg name="paused" value="false"/>
+        <arg name="gui" value="$(arg gui)"/>
+    </include>
+    
+    <!-- Launch SEND_VISO_TF2 and MAVLink publisher node -->
+    <include file="$(find controls)/launch/send_viso_tf2.launch">
+        <arg name="world_frame" value="$(arg world_frame)" />
+        <arg name="odom_rov_frame" default="$(arg orb_slam_3_frame)" />
+    </include>
+    <include file="$(find controls)/launch/mavlink_publisher.launch"> 
+        <arg name="base_frame" value="$(arg base_frame)" />
+        <arg name="publish_frame" value="$(arg rov_frame)" />
+    </include>
+    <include file="$(find controls)/launch/controller.launch"> 
+        <arg name="goal_topic" value="$(arg goal_topic)" />
+        <arg name="goal_rotation_topic" value="$(arg goal_rotation_topic)" />
+        <arg name="run_topic" value="$(arg isrunning_topic)" />
+    </include>
+
+    <!-- Launch fake sonar_ping -->
+    <include file="$(find sonar_ping)/launch/fake_ping.launch">
+        <arg name="sonar_ping_topic" value="$(arg sonar_ping_topic)" />
+        <arg name="altitude_topic" value="$(arg altitude_topic)" />
+        <arg name="pool_depth" value="$(arg pool_depth)" />
+        <arg name="ema_alpha" value="$(arg ema_alpha)" />
+    </include>
+
+    <!-- Front Camera -->
+    <arg name="front_camera_topic" default="/camera/color/image_raw"/>
+    <arg name="front_camera_width" default="640"/>
+    <arg name="front_camera_height" default="400"/>
+    <arg name="front_camera_HFOV" default="50.41"/>
+
+    <!-- front camera faux detection args -->
+    <arg name="front_detection_topic" default="/front_detection" />
+	<arg name="front_image_topic" default="$(arg front_camera_topic)" />
+	<arg name="front_model_file" default="$(find faux_detection)/trained_models/mobilenet-jul23.pb" />
+	<arg name="front_label_file" default="$(find faux_detection)/trained_models/mobilenet-jul23.pbtxt" />
+
+    <!-- Bottom Camera -->
+    <arg name="bottom_camera_topic" default="/bluerov2/camera_down/camera_image"/>
+    <arg name="bottom_camera_width" default="640"/>
+    <arg name="bottom_camera_height" default="400"/>
+    <arg name="bottom_camera_HFOV" default="69"/>
+
+    <!-- bottom camera faux detection args -->
+    <arg name="bottom_detection_topic" default="/bottom_detection" />
+    <arg name="bottom_image_topic" default="$(arg bottom_camera_topic)" />
+    <arg name="bottom_model_file" default="$(find faux_detection)/trained_models/mobilenet-jul23.pb" />
+    <arg name="bottom_label_file" default="$(find faux_detection)/trained_models/mobilenet-jul23.pbtxt" />
+
+
+    <!-- Run the front camera detection simulator -->
+    <include file="$(find faux_detection)/launch/faux_detector.launch" ns="front_cam">
+        <arg name="detection_topic" value="$(arg front_detection_topic)" />
+        <arg name="image_topic" value="$(arg front_image_topic)" />
+        <arg name="model_file" value="$(arg front_model_file)" />
+        <arg name="label_file" value="$(arg front_label_file)" />
+        <arg name="interval" value="50" />
+    </include>
+
+    <node type="rviz" pkg="rviz" name="rviz" if="$(eval arg('is_sim') == true)" args="-d $(find avoid_obstacles)/rviz/view_label_pose.rviz"/>
+    <node type="rviz" pkg="rviz" name="rviz" if="$(eval arg('is_sim') == false)" args="-d $(find avoid_obstacles)/rviz/view_trajectory.rviz"/>
+
+    <!-- Run the bottom camera detection simulator -->
+    <include file="$(find faux_detection)/launch/faux_detector.launch" ns="bottom_cam">
+        <arg name="detection_topic" value="$(arg bottom_detection_topic)" />
+        <arg name="image_topic" value="$(arg bottom_image_topic)" />
+        <arg name="model_file" value="$(arg bottom_model_file)" />
+        <arg name="label_file" value="$(arg bottom_label_file)" />
+        <arg name="interval" value="100" />
+    </include>
+
+
+    <!-- Launch SMACH node -->
+    <arg name="respawn_smach" default="false" />
+    <arg name="log_output" default="screen" />
+	<node pkg="mission_planning" type="smach_controller_simulation_qual.py" name="mission_planning" required="$(eval not respawn_smach)"
+    clear_params="true" output="$(arg log_output)" respawn="$(arg respawn_smach)"> 
+        <param name="is_sim" value="$(arg is_sim)"/>
+        <param name="base_frame" value="$(arg base_frame)" />
+        <!-- <param name="publish_frame" value="$(arg publish_frame)" /> -->
+        <param name="rov_frame" value="$(arg rov_frame)" />
+        <param name="goal_topic" value="$(arg goal_topic)" />
+        <param name="goal_rotation_topic" value ="$(arg goal_rotation_topic)" />
+        <param name="isrunning_topic" value ="$(arg isrunning_topic)"/>
+        <param name="world_frame" value="$(arg world_frame)" />
+        <param name="orb_slam_3_frame" value="$(arg orb_slam_3_frame)" />
+        <param name="front_label_file" value="$(arg front_label_file)" />
+        <param name="pcl_topic" value="$(arg pcl_topic)" />
+
+        <param name="bottom_detection_topic" value="$(arg bottom_detection_topic)" />
+        <param name="bottom_camera_topic" value="$(arg bottom_camera_topic)"/>
+        <param name="bottom_camera_width" value="$(arg bottom_camera_width)"/>
+        <param name="bottom_camera_height" value="$(arg bottom_camera_height)"/>
+        <param name="bottom_camera_HFOV" value="$(arg bottom_camera_HFOV)"/>
+        <param name="bottom_camera_frame" value="$(arg bottom_camera_frame)" />
+
+        <param name="front_detection_topic" value="$(arg front_detection_topic)" />
+        <param name="front_camera_topic" value="$(arg front_camera_topic)"/>
+        <param name="front_camera_width" value="$(arg front_camera_width)"/>
+        <param name="front_camera_height" value="$(arg front_camera_height)"/>
+        <param name="front_camera_HFOV" value="$(arg front_camera_HFOV)"/>
+        <param name="front_camera_frame" value="$(arg front_camera_frame)" />
+    </node>
+    
+    <!-- Static broadcasters for IMU <-> camera transforms courtesy of:
+	 	http://wiki.ros.org/tf2/Tutorials/Writing%20a%20tf2%20static%20broadcaster%20%28C%2B%2B%29
+		https://www.andre-gaschler.com/rotationconverter/ -->
+	<node pkg="tf2_ros" type="static_transform_publisher" name="oakd_imu_broadcaster" args="0.2 0 0.03 0.5 -0.5 0.5 -0.5 $(arg rov_frame) $(arg front_camera_frame)" />
+    <!-- Align x, y axes of transform to x, y axes of image frame - z is global up -->
+	<node pkg="tf2_ros" type="static_transform_publisher" name="oak1_imu_broadcaster" args="0.01 0 -0.11 0.70710678118 -0.70710678118 0 0 $(arg rov_frame) $(arg bottom_camera_frame)" />
+</launch>

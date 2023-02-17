@@ -1,0 +1,24 @@
+<?xml version="1.0" ?>
+<sdf version="1.5">
+<!-- SDF file for the gate -->
+<model name="qual_gate_no_middle">
+  <static>true</static>
+  <link name="gate_link">
+
+  <visual name="qual_gate_no_middle">
+    <pose>0 0 0 0 0 0</pose>
+    <geometry>
+      <mesh><uri>model://qual_gate_no_middle/meshes/qual_gate_no_middle.dae</uri><scale>1 1 1</scale></mesh>
+    </geometry>
+  </visual>
+
+  <collision name="qual_gate_no_middle">
+    <pose>0 0 0 0 0 0</pose>
+    <geometry>
+      <mesh><uri>model://qual_gate_no_middle/meshes/qual_gate_no_middle.stl</uri><scale>1 1 1</scale></mesh>
+    </geometry>
+  </collision>
+
+  </link>
+</model>
+</sdf>

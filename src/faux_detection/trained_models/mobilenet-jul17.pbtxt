@@ -1,0 +1,29 @@
+item {
+    id: 1
+    name: 'image_badge'
+}
+
+item {
+    id: 2
+    name: 'image_bootlegger'
+}
+
+item {
+    id: 3
+    name: 'image_gman'
+}
+
+item {
+    id: 4
+    name: 'image_tommygun'
+}
+
+item {
+    id: 5
+    name: 'marker'
+}
+
+item {
+    id: 6
+    name: 'qual_gate'
+}

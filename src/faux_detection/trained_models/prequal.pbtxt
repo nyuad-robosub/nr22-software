@@ -1,0 +1,9 @@
+item {
+    id: 1
+    name: 'gate'
+}
+
+item {
+    id: 2
+    name: 'pole'
+}

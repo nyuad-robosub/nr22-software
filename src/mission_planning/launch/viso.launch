@@ -1,0 +1,27 @@
+<launch>
+	<!-- base params -->
+	<!-- <arg name="mav_addr" default="" />
+	<arg name="base_frame" default="world" />
+	<arg name="publish_frame" default="base_link" />
+
+	<arg name="log_output" default="screen" />
+	<arg name="respawn_mavpub" default="false" />
+
+	<node pkg="controls" type="mavlink_publisher.py" name="mavlink_publisher" required="$(eval not respawn_mavpub)"
+	    clear_params="true" output="$(arg log_output)" respawn="$(arg respawn_mavpub)">
+		<param name="mav_addr" value="$(arg mav_addr)" />
+		<param name="base_frame" value="$(arg base_frame)" />
+		<param name="publish_frame" value="$(arg publish_frame)" />
+	</node> -->
+
+    <!-- <arg name="" default="" /> -->
+	<arg name="rov_frame" default="" />
+    <include file="$(find ORB_SLAM3)/launch/oakd_node.launch"></include>
+    <include file="$(find controls)/launch/send_viso_tf2.launch">
+        <arg name="mav_addr" value="udpin:0.0.0.0:14550" />
+        <!-- <arg name="rov_frame" value="viso_imu" /> -->
+		<arg name="rov_frame" value="orb_slam3_camera" />
+    </include>
+
+    <node pkg="tf2_ros" type="static_transform_publisher" name="SLAM_IMU_BROADCASTER" args="0 0.01 -0.08 0.5 -0.5 0.5 0.5 orb_slam3_camera viso_imu" />
+</launch>

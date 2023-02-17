@@ -1,0 +1,26 @@
+<launch>
+	<!-- Base params -->
+	<arg name="hydro_topic" default="hydrophone_angle" />
+	<arg name="world_frame" default="world" />
+	<arg name="rov_frame" default="bluerov2/base_link" />
+	<arg name="x" default="0.0" />
+	<arg name="y" default="0.0" />
+	<arg name="z" default="0.0" />
+	<arg name="noise" default="0.1" />
+	<arg name="interval" default="2.0" />
+
+	<arg name="log_output" default="screen" />
+	<arg name="respawn_control" default="false" />
+
+	<node pkg="sonar_ping" type="fake_hydro.py" name="fake_hydro" required="$(eval not respawn_control)"
+	    clear_params="true" output="$(arg log_output)" respawn="$(arg respawn_control)">
+		<param name="hydro_topic" value="$(arg hydro_topic)" />
+		<param name="world_frame" value="$(arg world_frame)" />
+		<param name="rov_frame" value="$(arg rov_frame)" />
+		<param name="x" value="$(arg x)" />
+		<param name="y" value="$(arg y)" />
+		<param name="z" value="$(arg z)" />
+		<param name="noise" value="$(arg noise)" />
+	    <param name="interval" value="$(arg interval)" />
+	</node>
+</launch>

@@ -1,0 +1,18 @@
+<launch>
+	<!-- Base params -->
+	<arg name="sonar_ping_topic" default="sonar_ping" />
+	<arg name="altitude_topic" default="altitude" />
+	<arg name="pool_depth" default="3.1" />
+	<arg name="ema_alpha" default="0.3" />
+
+	<arg name="log_output" default="screen" />
+	<arg name="respawn_control" default="false" />
+
+	<node pkg="sonar_ping" type="fake_ping.py" name="fake_ping" required="$(eval not respawn_control)"
+	    clear_params="true" output="$(arg log_output)" respawn="$(arg respawn_control)">
+		<param name="sonar_ping_topic" value="$(arg sonar_ping_topic)" />
+		<param name="altitude_topic" value="$(arg altitude_topic)" />
+		<param name="pool_depth" value="$(arg pool_depth)" />
+		<param name="ema_alpha" value="$(arg ema_alpha)" />
+	</node>
+</launch>

@@ -3,7 +3,7 @@
   <arg name="gui" default="true"/>
 
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
-    <arg name="world_name" value="worlds/pool_v2.world"/>
+    <arg name="world_name" value="worlds/pool_v2_qual.world"/>
     <arg name="paused" value="false"/>
     <arg name="use_sim_time" value="true"/>
     <arg name="gui" value="$(arg gui)"/>
@@ -17,13 +17,14 @@
     <arg name="x" value="0"/>
     <arg name="y" value="0"/>
     <arg name="z" value="0"/>
+    <arg name="yaw" value="10.0"/>
   </include>
 
   <node type="rviz" pkg="rviz" name="rviz" args="-d $(find avoid_obstacles)/rviz/view_trajectory.rviz"/>
 
   <include file="$(find uuv_assistants)/launch/publish_world_ned_frame.launch"/>
   
-  <node name="publish_world_models"
+  <!-- <node name="publish_world_models"
         pkg="uuv_assistants"
         type="publish_world_models.py"
         output="screen">
@@ -35,5 +36,5 @@
                       position: [0, 0, 0]
                     scale: [1, 1, 1]
         </rosparam>
-  </node>
+  </node> -->
 </launch>

@@ -146,3 +146,12 @@ logs/
 
 # VScode stuff
 .vscode/
+nr22-software.code-workspace
+*.jpg
+*.png
+*.bmp
+
+# SVO stuff
+src/deps/svo
+!src/deps/svo/rpg_svo_pro_open
+!src/deps/svo/rpg_svo_pro_open/*

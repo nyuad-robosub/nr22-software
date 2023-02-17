@@ -7,7 +7,7 @@ project(sonar_ping)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED)
+find_package(catkin REQUIRED std_msgs geometry_msgs tf2_ros)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -158,6 +158,8 @@ include_directories(
 catkin_install_python(PROGRAMS
    scripts/talker.py
    scripts/listener.py
+   scripts/fake_ping.py
+   scripts/fake_hydro.py
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
  )
 

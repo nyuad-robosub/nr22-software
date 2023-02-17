@@ -1,0 +1,24 @@
+<?xml version="1.0" ?>
+<sdf version="1.5">
+<!-- SDF file for the marker -->
+<model name="marker">
+  <static>true</static>
+  <link name="marker_link">
+
+  <visual name="marker">
+    <pose>0 0 0 0 0 0</pose>
+    <geometry>
+      <mesh><uri>model://marker/meshes/marker.dae</uri><scale>1 1 1</scale></mesh>
+    </geometry>
+  </visual>
+
+  <!-- <collision name="marker">
+    <pose>0 0 0 0 0 0</pose>
+    <geometry>
+      <mesh><uri>model://marker/meshes/marker.stl</uri><scale>1 1 1</scale></mesh>
+    </geometry>
+  </collision> -->
+
+  </link>
+</model>
+</sdf>

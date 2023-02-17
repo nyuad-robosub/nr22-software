@@ -1,0 +1,13 @@
+<library path="lib/libnodelet_ster">
+  <class name="camera_controller/StereoNodelet" type="camera_controller::StereoNodelet" base_class_type="nodelet::Nodelet">
+    <description>
+    This is our nodelet that runs mobilenet blob files.
+    </description>
+  </class>
+
+  <class name="camera_controller/StereoNodeletYolo" type="camera_controller::StereoNodeletYolo" base_class_type="nodelet::Nodelet">
+    <description>
+    This our nodelet for the stereo camera to run Yolo blob files.
+    </description>
+  </class>
+</library>

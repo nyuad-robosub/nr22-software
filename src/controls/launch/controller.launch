@@ -1,10 +1,12 @@
 <launch>
-	<!-- base params -->
+	<!-- Base params -->
 	<arg name="mav_addr" default="udpin:0.0.0.0:14552" />
 	<arg name="arm_topic" default="controller/isArmed" />
-	<arg name="pcl_topic" default="controller/usePCL" />
+	<arg name="run_topic" default="controller/isRunning" />
 
+	<!-- TRANSLATION TOPICS -->
 	<!-- Goal topic (XYZ) and point to focus on (currently only using xy position) -->
+	<arg name="pcl_topic" default="controller/usePCL" />
 	<arg name="focus_topic" default="controller/focusPoint" />
 	<arg name="goal_topic" default="controller/goalPoint" />
 	<arg name="goal_path_topic" default="controller/goalPath" />
@@ -13,9 +15,20 @@
 	<arg name="segment_size_topic" default="controller/segmentSize" />
 	<arg name="goal_threshold_topic" default="controller/goalThreshold" />
 
+	<!-- ROTATION TOPICS -->
+	<!-- Rotation topic (quaternion) -->
+	<arg name="goal_rotation_topic" default="controller/goalRotation" />
+
+	<!-- Angle size (maximum angle rotated at once) in degrees and rotation threshold -->
+	<arg name="angle_size_topic" default="controller/angleSize" />
+	<arg name="angle_threshold_topic" default="controller/angleThreshold" />
+
+	<!-- TRANSFORM LOOKUP -->
 	<!-- Frames to monitor current location of the ROV -->
 	<arg name="world_frame" default="world" />
 	<arg name="rov_frame" default="base_link" />
+	<arg name="attitude_topic" default="attitude" />
+	<arg name="altitude_topic" default="altitude" />
 
 	<arg name="log_output" default="screen" />
 	<arg name="respawn_control" default="false" />
@@ -24,13 +37,19 @@
 	    clear_params="true" output="$(arg log_output)" respawn="$(arg respawn_control)">
 		<param name="mav_addr" value="$(arg mav_addr)" />
 		<param name="arm_topic" value="$(arg arm_topic)" />
+		<param name="run_topic" value="$(arg run_topic)" />
 		<param name="pcl_topic" value="$(arg pcl_topic)" />
 		<param name="focus_topic" value="$(arg focus_topic)" />
 		<param name="goal_topic" value="$(arg goal_topic)" />
 		<param name="goal_path_topic" value="$(arg goal_path_topic)" />
 		<param name="segment_size_topic" value="$(arg segment_size_topic)" />
 		<param name="goal_threshold_topic" value="$(arg goal_threshold_topic)" />
+		<param name="goal_rotation_topic" value="$(arg goal_rotation_topic)" />
+		<param name="angle_size_topic" value="$(arg angle_size_topic)" />
+		<param name="angle_threshold_topic" value="$(arg angle_threshold_topic)" />
 		<param name="world_frame" value="$(arg world_frame)" />
 		<param name="rov_frame" value="$(arg rov_frame)" />
+		<param name="attitude_topic" value="$(arg attitude_topic)" />
+		<param name="altitude_topic" value="$(arg altitude_topic)" />
 	</node>
 </launch>

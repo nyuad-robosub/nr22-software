@@ -1,0 +1,4 @@
+# Excluding all folders installed by SVO
+/*
+!/.gitignore
+!/rpg_svo_pro_open

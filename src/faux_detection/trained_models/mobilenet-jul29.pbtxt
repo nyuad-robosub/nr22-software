@@ -1,0 +1,99 @@
+item {
+    id: 1
+    name: 'Collecting_Bins_Gman_Alc'
+}
+
+item {
+    id: 2
+    name: 'Collecting_Bins_Gman_Bin'
+}
+
+item {
+    id: 3
+    name: 'Collecting_Bins_Gman_Notepad'
+}
+
+item {
+    id: 4
+    name: 'Collecting_Bins_Gman_Phone'
+}
+
+item {
+    id: 5
+    name: 'bin_empty'
+}
+
+item {
+    id: 6
+    name: 'bottle'
+}
+
+item {
+    id: 7
+    name: 'gman_image'
+}
+
+item {
+    id: 8
+    name: 'handle'
+}
+
+item {
+    id: 9
+    name: 'image_badge'
+}
+
+item {
+    id: 10
+    name: 'image_bootlegger'
+}
+
+item {
+    id: 11
+    name: 'image_tommygun'
+}
+
+item {
+    id: 12
+    name: 'lid_empty'
+}
+
+item {
+    id: 13
+    name: 'marker'
+}
+
+item {
+    id: 14
+    name: 'qual_gate'
+}
+
+item {
+    id: 15
+    name: 'table_bootlegger'
+}
+
+item {
+    id: 16
+    name: 'table_bottles'
+}
+
+item {
+    id: 17
+    name: 'table_gman'
+}
+
+item {
+    id: 18
+    name: 'target_cup'
+}
+
+item {
+    id: 19
+    name: 'target_large'
+}
+
+item {
+    id: 20
+    name: 'target_star'
+}

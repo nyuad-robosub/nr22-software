@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- <args for urdf/> -->
+    <arg name="calibration_file"                 default="$(find camera_controller)/calibration/oakd_water.json" />
+    <arg name="MXID"                default=""/> <!--  1844301021693E0E00 MXID OF DEVICE NEEDED TO SELECT A SPECIFIC CAMERA FROM CAMERA SYSTEM set to empty if not using-->
+    <arg name="is_pool"             default="true" /> <!-- if in pool will adjust calibration parameters accordingly -->
+    <arg name="camera_model"        default="oak-1"   /> <!-- 'zed' or 'zedm' -->
+    <arg name="tf_prefix"           default="oak1"         />
+    <arg name="base_frame"          default="oak-1_frame" />
+    <arg name="parent_frame"        default="oak-1-base-frame" />
+
+    <arg name="cam_pos_x"           default="0.0"        /> <!-- Position respect to base frame (i.e. "base_link) -->
+    <arg name="cam_pos_y"           default="0.0"        /> <!-- Position respect to base frame (i.e. "base_link) -->
+    <arg name="cam_pos_z"           default="0.0"        /> <!-- Position respect to base frame (i.e. "base_link) -->
+    <arg name="cam_roll"            default="0.0"     /> <!-- Orientation respect to base frame (i.e. "base_link) -->
+    <arg name="cam_pitch"           default="0.0"        /> <!-- Orientation respect to base frame (i.e. "base_link) -->
+    <arg name="cam_yaw"             default="0.0"     /> <!-- Orientation respect to base frame (i.e. "base_link) -->
+
+    <arg name="sync_nn"             default="false"         />
+    <arg name="nnName"              default="mobilenet-ssd_openvino_2021.2_6shave.blob"         />
+    <arg name="resourceBaseFolder"  default="$(find camera_controller)/resources" />
+
+    <include file="$(find depthai_bridge)/launch/urdf.launch">
+        <arg name="base_frame"      value="$(arg  base_frame)"  />
+        <arg name="parent_frame"    value="$(arg  parent_frame)"/>
+        <arg name="camera_model"    value="$(arg  camera_model)"/>
+        <arg name="tf_prefix"       value="$(arg  tf_prefix)" />
+        <arg name="cam_pos_x"       value="$(arg  cam_pos_x)"   />
+        <arg name="cam_pos_y"       value="$(arg  cam_pos_y)"   />
+        <arg name="cam_pos_z"       value="$(arg  cam_pos_z)"   />
+        <arg name="cam_roll"        value="$(arg  cam_roll)"    />
+        <arg name="cam_pitch"       value="$(arg  cam_pitch)"   />
+        <arg name="cam_yaw"         value="$(arg  cam_yaw)"     />
+    </include>
+
+    <node name="mobilenet_publisher" pkg="camera_controller" type="mobilenet_node" output="screen" required="true">
+        <param name="calibration_file" value="$(arg calibration_file)"/>
+        <param name="tf_prefix"           value="$(arg tf_prefix)"     />
+        <param name="sync_nn"             value="$(arg sync_nn)"/>
+        <param name="nnName"              value="$(arg nnName)"/>
+        <param name="resourceBaseFolder"  value="$(arg resourceBaseFolder)"/>
+        <param name="MXID"                value="$(arg MXID)"/>
+    </node>            
+
+</launch>

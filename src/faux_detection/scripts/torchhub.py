@@ -104,7 +104,7 @@ class Detector():
         for index, row in result_df.iterrows():
             # Detection id & scores
             result = ObjectHypothesisWithPose()
-            result.id = row['class']
+            result.id = row['class'] + 1
             result.score = row['confidence']
 
             # Bounding box

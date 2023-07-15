@@ -19,7 +19,7 @@ class Detector():
     # Helper functions courtesy of:
     # https://colab.research.google.com/github/luxonis/depthai-ml-training/blob/master/colab-notebooks/Easy_Object_Detection_With_Custom_Data_Demo_Training.ipynb
     # Getting number of classes
-    def get_num_classes(pbtxt_fname):
+    def get_num_classes(self, pbtxt_fname):
         """ Find number of classes in pbtxt file
         :param pbtxt_fname: Path to label file
         """

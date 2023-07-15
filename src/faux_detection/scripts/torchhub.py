@@ -60,7 +60,7 @@ class Detector():
         self.new_frame = False
         self.image = Image()
         self.image_lock = threading.Lock()
-        self.image_downsize_factor = 4
+        self.image_downsize_factor = 1
 
         self.interval = interval
         self.last_frame_time = rospy.Time.now()

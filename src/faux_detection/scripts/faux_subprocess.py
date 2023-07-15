@@ -38,7 +38,7 @@ if __name__ == "__main__":
     # Load custom checkpoint courtesy of:
     # https://github.com/ultralytics/yolov5/discussions/5872#discussioncomment-2592644
     model = torch.hub.load(yolov5_path, 'custom', path=weights_path, source='local')
-    model.conf = 0.02
+    model.conf = 0.005
 
     while True:
         img_bytes = receive_data()

@@ -16,7 +16,7 @@ For TF1 GraphDef models:
 - `model_file`: path to the `.pb` file of the model.
 
 For PyTorch Hub models:
-- `model_path`: path to the model folder, such as the YOLOv5 repository [ultralytics/yolov5](https://github.com/ultralytics/yolov5]).
+- `model_path`: path to the model folder, such as the YOLOv5 repository [ultralytics/yolov5](https://github.com/ultralytics/yolov5]). Does not need to be changed if you're using YOLOv5 since it is a submodule.
 - `weights_file`: path to the `.pt` file of the trained model that contains the weights.
 - `subprocess_file`: path to the subprocess file, and does not need to be changed (more details in the [PyTorch Hub](#pytorch-yolov5) section.)
 - `subprocess_python_file`: path to the Python 3 executable (more details in the [PyTorch Hub](#pytorch-yolov5) section.)

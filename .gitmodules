@@ -42,3 +42,14 @@
 [submodule "src/deps/svo/rpg_svo_pro_open"]
 	path = src/deps/svo/rpg_svo_pro_open
 	url = https://github.com/nyuad-robosub/rpg_svo_pro_open
+[submodule "src/deps/catkin_simple"]
+	path = src/deps/catkin_simple
+	url = https://github.com/catkin/catkin_simple
+[submodule "include/ardupilot"]
+	path = include/ardupilot
+	url = https://github.com/nyuad-robosub/ardupilot
+	branch = simulation
+[submodule "include/ardupilot_gazebo"]
+	path = include/ardupilot_gazebo
+	url = https://github.com/patrickelectric/ardupilot_gazebo
+	branch = add_link

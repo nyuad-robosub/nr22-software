@@ -56,3 +56,7 @@
 [submodule "include/yolov5"]
 	path = include/yolov5
 	url = https://github.com/ultralytics/yolov5
+[submodule "include/models"]
+	path = include/models
+	url = https://github.com/nyuad-robosub/models
+	branch = r1.13.0

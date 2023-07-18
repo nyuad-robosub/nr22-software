@@ -2,7 +2,7 @@
 This package allows you to run object detection models on the machine running ROS. This is intended as an alternative to the OAK cameras while doing simulations, but can also be potentially used on the Jetson itself. 
 
 # Usage
-The package supports TensorFlow 1 GraphDef models such as MobileNetV2 and PyTorch Hub models such as YOLOv5. Each approach has a more detailed guide below ([TF1 GraphDef](#tensorflow-1-mobilenetv2), [PyTorch Hub](#pytorch-yolov5)).
+The package supports TensorFlow 1 GraphDef models such as MobileNetV2 and PyTorch Hub models such as YOLOv5. Each approach has a more detailed guide below ([TF1 GraphDef](#tensorflow-1-mobilenetv2), [PyTorch Hub](#pytorch-hub-yolov5)).
 
 The [faux_detector.launch](launch/faux_detector.launch) file is the main launch file of the package. These are parameters common to both approaches:
 
@@ -16,22 +16,42 @@ For TF1 GraphDef models:
 - `model_file`: path to the `.pb` file of the model.
 
 For PyTorch Hub models:
-- `model_path`: path to the model folder, such as the YOLOv5 repository [ultralytics/yolov5](https://github.com/ultralytics/yolov5]). Does not need to be changed if you're using YOLOv5 since it is a submodule.
+- `model_path`: path to the model folder, such as the YOLOv5 repository [ultralytics/yolov5](https://github.com/ultralytics/yolov5). Does not need to be changed if you're using YOLOv5, since it is included as a submodule.
 - `weights_file`: path to the `.pt` file of the trained model that contains the weights.
-- `subprocess_file`: path to the subprocess file, and does not need to be changed (more details in the [PyTorch Hub](#pytorch-yolov5) section.)
-- `subprocess_python_file`: path to the Python 3 executable (more details in the [PyTorch Hub](#pytorch-yolov5) section.)
+- `subprocess_file`: path to the subprocess file, and does not need to be changed by default (more details in the [PyTorch Hub](#pytorch-hub-yolov5) section.)
+- `subprocess_python_file`: path to the Python 3 executable (more details in the [PyTorch Hub](#pytorch-hub-yolov5) section.)
 
 ## Tensorflow 1 (MobileNetV2)
-This approach keeps a Tensorflow 1 session open while running inference on each new image, which achieves real-time speeds like a deployed model. You can visit [graphdef.py](scripts/graphdef.py) to learn more.
+This approach keeps a Tensorflow 1 session open while running inference on each new image, which achieves real-time speeds like a deployed model. You can read [graphdef.py](scripts/graphdef.py) to learn more.
 
 ### Install `object_detection`
-The package uses the `object_detection` package provided in [TensorFlow's repository](https://github.com/tensorflow/models/tree/master/research/object_detection). To install:
-- Please clone the branch `r1.13.0`
-- `cd` into `research`
-- Do the following (courtesy of [rakidedigama](https://stackoverflow.com/a/57002353)):
+The package uses the `object_detection` package provided in [TensorFlow's repository](https://github.com/tensorflow/models/tree/master/research/object_detection), which is included in `nr22-software/include`. To install, do the following:
+-  `cd` into `nr22-software/include/models/research`
+- Install using the following (courtesy of [rakidedigama](https://stackoverflow.com/a/57002353)):
 ```
 python setup.py build
 python setup.py install
+```
+If the above gives you the `[Errno 13] Permission denied` error, it means you're using the system python, and it is not recommended to use `setup.py` to install for all users. Try this instead to install for local user.
+```
+python setup.py install --user
+```
+- Still in `models/research`, run the following to add the library to PYTHON_PATH:
+```
+echo "export PYTHONPATH=\$PYTHONPATH:$PWD:$PWD/slim" >> ~/.profile
+export PYTHONPATH=$PYTHONPATH:$PWD:$PWD/slim
+```
+- Still in `models/research`, run the following (if you don't have `protoc`, install with `sudo apt-get install protobuf-compiler`.)
+```
+protoc object_detection/protos/*.proto --python_out=.
+```
+- If you cannot install `protoc` with apt as above, you can install it manually. Download and install the 3.0 release of protoc, then unzip the file.
+```
+# From tensorflow/models/research (be in this directory)
+wget -O protobuf.zip https://github.com/google/protobuf/releases/download/v3.0.0/protoc-3.0.0-linux-x86_64.zip
+unzip protobuf.zip
+rm -rf protobuf.zip
+./bin/protoc object_detection/protos/*.proto --python_out=.
 ```
 
 ### Install other dependencies
@@ -40,33 +60,10 @@ The following installs the rest of the dependencies. Note that this installs a n
 pip2 install --user tensorflow==1.15.0 Cython contextlib2 pillow lxml
 ```
 
-If there is an issue with CUDA, possibly your graphics card is being used for display and cannot run TensorFlow (see [this](https://stackoverflow.com/questions/41965187/nvidia-device-error-in-tensorflow) and [this](https://stackoverflow.com/a/39661999)). Remove availability of CUDA devices could help (only show available devices not used for display):
-```
-export CUDA_VISIBLE_DEVICES=1
-```
-
-### Install protobuf
-If you are on linux:
-
-Download and install the 3.0 release of protoc, then unzip the file.
-```
-# From tensorflow/models/research/(be in this directory)
-wget -O protobuf.zip https://github.com/google/protobuf/releases/download/v3.0.0/protoc-3.0.0-linux-x86_64.zip
-unzip protobuf.zip
-rm -rf protobuf.zip
-```
-
-Run the compilation process again, but use the downloaded version of protoc
-
-From tensorflow/models/research/
-```
-./bin/protoc object_detection/protos/*.proto --python_out=.
-```
-
 ## PyTorch Hub (Yolov5)
-This approach uses the PyTorch Hub to open a model and run inferences, but there's a tricky issue that PyTorch no longer supports Python 2.7. Instead, this uses the `subprocess` package to run a Python 3 subprocess with PyTorch installed. Back-and-forth communication is facilitated with `subprocess.PIPE`s. You can visit [torchhub.py](scripts/torchhub.py) to learn more.
+This approach uses the PyTorch Hub to open a model and run inferences, but there's a tricky issue that PyTorch no longer supports Python 2.7. Instead, this uses the `subprocess` package to run a Python 3 subprocess with PyTorch installed. Back-and-forth communication is facilitated with `subprocess.PIPE`s. You can read [torchhub.py](scripts/torchhub.py) to learn more.
 
-At the moment, it also relies on the `object_detection` package described in the above section ([Install `object_detection`](#install-objectdetection)). Please go there and install accordingly.
+At the moment, it also relies on the `object_detection` package described in the above section ([Install `object_detection`](#install-object_detection)). Please go there and install accordingly.
 
 ### Launch parameters
 The `subprocess_file` parameter in the launch file does not need to be changed, as the default path points to the correctly-working [faux_subprocess.py](scripts/faux_subprocess.py).
@@ -95,3 +92,9 @@ Or, from the terminal:
 python -c "import sys; print(sys.executable)"
 ```
 This will give you the full path to the Python executable that you can put in the `subprocess_python_file` parameter.
+
+# Troubleshooting
+If there is an issue with CUDA, possibly your graphics card is being used for display and cannot run TensorFlow (see [this](https://stackoverflow.com/questions/41965187/nvidia-device-error-in-tensorflow) and [this](https://stackoverflow.com/a/39661999)). Remove availability of CUDA devices could help (only show available devices not used for display):
+```
+export CUDA_VISIBLE_DEVICES=1
+```

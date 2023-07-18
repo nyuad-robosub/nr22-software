@@ -2,10 +2,19 @@
 	<!-- Base params -->
 	<arg name="image_topic" default="/camera/color/image_raw" />
 	<arg name="detection_topic" default="/detection" />
-	<arg name="model_file" default="$(find faux_detection)/trained_models/mobilenet-jul17.pb" />
-	<arg name="label_file" default="$(find faux_detection)trained_models/mobilenet-jul17.pbtxt" />
 	<arg name="min_score_thresh" default="0.25" />
 	<arg name="interval" default="60" />
+	<arg name="label_file" default="$(find faux_detection)/trained_models/mobilenet-jul29.pbtxt" />
+	<arg name="model_type" default="torchhub" /> <!-- graphdef (MobileNet) / torchhub (YOLO) -->
+
+	<!-- MobileNet params -->
+	<arg name="model_file" default="$(find faux_detection)/trained_models/mobilenet-jul29.pb" />
+
+	<!-- YOLO params-->
+	<arg name="model_path" default="$(find faux_detection)/../../include/yolov5" />
+	<arg name="weights_file" default="$(find faux_detection)/trained_models/yolov5-aug1st/best.pt" />
+	<arg name="subprocess_file" default="$(find faux_detection)/scripts/faux_subprocess.py" />
+	<arg name="subprocess_python_file" default="/.../bin/python" />
 
 	<arg name="log_output" default="screen" />
 	<arg name="respawn_control" default="false" />
@@ -14,9 +23,14 @@
 	    clear_params="true" output="$(arg log_output)" respawn="$(arg respawn_control)">
 		<param name="image_topic" value="$(arg image_topic)" />
 		<param name="detection_topic" value="$(arg detection_topic)" />
-		<param name="model_file" value="$(arg model_file)" />
-		<param name="label_file" value="$(arg label_file)" />
 		<param name="min_score_thresh" value="$(arg min_score_thresh)" />
 		<param name="interval" value="$(arg interval)" />
+		<param name="model_type" value="$(arg model_type)" />
+		<param name="model_file" value="$(arg model_file)" />
+		<param name="label_file" value="$(arg label_file)" />
+		<param name="model_path" value="$(arg model_path)" />
+		<param name="weights_file" value="$(arg weights_file)" />
+		<param name="subprocess_file" value="$(arg subprocess_file)" />
+		<param name="subprocess_python_file" value="$(arg subprocess_python_file)" />
 	</node>
 </launch>

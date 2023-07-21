@@ -6,8 +6,8 @@ NR22_DIRECTORY=$PWD
 # Array of all the init scripts in execution order
 INIT_DIRECTORY="init"
 declare -a init_scripts=(
-    "miniconda.sh"
     "ros_gazebo.sh"
+    "miniconda.sh"
     "src/deps/realsense.sh"
     "src/deps/svo.sh"
     "catkin.sh"

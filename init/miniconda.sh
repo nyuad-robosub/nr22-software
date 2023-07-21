@@ -24,8 +24,7 @@ then
 fi
 
 # Check if user wants to create a Python 2 environment
-read -p "Create a conda environment with Python 2.7? \
-(recommended for isolation from system Python, skip this step if you don't have conda installed) [N/y]"
+read -p "Create a conda environment with Python 2.7? (recommended for isolation from system Python, skip this step if you don't have conda installed) [N/y]"
 if [[ $REPLY =~ ^[Yy]$ ]]
 then
     read -p "Give your environment a name (no whitespaces): "
@@ -37,8 +36,7 @@ then
     exportline="conda activate $ENV_NAME";
     eval $exportline
     grep -Fxq "$exportline" ~/$SHELL_INIT 2> /dev/null || {
-        read -p "Automatically activate ($ENV_NAME) on startup? \
-        (will replace the default conda environment (base) if set earlier) [N/y]"
+        read -p "Automatically activate ($ENV_NAME) on startup? (will replace the default conda environment (base) if set earlier) [N/y]"
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             conda config --set auto_activate_base false
             echo $exportline >> ~/$SHELL_INIT

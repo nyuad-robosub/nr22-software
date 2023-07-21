@@ -15,7 +15,7 @@ sudo apt-get install -y python-rosdep python-rosinstall python-rosinstall-genera
 sudo rosdep init && rosdep update 
 
 # Fixing Gazebo libignition
-sudo apt upgrade libignition-math2
+sudo apt-get install -y --only-upgrade libignition-math2
 gazebo --version
 which gzserver
 which gzclient
@@ -25,8 +25,7 @@ SHELL_INIT=".bashrc"
 exportline="source /opt/ros/melodic/setup.bash";
 eval $exportline
 grep -Fxq "$exportline" ~/$SHELL_INIT 2>/dev/null || {
-    read -p "Add \"source /opt/ros/melodic/setup.bash\" to ~/.bashrc? \
-    (not needed if using catkin workspaces) [N/y]"
+    read -p "Add \"source /opt/ros/melodic/setup.bash\" to ~/.bashrc? (not neccessary if using catkin workspaces later) [N/y]"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         echo $exportline >> ~/$SHELL_INIT
         echo "Done!"

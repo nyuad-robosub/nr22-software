@@ -19,6 +19,7 @@ declare -a init_scripts=(
 # Loop through array to run scripts
 for i in "${init_scripts[@]}"
 do
+    echo # New line for new file
     read -p "Run $INIT_DIRECTORY/$i? [N/y]"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         bash $INIT_DIRECTORY/$i

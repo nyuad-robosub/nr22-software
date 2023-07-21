@@ -6,9 +6,9 @@ sudo apt-get install -y curl
 curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add -
 
 # Install ROS + Gazebo
-sudo apt-get update && sudo apt-get upgrade
+sudo apt-get update # && sudo apt-get upgrade
 sudo apt-get install -y ros-melodic-desktop-full # ros-melodic-ros-gz # -full
-sudo apt-get install -y ros-melodic-uuv-simulator ros-melodic-robot-localization ros-melodic-ddynamic-reconfigure ros-melodic-vision-msgs ros-melodic-tf2-sensor-msgs ros-melodic-rospy-message-converter
+sudo apt-get install -y ros-melodic-uuv-simulator ros-melodic-robot-localization ros-melodic-ddynamic-reconfigure ros-melodic-vision-msgs ros-melodic-tf2-sensor-msgs ros-melodic-rospy-message-converter ros-melodic-rgbd-launch ros-melodic-camera-info-manager ros-melodic-pcl-ros ros-melodic-image-transport ros-melodic-smach ros-melodic-rosbuild ros-melodic-mavros nlohmann-json-dev
 
 # Install system python packages
 sudo apt-get install -y python-rosdep python-rosinstall python-rosinstall-generator python-wstool python-pip python3-pip

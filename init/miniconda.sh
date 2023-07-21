@@ -37,7 +37,8 @@ then
     exportline="conda activate $ENV_NAME";
     eval $exportline
     grep -Fxq "$exportline" ~/$SHELL_INIT 2> /dev/null || {
-        read -p "Automatically activate $ENV_NAME on startup? [N/y]"
+        read -p "Automatically activate ($ENV_NAME) on startup? \
+        (will replace the default conda environment (base) if set earlier) [N/y]"
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             conda config --set auto_activate_base false
             echo $exportline >> ~/$SHELL_INIT

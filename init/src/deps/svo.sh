@@ -10,7 +10,4 @@ vcs-import < ./rpg_svo_pro_open/dependencies.yaml
 touch minkindr/minkindr_python/CATKIN_IGNORE
 # vocabulary for place recognition
 cd rpg_svo_pro_open/svo_online_loopclosing/vocabularies && ./download_voc.sh
-cd ../../..
-catkin build
-
 cd $NR22_DIRECTORY

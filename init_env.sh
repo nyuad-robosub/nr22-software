@@ -1,10 +1,8 @@
 #!/bin/bash
-# Update all submodules
-git submodule update --init --recursive
 NR22_DIRECTORY=$PWD
 
 # Array of all the init scripts in execution order
-INIT_DIRECTORY="init"
+INIT_DIRECTORY="$NR22_DIRECTORY/init"
 declare -a init_scripts=(
     "ros_gazebo.sh"
     "miniconda.sh"

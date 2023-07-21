@@ -5,8 +5,8 @@ nr_directory=$(pwd)
 include_directory="${nr_directory}/include"
 
 # COLORS AND LOGGING FUNCTIONS
-MAGENTA = "\x1b[35m"
-NO_COLOR = "\x1b[0m"
+MAGENTA="\x1b[35m"
+NO_COLOR="\x1b[0m"
 log () {
     echo -e $MAGENTA "NR LOG: " $1 $NO_COLOR 
 }
@@ -100,13 +100,13 @@ cmake --build build
 # cd $nr_directory
 # catkin config --extend /opt/ros/melodic
 # catkin_make -j2
-catkin build
+# catkin build
 
 # source $nr_directory/devel/setup.sh
 # echo $nr_directory'/devel/setup.sh' >> ~/.bashrc
 
 #create orbslam3 ros package separately
-cd $include_directory/ORB_SLAM3_OPENCV4/build.sh
+cd $include_directory/ORB_SLAM3_OPENCV4
 bash ./build.sh
 
 # This is to add package path to bashrc for ROS support

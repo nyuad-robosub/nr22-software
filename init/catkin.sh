@@ -2,7 +2,7 @@
 # Setup nr22-software as a catkin workspace
 NR22_DIRECTORY=$PWD
 pip install --upgrade pip
-pip install catkin_tools pymap3d==1.5.2 transforms3d
+pip install catkin_tools pymap3d==1.5.2 transforms3d empy
 catkin config --init --extend /opt/ros/melodic
 
 # Run catkin_build 4 times to smooth out incorrect package orders

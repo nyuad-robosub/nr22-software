@@ -15,7 +15,9 @@ sudo apt-get install -y python-rosdep python-rosinstall python-rosinstall-genera
 sudo rosdep init && rosdep update 
 
 # Fixing Gazebo libignition
-sudo apt-get install -y --only-upgrade libignition-math2
+# https://answers.gazebosim.org/question/23475/ssl-no-alternative-certificate-subject-name-matches-target-host-name-apiignitionfuelorg/?answer=25944#post-id-25944
+sed -i 's/api.ignitionfuel.org/fuel.ignitionrobotics.org/' ~/.ignition/fuel/config.yaml
+# sudo apt-get install -y --only-upgrade libignition-math2
 gazebo --version
 which gzserver
 which gzclient

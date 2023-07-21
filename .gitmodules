@@ -42,9 +42,6 @@
 [submodule "src/deps/svo/rpg_svo_pro_open"]
 	path = src/deps/svo/rpg_svo_pro_open
 	url = https://github.com/nyuad-robosub/rpg_svo_pro_open
-[submodule "src/deps/catkin_simple"]
-	path = src/deps/catkin_simple
-	url = https://github.com/catkin/catkin_simple
 [submodule "include/ardupilot"]
 	path = include/ardupilot
 	url = https://github.com/nyuad-robosub/ardupilot

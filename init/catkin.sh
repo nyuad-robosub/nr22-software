@@ -1,8 +1,10 @@
 #!/bin/bash
 NR22_DIRECTORY=$PWD
+# Update cmake version
+pip install --upgrade pip
+pip install --upgrade cmake
 
 # Setup nr22-software as a catkin workspace
-pip install --upgrade pip
 pip install catkin_tools pymap3d==1.5.2 transforms3d empy
 catkin config --init --extend /opt/ros/melodic
 

@@ -1,4 +1,9 @@
 #!/bin/bash
+NR22_DIRECTORY=$PWD
+
+# Update cmake version
+pip install --upgrade cmake
+
 # Add ROS to package list
 sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
 # If curl is not installed yet
@@ -33,3 +38,7 @@ grep -Fxq "$exportline" ~/$SHELL_INIT 2>/dev/null || {
         echo "Done!"
     fi
 }
+
+# Install some remaining prerequisites (needed in virtual environment)
+pip install rospkg defusedxml
+cd $NR22_DIRECTORY

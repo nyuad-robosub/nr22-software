@@ -2,7 +2,7 @@
 # -- object_detection --
 NR22_DIRECTORY=$PWD
 cd $NR22_DIRECTORY/include/models/research
-pip install tensorflow==1.15 Cython contextlib2 pillow lxml
+pip install tensorflow==1.15 Cython contextlib2 pillow lxml pandas matplotlib scipy
 python setup.py build
 
 # Check if user wants to install with --user

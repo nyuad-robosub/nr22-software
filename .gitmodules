@@ -57,3 +57,7 @@
 	path = include/models
 	url = https://github.com/nyuad-robosub/models
 	branch = r1.13.0
+[submodule "src/deps/orocos_kinematics_dynamics"]
+	path = src/deps/orocos_kinematics_dynamics
+	url = https://github.com/orocos/orocos_kinematics_dynamics
+	branch = release-1.5

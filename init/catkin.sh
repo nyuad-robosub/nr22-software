@@ -1,6 +1,7 @@
 #!/bin/bash
-# Setup nr22-software as a catkin workspace
 NR22_DIRECTORY=$PWD
+
+# Setup nr22-software as a catkin workspace
 pip install --upgrade pip
 pip install catkin_tools pymap3d==1.5.2 transforms3d empy
 catkin config --init --extend /opt/ros/melodic
@@ -8,8 +9,8 @@ catkin config --init --extend /opt/ros/melodic
 # Run catkin_build 4 times to smooth out incorrect package orders
 catkin build
 catkin build
-catkin build
-catkin build
+catkin build --mem-limit 70%
+catkin build --mem-limit 50%
 
 # Check if user wants to add devel/setup.bash into .bashrc (if doesn't exist yet)
 SHELL_INIT=".bashrc"

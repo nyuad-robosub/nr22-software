@@ -6,10 +6,10 @@ INIT_DIRECTORY="$NR22_DIRECTORY/init"
 declare -a init_scripts=(
     "ros_gazebo.sh"
     "miniconda.sh"
+    "include/orbslam_opencv.sh"
     "src/deps/realsense.sh"
     "src/deps/svo.sh"
     "catkin.sh"
-    "include/orbslam_opencv.sh"
     "include/ardupilot.sh"
     "src/faux_detection.sh"
 )
@@ -18,7 +18,7 @@ declare -a init_scripts=(
 for i in "${init_scripts[@]}"
 do
     echo # New line for new file
-    read -p "Run $INIT_DIRECTORY/$i? [N/y]"
+    read -p "Run $i? [N/y]"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         source $INIT_DIRECTORY/$i
     fi

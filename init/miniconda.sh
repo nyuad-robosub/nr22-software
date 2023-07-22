@@ -1,4 +1,6 @@
 #!/bin/bash
+NR22_DIRECTORY=$PWD
+
 # Recommend Miniconda install as will be useful in many cases
 read -p "Install Miniconda? (allows multiple Python environments) [N/y]"
 if [[ $REPLY =~ ^[Yy]$ ]]
@@ -44,3 +46,6 @@ then
         fi
     }
 fi
+
+python --version
+cd $NR22_DIRECTORY

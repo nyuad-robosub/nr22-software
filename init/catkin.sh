@@ -5,7 +5,7 @@ pip install --upgrade pip
 pip install --upgrade cmake
 
 # Setup nr22-software as a catkin workspace
-pip install catkin_tools pymap3d==1.5.2 transforms3d empy
+pip install catkin_tools pymap3d==1.5.2 transforms3d empy psutil
 catkin config --init --extend /opt/ros/melodic
 
 # Run catkin_build 4 times to smooth out incorrect package orders

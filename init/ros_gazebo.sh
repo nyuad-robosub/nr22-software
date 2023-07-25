@@ -36,8 +36,7 @@ SHELL_INIT=".bashrc"
 exportline="source /opt/ros/melodic/setup.bash";
 eval $exportline
 grep -Fxq "$exportline" ~/$SHELL_INIT 2>/dev/null || {
-    read -p "Add \"source /opt/ros/melodic/setup.bash\" to ~/.bashrc? (not neccessary if using catkin workspaces later) [N/y]"
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
+    if utils_prompt_user "Add \"source /opt/ros/melodic/setup.bash\" to ~/.bashrc? (not neccessary if using catkin workspaces later)" n; then
         echo $exportline >> ~/$SHELL_INIT
         echo "Done!"
     fi

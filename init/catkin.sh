@@ -24,8 +24,7 @@ SHELL_INIT=".bashrc"
 exportline="source $NR22_DIRECTORY/devel/setup.bash";
 eval $exportline
 grep -Fxq "$exportline" ~/$SHELL_INIT 2>/dev/null || {
-    read -p "Set $NR22_DIRECTORY as default catkin workspace? [N/y]"
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
+    if utils_prompt_user "Set $NR22_DIRECTORY as default catkin workspace?" y; then
         echo $exportline >> ~/$SHELL_INIT
         echo "Done!"
     fi

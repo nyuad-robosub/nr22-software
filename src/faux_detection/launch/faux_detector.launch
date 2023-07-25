@@ -5,7 +5,7 @@
 	<arg name="min_score_thresh" default="0.25" />
 	<arg name="interval" default="60" />
 	<arg name="label_file" default="$(find faux_detection)/trained_models/mobilenet-jul29.pbtxt" />
-	<arg name="model_type" default="torchhub" /> <!-- graphdef (MobileNet) / torchhub (YOLO) -->
+	<arg name="model_type" default="graphdef" /> <!-- graphdef (MobileNet) / torchhub (YOLO) -->
 
 	<!-- MobileNet params -->
 	<arg name="model_file" default="$(find faux_detection)/trained_models/mobilenet-jul29.pb" />

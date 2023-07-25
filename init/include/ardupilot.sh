@@ -23,9 +23,7 @@ Tools/environment_install/install-prereqs-ubuntu.sh -y
 
 # Check if user wants to create automated bash file in ~/
 cd $HOME
-read -p "Create AS.sh in $HOME (~) for SITL simulations? [N/y]"
-if [[ $REPLY =~ ^[Yy]$ ]]
-then
+if utils_prompt_user "Create AS.sh in $HOME (~) for SITL simulations?" y; then
     echo "#!/bin/bash
     source $HOME/.bashrc
     sim_vehicle.py -f gazebo-bluerov2 -v ArduSub -L Saadiyat --out=udp:0.0.0.0:14550 --out=udp:0.0.0.0:14551 --out=udp:0.0.0.0:14552 --out=udp:0.0.0.0:14553 --out=udp:0.0.0.0:14554 --out=udp:0.0.0.0:14555 --console
@@ -47,9 +45,7 @@ sudo make install
 # Check if user wants to install QGroundControl
 # https://docs.qgroundcontrol.com/master/en/getting_started/download_and_install.html
 cd $HOME
-read -p "Download QGroundControl in $HOME (~)? [N/y]"
-if [[ $REPLY =~ ^[Yy]$ ]]
-then
+if utils_prompt_user "Download QGroundControl in $HOME (~)?" y; then
     # sudo usermod -a -G dialout $USER # This is already done in install-prereqs-ubuntu.sh
     sudo apt-get remove modemmanager -y
     sudo apt-get install gstreamer1.0-plugins-bad gstreamer1.0-libav gstreamer1.0-gl -y

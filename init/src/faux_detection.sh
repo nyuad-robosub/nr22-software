@@ -28,8 +28,7 @@ protoc object_detection/protos/*.proto --python_out=.
 SHELL_LOGIN=".profile"
 exportline="export PYTHONPATH=\$PYTHONPATH:$PWD:$PWD/slim";
 grep -Fxq "$exportline" ~/$SHELL_LOGIN 2> /dev/null || {
-    read -p "Add $PWD and $PWD/slim to PYTHONPATH? (needed for object_detection to find proto files properly) [N/y]"
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
+    if utils_prompt_user "Add $PWD and $PWD/slim to PYTHONPATH? (needed for object_detection to find proto files properly)" y; then
         echo $exportline >> ~/$SHELL_LOGIN
         eval $exportline
         echo "Done!"

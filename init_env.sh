@@ -1,8 +1,12 @@
 #!/bin/bash
 NR22_DIRECTORY=$PWD
+INIT_DIRECTORY="$NR22_DIRECTORY/init"
+
+# Default argument (-d) is passed directly to utils.sh because of `source`
+# DEF_ARG=$1
+source $INIT_DIRECTORY/utils.sh
 
 # Array of all the init scripts in execution order
-INIT_DIRECTORY="$NR22_DIRECTORY/init"
 declare -a init_scripts=(
     "ros_gazebo.sh"
     "miniconda.sh"
@@ -24,8 +28,7 @@ do
     # Regex courtesy of: https://stackoverflow.com/a/1247828
     sed -n 's/^#\s*|\s*//p' $INIT_DIRECTORY/$i
     echo "============================================================"
-    read -p "Run $i? [N/y]"
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
+    if utils_prompt_user "Run $i?" y; then
         source $INIT_DIRECTORY/$i
     fi
 done

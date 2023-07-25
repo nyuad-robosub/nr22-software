@@ -1,4 +1,11 @@
 #!/bin/bash
+# Script description
+# | This script install ros-melodic-desktop-full as well as some other 
+# | ROS packages needed for nr22-software. It also prompts you to add 
+# | /opt/ros/melodic as default workspace. Should not be run within a
+# | virtual environment, as some ROS packages use system Python to
+# | install.
+
 NR22_DIRECTORY=$PWD
 # Add ROS to package list
 sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
@@ -15,13 +22,14 @@ sudo apt-get install -y ros-melodic-uuv-simulator ros-melodic-robot-localization
 sudo apt-get install -y python-rosdep python-rosinstall python-rosinstall-generator python-wstool python-pip python3-pip
 sudo rosdep init && rosdep update 
 
-# Fixing Gazebo libignition
-# https://answers.gazebosim.org/question/23475/ssl-no-alternative-certificate-subject-name-matches-target-host-name-apiignitionfuelorg/?answer=25944#post-id-25944
-sed -i 's/api.ignitionfuel.org/fuel.ignitionrobotics.org/' ~/.ignition/fuel/config.yaml
-# sudo apt-get install -y --only-upgrade libignition-math2
+# Verify Gazebo installation
 gazebo --version
 which gzserver
 which gzclient
+# Fixing Gazebo libignition
+# https://answers.gazebosim.org/question/23475/ssl-no-alternative-certificate-subject-name-matches-target-host-name-apiignitionfuelorg/?answer=25944#post-id-25944
+# sudo apt-get install -y --only-upgrade libignition-math2
+sed -i 's/api.ignitionfuel.org/fuel.ignitionrobotics.org/' $HOME/.ignition/fuel/config.yaml
 
 # Check if user wants to add ROS setup.bash into .bashrc (if doesn't exist yet)
 SHELL_INIT=".bashrc"
@@ -35,6 +43,4 @@ grep -Fxq "$exportline" ~/$SHELL_INIT 2>/dev/null || {
     fi
 }
 
-# Install some remaining prerequisites (needed in virtual environment)
-pip install rospkg defusedxml
 cd $NR22_DIRECTORY

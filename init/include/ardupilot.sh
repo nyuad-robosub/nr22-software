@@ -1,4 +1,10 @@
 #!/bin/bash
+# Script description
+# | This script installs ArduPilot into the current Python environment,
+# | which will not be usable if you change to a different environment.
+# | It also prompts to install QGroundControl and a convenience AS.sh
+# | script at $HOME for SITL.
+
 # Install ROS packages
 sudo apt-get install -y ros-melodic-mavros ros-melodic-geographic-msgs ros-melodic-geodesy
 sudo bash /opt/ros/melodic/lib/mavros/install_geographiclib_datasets.sh

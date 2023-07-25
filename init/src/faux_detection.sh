@@ -1,4 +1,10 @@
 #!/bin/bash
+# Script description
+# | This script installs Tensorflow 1.15 and the object_detection library
+# | into the current Python environment. They are needed for GraphDef models
+# | but not PyTorch models, and can be made redundant after no more
+# | object_detection functions are used in nr22-software.
+
 # -- object_detection --
 NR22_DIRECTORY=$PWD
 cd $NR22_DIRECTORY/include/models/research

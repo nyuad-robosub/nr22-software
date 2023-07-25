@@ -1,4 +1,9 @@
 #!/bin/bash
+# Script description
+# | This script prompts you to install Miniconda and set up a Python 2
+# | environment for later uses. Also prompts you if you want the
+# | Python 2 environment to be default.
+
 NR22_DIRECTORY=$PWD
 
 # Recommend Miniconda install as will be useful in many cases

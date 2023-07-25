@@ -1,4 +1,9 @@
-#!/bin/bash   
+#!/bin/bash
+# Script description
+# | This script installs depthai and ORBSLAM3 packages and their 
+# | dependencies. The depthai package is needed for depthai_bridge
+# | and depthai_examples.
+
 # INSTALLS REQUIRED DEPENDENCIES AND BUILD CATKIN WORKSPACE
 
 nr_directory=$(pwd)

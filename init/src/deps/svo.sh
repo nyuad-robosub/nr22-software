@@ -1,4 +1,7 @@
 #!/bin/bash
+# Script description
+# | This script installs SVO and its ROS packages.
+
 NR22_DIRECTORY=$PWD
 cd $NR22_DIRECTORY/src/deps/svo
 # System dependencies

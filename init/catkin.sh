@@ -1,11 +1,16 @@
 #!/bin/bash
+# Script description
+# | This script installs catkin_tools and relevant packages into your
+# | (preferably) Python2 environment. Can be used in both system and
+# | virtual environments.
+
 NR22_DIRECTORY=$PWD
 # Update cmake version
 pip install --upgrade pip
 pip install --upgrade cmake
 
 # Setup nr22-software as a catkin workspace
-pip install catkin_tools pymap3d==1.5.2 transforms3d empy psutil
+pip install catkin_tools rospkg defusedxml pymap3d==1.5.2 transforms3d empy psutil
 catkin config --init --extend /opt/ros/melodic
 
 # Run catkin_build 4 times to smooth out incorrect package orders

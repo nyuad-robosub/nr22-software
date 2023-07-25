@@ -32,3 +32,7 @@ do
         source $INIT_DIRECTORY/$i
     fi
 done
+
+# Reboot disclaimer
+echo 
+echo "May need a reboot before everything works"

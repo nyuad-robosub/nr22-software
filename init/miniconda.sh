@@ -28,9 +28,9 @@ fi
 
 # Check if user wants to create a Python 2 environment
 if utils_prompt_user "Create a conda environment with Python 2.7? (recommended for isolation from system Python, skip this step if you don't have conda installed)" y; then
-    read -p "Give your environment a name (no whitespaces): "
+    read -p "Give your Python 2 environment a name (no whitespaces): "
     ENV_NAME=$REPLY
-    conda create -n $ENV_NAME python=2.7
+    conda create -n $ENV_NAME python=2.7 -y
     
     # Check if user wants to activate new environment on startup
     SHELL_INIT=".bashrc"

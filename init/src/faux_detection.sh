@@ -12,9 +12,7 @@ pip install tensorflow==1.15 Cython contextlib2 pillow lxml pandas matplotlib sc
 python setup.py build
 
 # Check if user wants to install with --user
-read -p "Run setup.py install with --user? (--user can lead to issues in virtual environments, but is needed if installing with system Python) [N/y]"
-if [[ $REPLY =~ ^[Yy]$ ]]
-then
+if utils_prompt_user "Run setup.py install with --user? (--user can lead to issues in virtual environments, but is needed if installing with system Python)" n; then
     python setup.py install --user
 else
     python setup.py install

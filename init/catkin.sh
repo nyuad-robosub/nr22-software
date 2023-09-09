@@ -13,11 +13,10 @@ pip install --upgrade cmake
 pip install catkin_tools rospkg defusedxml pymap3d==1.5.2 transforms3d empy psutil
 catkin config --init --extend /opt/ros/melodic
 
-# Run catkin_build 4 times to smooth out incorrect package orders
-catkin build
-catkin build
-catkin build --mem-limit 70%
+# Run catkin_build few times to smooth out incorrect package orders
 catkin build --mem-limit 50%
+catkin build --mem-limit 70%
+catkin build
 
 # Check if user wants to add devel/setup.bash into .bashrc (if doesn't exist yet)
 SHELL_INIT=".bashrc"

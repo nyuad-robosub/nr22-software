@@ -81,6 +81,12 @@ pip3 install torch torchvision torchaudio --index-url https://download.pytorch.o
 
 where `<CUDA VERSION NUMBER>` is your CUDA version without a dot, e.g. 116, 117 or 118. If this does not work, you can try PyTorch's [Previous Versions](https://pytorch.org/get-started/previous-versions/).
 
+### Install other dependencies
+The following installs the rest of the dependencies. 
+```
+pip install --upgrade opencv-python pandas psutil pyyaml tqdm ultralytics gitpython>=3.1.30
+```
+
 ### Get Python executable path
 Using your new Python 3, run the following:
 ```

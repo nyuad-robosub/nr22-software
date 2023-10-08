@@ -147,9 +147,14 @@ logs/
 # VScode stuff
 .vscode/
 nr22-software.code-workspace
+
+# Testing images
 *.jpg
 *.png
 *.bmp
+!src/pools/**/*.jpg
+!src/pools/**/*.png
+!src/pools/**/*.bmp
 
 # SVO stuff
 src/deps/svo

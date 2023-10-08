@@ -16,14 +16,19 @@
 </div>
 
 # Table of contents
-* [Repo Structure](#repository-structure)
-* [Installation/Setup](#installing)
-* [Alternative Installation/Setup](#installingalternative)
-* [Launching Simulation](#running-simulation-scripts)
-* [Launching ORB_SLAM3 with OAK-D](#launching-orb_slam3-with-the-oak-d)
-* [Installing ORB_SLAM2](#installing-orb_slam2-and-oakd-ros-launch-files)
-* [Launching ORB_SLAM2](#running-orb-slam2-and-oak-d-pipeline-scripts)
-# Repository Structure
+* [Repo structure](#repository-structure)
+* [Installation](#installation)
+  * [Script installation](#script-installation)
+  * [Manual installation](#manual-installation)
+* [Usage](#usage)
+  * [Launching simulation](#running-simulation-scripts)
+  * [Launching ORB_SLAM3 with OAK-D](#launching-orb_slam3-with-the-oak-d)
+  * [Installing ORB_SLAM2](#installing-orb_slam2-and-oakd-ros-launch-files)
+  * [Launching ORB_SLAM2](#running-orb-slam2-and-oak-d-pipeline-scripts)
+* [Development](#development)
+  * [Creating new packages](#creating-new-packages)
+
+# Repository structure
 The repository is structured as a ROS catkin workspace with the following directories:
 
     .
@@ -43,13 +48,39 @@ The repository is structured as a ROS catkin workspace with the following direct
     │   ├── torpedo-hole        # Torpedo task detection scripts
     └── README.md
 
-# Installing
+# Installation
+The repository uses ROS Melodic due to legacy issues, and as of now can only be installed on Ubuntu 18.04 or similar systems.
+
+## Script installation
+The initialization scripts are located in the `init` folder and is structured similarly to the repository modules. If the default flag `-d` is not set, the main script `init_env.sh` will describe each initialization script and prompt for installation.
+
+- Clone nr22-software and all submodules (clone outside of pre-existing ROS workspaces): 
+
+`git clone https://github.com/nyuad-robosub/nr22-software --recursive`
+
+- **`cd`** into it. This is very important as the initialization scripts will rely on `$PWD` to understand directories.
+
+`cd nr22-software`
+
+- For a fresh Ubuntu 18.04 or similar system,  run the bash script with **`source`** and the default tag `-d`:
+
+`source init_env.sh -d`
+
+The installation may fail at some initialization scripts due to build errors (out of memory, permission issues, etc.) If so, use the following step to rerun the failed script/run the next scripts.
+
+- For more control of the installation, run the script with `source` and no `-d`:
+
+`source init_env.sh`
+
+The installation will prompt you for each initialization script, as well as some important decisions within each script. All decisions with a default option can be answered with Enter instead of `y`/`n`.
+
+## Manual installation
 
 - Clone the nr22-software and cd into it: (clone it outside of pre-existing workspaces, if any)
 
 `git clone https://github.com/nyuad-robosub/nr22-software` (add `-b <branch>` if cloning a specific branch, and add `--single-branch` if only want to fetch single branch)
 
-- Change directory to the new repoL
+- Change directory to the new repo
 
 `cd nr22-software`
 
@@ -83,43 +114,32 @@ The repository is structured as a ROS catkin workspace with the following direct
   - Append `source <path-to-nr22-software>/nr22-software/devel/setup.bash` at the end of the file
   - This will allow each new terminal opened to recognize the new workspace and use the packages
 
-# Installing(Alternative)
+# Usage
+## Running simulation scripts
 
-- Change directory to the new repo:
-
-`cd nr22-software`
-
-- Then run the bash script:
-
-`sudo bash ./init_env.sh`
-
-> SVO installation will fail, install manually.
-
-# Running Simulation Scripts
-
-> Prior to running these scripts you should have run the init_env.sh file and [setup object detection here](src/faux_detection/README.md)
+> Prior to running these scripts you should have run the init_env.sh file and [setup object detection here](src/faux_detection/README.md) (this is done if you did the [Script installation](#script-installation) route.)
 - To run simulation, type `roslaunch mission_planning start_run_sim.launch`
 
-# Launching ORB_SLAM3 with the OAK-D
+## Launching ORB_SLAM3 with the OAK-D
 
 - Simply start the launch file
 
 `roslaunch ORB_SLAM3 oakd_node.launch`
 
-# Installing ORB_SLAM2 and OAKD ros launch files
+## Installing ORB_SLAM2 and OAKD ros launch files
 
 
 - To setup ORB_SLAM2:
 - Go to `.bashrc`
 - Append `export ROS_PACKAGE_PATH=${ROS_PACKAGE_PATH}:~/nr22-software/include/ORB_SLAM2/Examples/ROS/ORB_SLAM2`
 
-# Running ORB-SLAM2 and OAK-D pipeline scripts:
+## Running ORB-SLAM2 and OAK-D pipeline scripts:
 
 - Type `rosrun ORB_SLAM2 STEREO_OAKD {PATH TO VOCABULARY FILE} {PATH TO CAMERA YAML CONFIGURAITON FILE}`
   - For example: `rosrun ORB_SLAM2 STEREO_OAKD /home/rami/nr22-software/include/ORB_SLAM2/Vocabulary/ORBvoc.txt /home/rami/nr22-software/include/ORB_SLAM2/Examples/ROS/ORB_SLAM2/OAKD.yaml`
 
-
-# Creating new packages
+# Development
+## Creating new packages
 
 - References: https://catkin-tools.readthedocs.io/en/latest/verbs/catkin_create.html
 

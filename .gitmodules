@@ -21,7 +21,7 @@
 [submodule "src/deps/depthai-ros"]
 	path = src/deps/depthai-ros
 	url = https://github.com/nyuad-robosub/depthai-ros
-	branch = ros-release
+	branch = ros-release-opencv-versions
 [submodule "include/json"]
 	path = include/json
 	url = https://github.com/nlohmann/json
@@ -42,3 +42,22 @@
 [submodule "src/deps/svo/rpg_svo_pro_open"]
 	path = src/deps/svo/rpg_svo_pro_open
 	url = https://github.com/nyuad-robosub/rpg_svo_pro_open
+[submodule "include/ardupilot"]
+	path = include/ardupilot
+	url = https://github.com/nyuad-robosub/ardupilot
+	branch = simulation
+[submodule "include/ardupilot_gazebo"]
+	path = include/ardupilot_gazebo
+	url = https://github.com/patrickelectric/ardupilot_gazebo
+	branch = add_link
+[submodule "include/yolov5"]
+	path = include/yolov5
+	url = https://github.com/ultralytics/yolov5
+[submodule "include/models"]
+	path = include/models
+	url = https://github.com/nyuad-robosub/models
+	branch = r1.13.0
+[submodule "src/deps/orocos_kinematics_dynamics"]
+	path = src/deps/orocos_kinematics_dynamics
+	url = https://github.com/orocos/orocos_kinematics_dynamics
+	branch = release-1.5

@@ -30,7 +30,7 @@ https://answers.gazebosim.org//question/19654/my-model-is-not-showing-in-gazebo/
   <visual name="complete_props">
     <pose>0 0 -3.9 0 0 0</pose>
     <geometry>
-      <mesh><uri>model://complete_props_flat/meshes/complete_props_flat.dae</uri><scale>1 1 1</scale></mesh>
+      <mesh><uri>model://complete_props_flat/meshes/complete_props_flat.obj</uri><scale>1 1 1</scale></mesh>
     </geometry>
   </visual>
 
